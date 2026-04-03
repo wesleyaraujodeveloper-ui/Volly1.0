@@ -1,8 +1,12 @@
 import { Tabs } from 'expo-router';
 import { theme } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../../src/store/useAppStore';
 
 export default function TabsLayout() {
+  const { user } = useAppStore();
+  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+
   return (
     <Tabs
       screenOptions={{
@@ -37,6 +41,19 @@ export default function TabsLayout() {
           ),
         }}
       />
+      
+      {/* Aba de Gestão visível apenas para Líderes e Admins */}
+      <Tabs.Screen
+        name="gestao"
+        options={{
+          title: 'Equipe',
+          href: (isAdminOrLeader ? '/(tabs)/gestao' : null) as any,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="escalas"
         options={{

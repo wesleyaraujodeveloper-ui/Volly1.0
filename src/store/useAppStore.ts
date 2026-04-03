@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
+export type Role = 'ADMIN' | 'LÍDER' | 'VOLUNTÁRIO';
+
 interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: Role;
 }
 
 interface AppState {
@@ -12,12 +14,15 @@ interface AppState {
   setUser: (user: User | null) => void;
   isLoadingData: boolean;
   setIsLoadingData: (loading: boolean) => void;
+  clearSession: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   user: null, // O usuário logado atualmente (null = deslogado)
   setUser: (user) => set({ user }),
   
-  isLoadingData: false,
+  isLoadingData: true, // Começa em true enquanto checa a sessão no Supabase
   setIsLoadingData: (loading) => set({ isLoadingData: loading }),
+
+  clearSession: () => set({ user: null }),
 }));
