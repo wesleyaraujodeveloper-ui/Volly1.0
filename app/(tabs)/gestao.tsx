@@ -137,12 +137,41 @@ export default function GestaoMembrosScreen() {
     if (data) setUserDepts(data.map((d: any) => d.department_id));
   };
 
-  const toggleUserDept = async (deptId: string) => {
+  const toggleUserDept = (deptId: string) => {
+    setUserDepts(prev => 
+      prev.includes(deptId) ? prev.filter(id => id !== deptId) : [...prev, deptId]
+    );
+  };
+
+  const handleSaveTeams = async () => {
     if (!managingTeamProfile?.id) return;
-    const isAdding = !userDepts.includes(deptId);
-    setUserDepts(prev => isAdding ? [...prev, deptId] : prev.filter(id => id !== deptId));
-    const { error } = await adminService.manageUserDepartment(managingTeamProfile.id, deptId, isAdding ? 'ADD' : 'REMOVE');
-    if (error) Alert.alert('Erro', error.message);
+    setLoading(true);
+    
+    try {
+      // 1. Pega os vínculos atuais do banco para saber o que adicionar e o que remover
+      const { data: currentDepts } = await adminService.getUserDepartments(managingTeamProfile.id);
+      const currentIds = currentDepts?.map((d: any) => d.department_id) || [];
+      
+      // 2. Identifica mudanças
+      const toAdd = userDepts.filter(id => !currentIds.includes(id));
+      const toRemove = currentIds.filter(id => !userDepts.includes(id));
+      
+      // 3. Executa as operações em paralelo
+      const promises = [
+        ...toAdd.map(id => adminService.manageUserDepartment(managingTeamProfile.id!, id, 'ADD')),
+        ...toRemove.map(id => adminService.manageUserDepartment(managingTeamProfile.id!, id, 'REMOVE'))
+      ];
+      
+      await Promise.all(promises);
+      
+      setManagingTeamProfile(null);
+      loadVolunteers();
+    } catch (error) {
+      console.error('Save teams error:', error);
+      Alert.alert('Erro', 'Não foi possível salvar todos os vínculos.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleManageUserRoles = async (p: Profile) => {
@@ -417,7 +446,13 @@ export default function GestaoMembrosScreen() {
                 );
               })}
             </ScrollView>
-            <TouchableOpacity style={styles.addButton} onPress={() => setManagingTeamProfile(null)}><Text style={styles.addButtonText}>SALVAR</Text></TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.addButton, loading && { opacity: 0.7 }]} 
+              onPress={handleSaveTeams}
+              disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>SALVAR VÍNCULOS</Text>}
+            </TouchableOpacity>
           </View>
         </View>
       )}

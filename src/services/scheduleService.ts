@@ -118,5 +118,82 @@ export const scheduleService = {
       .eq('event_id', eventId);
 
     return { data, error };
+  },
+
+  /**
+   * Gera escalas automaticamente para um evento e departamento.
+   */
+  autoGenerateSchedule: async (eventId: string, departmentId: string, providerToken?: string | null) => {
+    // 1. Pegar todas as funções do departamento
+    const { data: roles, error: rolesErr } = await supabase.from('roles').select('*').eq('department_id', departmentId);
+    if (rolesErr) return { error: `Erro ao buscar funções: ${rolesErr.message}` };
+    if (!roles || roles.length === 0) return { error: 'Nenhuma função encontrada para este departamento. Cadastre as funções primeiro.' };
+
+    // 2. Pegar escalas existentes (para não sobrescrever)
+    const { data: existing } = await scheduleService.listSchedulesByEvent(eventId);
+    const existingRoleIds = existing?.map(s => s.role_id) || [];
+
+    // 3. Pegar voluntários disponíveis para este evento
+    const { data: availables, error: availErr } = await supabase
+      .from('user_event_availabilities')
+      .select('user_id')
+      .eq('event_id', eventId)
+      .eq('is_available', true);
+    
+    if (availErr) return { error: `Erro ao buscar disponibilidades: ${availErr.message}` };
+    if (!availables || availables.length === 0) return { error: 'Nenhum voluntário marcou disponibilidade para este evento.' };
+    const availableUserIds = availables.map(a => a.user_id);
+
+    // 4. Pegar dados do evento para o balanceamento
+    const { data: event, error: evErr } = await supabase.from('events').select('event_date').eq('id', eventId).single();
+    if (evErr || !event) return { error: 'Erro ao localizar dados do evento.' };
+
+    // 5. Pegar balanceamento mensal dos voluntários
+    const { data: balancing, error: balErr } = await scheduleService.getVolunteerBalancing(departmentId, event.event_date);
+    if (balErr || !balancing) return { error: 'Erro ao calcular balanceamento da equipe.' };
+
+    const results = [];
+    for (const role of roles) {
+      if (existingRoleIds.includes(role.id)) continue; 
+
+      // Encontrar voluntário disponível para este evento que esteja no ranking de balanceamento
+      const candidate = balancing.find(b => availableUserIds.includes(b.id));
+
+      if (candidate) {
+        const { data, error: assignErr } = await scheduleService.assignVolunteer({
+          event_id: eventId,
+          user_id: candidate.id,
+          role_id: role.id,
+          status: 'PENDENTE'
+        }, providerToken);
+        
+        if (data) {
+          results.push(data);
+          candidate.count++;
+          balancing.sort((a, b) => a.count - b.count);
+        }
+      }
+    }
+
+    if (results.length === 0) {
+      return { error: 'As funções já estão preenchidas ou não há voluntários disponíveis para as funções restantes.' };
+    }
+
+    return { data: results };
+  },
+
+  /**
+   * Conclui a escala e altera o status de PENDENTE para CONFIRMADO.
+   */
+  completeAndNotify: async (eventId: string) => {
+    const { data, error } = await supabase
+      .from('schedules')
+      .update({ status: 'CONFIRMADO' })
+      .eq('event_id', eventId)
+      .eq('status', 'PENDENTE')
+      .select();
+
+    // Aqui no futuro dispararíamos push/email via Edge Function
+    return { data, error };
   }
 };

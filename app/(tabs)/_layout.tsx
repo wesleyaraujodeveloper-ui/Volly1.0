@@ -30,6 +30,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
@@ -54,12 +55,23 @@ export default function TabsLayout() {
         }}
       />
 
+       <Tabs.Screen
+        name="eventos"
+        options={{
+          title: 'Eventos',
+          href: (isAdminOrLeader ? '/(tabs)/eventos' : null) as any,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="escalas"
         options={{
           title: 'Escalas',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+            <Ionicons name="list-outline" size={size} color={color} />
           ),
         }}
       />

@@ -1,282 +1,1029 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppStore } from '../../src/store/useAppStore';
+import { availabilityService, Availability, Absence, UserDepartment } from '../../src/services/availabilityService';
 import { eventService, Event } from '../../src/services/eventService';
-import { Calendar } from 'react-native-calendars';
+import { scheduleService } from '../../src/services/scheduleService';
+import { supabase } from '../../src/services/supabase';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useAppStore } from '../../src/store/useAppStore';
 
-type ViewMode = 'LISTA' | 'CALENDARIO';
-type ListTab = 'PROXIMOS' | 'HISTORICO';
+type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 
-export default function EscalasScreen() {
-  const router = useRouter();
-  const { user } = useAppStore();
-  const [viewMode, setViewMode] = useState<ViewMode>('LISTA');
-  const [listTab, setListTab] = useState<ListTab>('PROXIMOS');
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+const PERIODS = ['Manhã', 'Tarde', 'Noite'];
+
+export default function EscalasTabsScreen() {
+  const { user, providerToken } = useAppStore();
+  const [activeTab, setActiveTab] = useState<subTab>('DISPONIBILIDADE');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
-  const isLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+  // Estados para Contexto (Departamentos)
+  const [departments, setDepartments] = useState<UserDepartment[]>([]);
+  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
 
-  const loadEvents = async () => {
-    setLoading(true);
-    if (listTab === 'PROXIMOS') {
-      const { data } = await eventService.listUpcomingEvents({ name: search });
-      setEvents(data || []);
-    } else {
-      const { data } = await eventService.listPastEvents(10);
-      setEvents(data || []);
-    }
-    setLoading(false);
-  };
+  // Estados para Disponibilidade
+  const [monthEvents, setMonthEvents] = useState<Event[]>([]);
+  const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
+  const [userAbsences, setUserAbsences] = useState<Absence[]>([]);
+
+  // Estados para Escalas (Aba 2)
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventSchedules, setEventSchedules] = useState<any[]>([]);
+
+  // Estados para Escala Mensal (Aba 3)
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [monthlyEvents, setMonthlyEvents] = useState<Event[]>([]);
+  const [allMonthlySchedules, setAllMonthlySchedules] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+
+  // Estado para Modal de Ausência
+  const [showAbsenceModal, setShowAbsenceModal] = useState(false);
+  const [newAbsence, setNewAbsence] = useState({ start_date: '', end_date: '', description: '' });
+
+  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
 
   useEffect(() => {
-    loadEvents();
-  }, [listTab, search]);
+    loadInitialData();
+  }, []);
 
-  const renderEventItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.eventCard} 
-      onPress={() => router.push(`/events/${item.id}` as any)}
-    >
-      <View style={styles.dateBadge}>
-        <Text style={styles.dayText}>{format(parseISO(item.event_date), 'dd')}</Text>
-        <Text style={styles.monthText}>{format(parseISO(item.event_date), 'MMM', { locale: ptBR }).toUpperCase()}</Text>
+  useEffect(() => {
+    if (selectedDeptId) {
+      loadUpcomingEvents();
+    }
+  }, [selectedDeptId]);
+
+  useEffect(() => {
+    if (selectedEventId) {
+      loadEventSchedules();
+    }
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    if (activeTab === 'MENSAL' && selectedDeptId) {
+      loadMonthlyData();
+    }
+  }, [activeTab, selectedMonth, selectedDeptId]);
+
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      const { data: depts } = await availabilityService.getUserDepartments();
+      if (depts && depts.length > 0) {
+        setDepartments(depts);
+        const initialDeptId = depts[0].department_id;
+        setSelectedDeptId(initialDeptId);
+      }
+      
+      const { data: abs } = await availabilityService.getAbsences();
+      setUserAbsences(abs || []);
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUpcomingEvents = async () => {
+    if (!selectedDeptId) return;
+    
+    try {
+      // 1. Busca os próximos eventos do departamento
+      const { data: events } = await eventService.listUpcomingEvents({ 
+        department_id: selectedDeptId 
+      });
+      
+      const eventList = events || [];
+      setUpcomingEvents(eventList);
+      setMonthEvents(eventList); // Sincroniza a aba de disponibilidade
+
+      // 2. Se houver eventos, busca as disponibilidades já marcadas
+      if (eventList.length > 0) {
+        const { data: avail } = await availabilityService.getEventAvailability(eventList.map(e => e.id!));
+        setEventAvailabilities(avail || []);
+        
+        // Seleciona o primeiro evento por padrão para a aba de Escalas
+        setSelectedEventId(eventList[0].id!);
+      } else {
+        setEventAvailabilities([]);
+        setSelectedEventId(null);
+      }
+    } catch (error) {
+      console.error('Error loading events:', error);
+    }
+  };
+
+  const loadEventSchedules = async () => {
+    try {
+      const { data } = await scheduleService.listSchedulesByEvent(selectedEventId!);
+      setEventSchedules(data || []);
+    } catch (error) {
+      console.error('Error loading schedules:', error);
+    }
+  };
+
+  const loadMonthlyData = async () => {
+    if (!selectedDeptId) return;
+    setLoading(true);
+    try {
+      const start = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).toISOString().split('T')[0];
+      const end = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      // 1. Buscar roles do depto
+      const { data: deptRoles } = await supabase.from('roles').select('*').eq('department_id', selectedDeptId);
+      setRoles(deptRoles || []);
+
+      // 2. Buscar eventos no intervalo
+      const { data: events } = await eventService.listUpcomingEvents({ date: undefined }); // Limpa o "upcoming" e usa range?
+      // Melhor usar filtro de data customizado
+      const { data: mEvents } = await supabase
+        .from('events')
+        .select('*, event_departments!inner(*)')
+        .eq('event_departments.department_id', selectedDeptId)
+        .gte('event_date', `${start}T00:00:00Z`)
+        .lte('event_date', `${end}T23:59:59Z`)
+        .order('event_date', { ascending: true });
+      
+      setMonthlyEvents(mEvents || []);
+
+      // 3. Buscar TODAS as escalas desses eventos
+      if (mEvents && mEvents.length > 0) {
+        const { data: mSchedules } = await supabase
+          .from('schedules')
+          .select('*, profiles(full_name), roles(id, name)')
+          .in('event_id', mEvents.map((e: any) => e.id));
+        setAllMonthlySchedules(mSchedules || []);
+      } else {
+        setAllMonthlySchedules([]);
+      }
+    } catch (error) {
+      console.error('Error monthly data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeMonth = (offset: number) => {
+    const newMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + offset, 1);
+    setSelectedMonth(newMonth);
+  };
+
+  const toggleEventAvailability = (eventId: string) => {
+    const existing = eventAvailabilities.find(a => a.event_id === eventId);
+    if (existing) {
+      setEventAvailabilities(prev => prev.map(a => 
+        a.event_id === eventId ? { ...a, is_available: !a.is_available } : a
+      ));
+    } else {
+      setEventAvailabilities(prev => [...prev, { 
+        user_id: user?.id!, 
+        event_id: eventId, 
+        periods: [], 
+        is_available: true 
+      }]);
+    }
+  };
+
+  const toggleEventPeriod = (eventId: string, period: string) => {
+    setEventAvailabilities(prev => {
+      const existing = prev.find(a => a.event_id === eventId);
+      if (existing) {
+        const newPeriods = existing.periods.includes(period)
+          ? existing.periods.filter((p: string) => p !== period)
+          : [...existing.periods, period];
+        return prev.map(a => a.event_id === eventId ? { ...a, periods: newPeriods, is_available: true } : a);
+      }
+      return [...prev, { user_id: user?.id!, event_id: eventId, periods: [period], is_available: true }];
+    });
+  };
+
+  const handleSaveAvailability = async () => {
+    setSaving(true);
+    try {
+      const promises = eventAvailabilities.map(a => 
+        availabilityService.updateEventAvailability(a.event_id, a.periods, a.is_available)
+      );
+      await Promise.all(promises);
+      Alert.alert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddAbsence = async () => {
+    if (!newAbsence.start_date || !newAbsence.end_date) {
+      Alert.alert('Erro', 'Por favor, preencha as datas.');
+      return;
+    }
+    try {
+      const { error } = await availabilityService.addAbsence(
+        newAbsence.start_date, 
+        newAbsence.end_date, 
+        newAbsence.description
+      );
+      if (error) throw error;
+      setShowAbsenceModal(false);
+      loadInitialData();
+    } catch (error) {
+      Alert.alert('Erro', 'Erro ao adicionar ausência.');
+    }
+  };
+  
+  const handleAutoGenerateScale = async () => {
+    if (!selectedEventId || !selectedDeptId) return;
+    setSaving(true);
+    const { error, data } = await scheduleService.autoGenerateSchedule(selectedEventId, selectedDeptId, providerToken);
+    
+    if (error) {
+      Alert.alert('Atenção', error);
+    } else {
+      Alert.alert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`);
+      loadEventSchedules();
+    }
+    setSaving(false);
+  };
+
+  const handleCompleteScale = async () => {
+    if (!selectedEventId) return;
+    setSaving(true);
+    const { error } = await scheduleService.completeAndNotify(selectedEventId);
+    if (error) {
+      Alert.alert('Erro', 'Erro ao concluir escalas.');
+    } else {
+      Alert.alert('Sucesso', 'Escalas concluídas e voluntários notificados!');
+      loadEventSchedules();
+    }
+    setSaving(false);
+  };
+
+  const renderDepartmentChips = () => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deptChipsContainer}>
+      {departments.map((dept) => (
+        <TouchableOpacity 
+          key={dept.department_id} 
+          style={[styles.deptChip, selectedDeptId === dept.department_id && styles.activeDeptChip]}
+          onPress={() => setSelectedDeptId(dept.department_id)}
+        >
+          <Text style={[styles.deptChipText, selectedDeptId === dept.department_id && styles.activeDeptChipText]}>
+            {dept.departments.name.toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+
+  const renderTabHeader = () => (
+    <View style={styles.tabHeader}>
+      <TouchableOpacity 
+        style={[styles.tabButton, activeTab === 'DISPONIBILIDADE' && styles.activeTabButton]}
+        onPress={() => setActiveTab('DISPONIBILIDADE')}
+      >
+        <Text style={[styles.tabButtonText, activeTab === 'DISPONIBILIDADE' && styles.activeTabButtonText]}>Disponibilidade</Text>
+      </TouchableOpacity>
+
+      {isAdminOrLeader && (
+        <>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'ESCALAS' && styles.activeTabButton]}
+            onPress={() => setActiveTab('ESCALAS')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'ESCALAS' && styles.activeTabButtonText]}>Escalas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'MENSAL' && styles.activeTabButton]}
+            onPress={() => setActiveTab('MENSAL')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'MENSAL' && styles.activeTabButtonText]}>Escala Mensal</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
+  const renderDisponibilidade = () => {
+    if (loading) return <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />;
+
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.sectionTitle}>Dias disponíveis</Text>
+        <Text style={styles.sectionSubtitle}>Aqui você atualizará os dias de disponibilidade da semana e também períodos de ausência programada.</Text>
+        
+        {monthEvents.length === 0 ? (
+          <View style={styles.emptyEventsContainer}>
+            <Ionicons name="calendar-outline" size={40} color={theme.colors.surfaceHighlight} />
+            <Text style={styles.emptyText}>Nenhum evento programado para este departamento.</Text>
+          </View>
+        ) : (
+          monthEvents.map((event) => {
+            const avail = eventAvailabilities.find(a => a.event_id === event.id);
+            const isEnabled = avail ? avail.is_available : false;
+            const eventDate = parseISO(event.event_date);
+            
+            return (
+              <View key={event.id} style={[styles.dayCard, !isEnabled && { opacity: 0.5 }]}>
+                <TouchableOpacity style={styles.dayHeader} onPress={() => toggleEventAvailability(event.id!)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dayName}>{event.title}</Text>
+                    <Text style={styles.eventDateLabel}>{format(eventDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
+                  </View>
+                  <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
+                    {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
+                  </View>
+                </TouchableOpacity>
+                
+                {isEnabled && (
+                  <View style={styles.periodsContainer}>
+                    {PERIODS.map(period => {
+                      const isSelected = avail?.periods.includes(period);
+                      return (
+                        <TouchableOpacity 
+                          key={period} 
+                          style={[styles.periodChip, isSelected && styles.activePeriodChip]}
+                          onPress={() => toggleEventPeriod(event.id!, period)}
+                        >
+                          <Ionicons 
+                            name={period === 'Manhã' ? 'sunny-outline' : period === 'Tarde' ? 'sunny' : 'moon-outline'} 
+                            size={14} 
+                            color={isSelected ? '#000' : theme.colors.textSecondary} 
+                          />
+                          <Text style={[styles.periodText, isSelected && styles.activePeriodText]}>{period}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
+
+        <View style={styles.absenceHeader}>
+          <Text style={styles.sectionTitle}>Bloqueio de data</Text>
+          <TouchableOpacity onPress={() => setShowAbsenceModal(true)}>
+            <Ionicons name="add-circle" size={32} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {userAbsences.map(absence => (
+          <View key={absence.id} style={styles.absenceCard}>
+            <View style={styles.absenceInput}>
+              <Text style={styles.labelSmall}>{absence.description || 'Período de ausência'}</Text>
+              <Text style={styles.dateText}>{new Date(absence.start_date).toLocaleDateString(undefined, { timeZone: 'UTC' })} - {new Date(absence.end_date).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
+            </View>
+            <TouchableOpacity onPress={() => availabilityService.removeAbsence(absence.id!).then(loadInitialData)}>
+              <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSaveAvailability} disabled={saving}>
+          {saving ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>Salvar Disponibilidade</Text>}
+        </TouchableOpacity>
+
+        <Modal visible={showAbsenceModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Nova Ausência</Text>
+              <TextInput 
+                placeholder="Descrição (Ex: Viagem)" 
+                placeholderTextColor="#666"
+                style={styles.modalInput}
+                onChangeText={(t) => setNewAbsence({...newAbsence, description: t})}
+              />
+              <TextInput 
+                placeholder="Início (AAAA-MM-DD)" 
+                placeholderTextColor="#666"
+                style={styles.modalInput}
+                onChangeText={(t) => setNewAbsence({...newAbsence, start_date: t})}
+              />
+              <TextInput 
+                placeholder="Fim (AAAA-MM-DD)" 
+                placeholderTextColor="#666"
+                style={styles.modalInput}
+                onChangeText={(t) => setNewAbsence({...newAbsence, end_date: t})}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setShowAbsenceModal(false)} style={[styles.modalButton, { backgroundColor: '#444' }]}>
+                  <Text style={styles.modalButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleAddAbsence} style={styles.modalButton}>
+                  <Text style={styles.modalButtonText}>Adicionar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+    );
+  };
+
+  const renderEscalasTab = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      {isAdminOrLeader && (
+        <View style={styles.adminActions}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleCompleteScale} disabled={saving}>
+            <Text style={styles.buttonText}>Concluir escala e Notificar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.primaryButton, { backgroundColor: '#333', marginTop: 10 }]} 
+            onPress={handleAutoGenerateScale}
+            disabled={saving}
+          >
+            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>Gerar escalas automáticamente</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {upcomingEvents.length > 0 ? (
+        upcomingEvents.map((event) => {
+          const isSelected = selectedEventId === event.id;
+          const eventDate = parseISO(event.event_date);
+          
+          return (
+            <View key={event.id} style={styles.eventGroup}>
+              <TouchableOpacity 
+                style={[styles.eventHeaderRow, isSelected && styles.activeEventHeader]}
+                onPress={() => setSelectedEventId(event.id!)}
+              >
+                <View style={styles.eventDateGroup}>
+                  <Text style={styles.eventDayName}>{format(eventDate, 'eee', { locale: ptBR })}</Text>
+                  <Text style={styles.eventDayNumber}>{format(eventDate, 'dd', { locale: ptBR })}</Text>
+                </View>
+                <View style={styles.eventTitleGroup}>
+                  <Text style={styles.eventTimeText}>{format(eventDate, 'HH:mm', { locale: ptBR })}</Text>
+                  <Text style={styles.eventTitleText}>{event.title}</Text>
+                </View>
+                <Ionicons name={isSelected ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+
+              {isSelected && (
+                <View style={styles.scheduleTable}>
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.columnHeader, { width: 120 }]}>Função</Text>
+                    <Text style={styles.columnHeader}>Voluntário</Text>
+                  </View>
+                  {eventSchedules.length > 0 ? (
+                    eventSchedules.map((sch, index) => (
+                      <View key={index} style={styles.tableRow}>
+                        <View style={styles.roleCellSmall}>
+                          <Text style={styles.roleTextSmall}>{sch.roles?.name}</Text>
+                        </View>
+                        <View style={styles.volunteerCell}>
+                          <View style={styles.avatarMini} />
+                          <Text style={styles.volunteerNameText}>{sch.profiles?.full_name}</Text>
+                          <View style={[styles.smallDot, { backgroundColor: sch.status === 'CONFIRMADO' ? theme.colors.success : '#ff9000' }]} />
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyTableText}>Ninguém escalado.</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        })
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="calendar-outline" size={48} color={theme.colors.surfaceHighlight} />
+          <Text style={styles.emptyText}>Sem eventos para este departamento.</Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  const renderMensalTab = () => (
+    <ScrollView style={styles.tabContent}>
+      <View style={styles.mensalHeader}>
+        <View style={styles.mensalControls}>
+          <View style={styles.dateControl}>
+            <TouchableOpacity onPress={() => changeMonth(-1)}>
+              <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.dateRangeText}>
+              {format(selectedMonth, 'MMMM / yyyy', { locale: ptBR })}
+            </Text>
+            <TouchableOpacity onPress={() => changeMonth(1)}>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.exportButton}>
+            <Ionicons name="download-outline" size={18} color="#000" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.eventInfo}>
-        <Text style={styles.eventTitle}>{item.title}</Text>
-        <Text style={styles.eventSubtitle}>
-          {item.departments?.name} • {format(parseISO(item.event_date), 'HH:mm')}
-        </Text>
+
+       <View style={styles.statusLegend}>
+        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#ff9000' }]} /><Text style={styles.legendText}>Pendente</Text></View>
+        <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: theme.colors.success }]} /><Text style={styles.legendText}>Confirmado</Text></View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.colors.border} />
-    </TouchableOpacity>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+        <View>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.columnHeader, { width: 100 }]}>Funções</Text>
+            {monthlyEvents.map(ev => (
+              <View key={ev.id} style={styles.dayColumn}>
+                <Text style={styles.dayHeaderText}>
+                  {format(parseISO(ev.event_date), 'eee, dd', { locale: ptBR })}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {roles.map((role) => (
+            <View key={role.id} style={styles.tableRow}>
+              <View style={styles.roleCell}>
+                <Text style={styles.roleText}>{role.name}</Text>
+              </View>
+              
+              {monthlyEvents.map(ev => {
+                const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+                return (
+                  <View key={ev.id} style={styles.nameCellDetailed}>
+                    {sch ? (
+                      <>
+                        <View style={[styles.avatarSmall, { backgroundColor: sch.status === 'CONFIRMADO' ? theme.colors.success : '#ff9000' }]} />
+                        <Text style={styles.nameTextSmall} numberOfLines={1}>{sch.profiles?.full_name?.split(' ')[0]}</Text>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.avatarEmpty} />
+                        <Text style={styles.nameTextSmallEmpty}>--</Text>
+                      </>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </ScrollView>
   );
 
   return (
     <View style={globalStyles.container}>
-      <View style={styles.header}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar eventos..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-        <TouchableOpacity 
-          style={styles.modeToggle}
-          onPress={() => setViewMode(viewMode === 'LISTA' ? 'CALENDARIO' : 'LISTA')}
-        >
-          <Ionicons name={viewMode === 'LISTA' ? 'calendar' : 'list'} size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {viewMode === 'LISTA' ? (
-        <>
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity 
-              style={[styles.tab, listTab === 'PROXIMOS' && styles.activeTab]}
-              onPress={() => setListTab('PROXIMOS')}
-            >
-              <Text style={[styles.tabText, listTab === 'PROXIMOS' && styles.activeTabText]}>Próximos</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, listTab === 'HISTORICO' && styles.activeTab]}
-              onPress={() => setListTab('HISTORICO')}
-            >
-              <Text style={[styles.tabText, listTab === 'HISTORICO' && styles.activeTabText]}>Histórico</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
-          ) : (
-            <FlatList
-              data={events}
-              keyExtractor={(item) => item.id!}
-              renderItem={renderEventItem}
-              contentContainerStyle={{ paddingBottom: 80 }}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={64} color={theme.colors.border} />
-                  <Text style={styles.emptyText}>Nenhum evento encontrado.</Text>
-                </View>
-              }
-            />
-          )}
-        </>
-      ) : (
-        <View style={styles.calendarContainer}>
-          <Calendar
-            theme={{
-              backgroundColor: theme.colors.background,
-              calendarBackground: theme.colors.background,
-              textSectionTitleColor: theme.colors.primary,
-              selectedDayBackgroundColor: theme.colors.primary,
-              selectedDayTextColor: '#000',
-              todayTextColor: theme.colors.primary,
-              dayTextColor: theme.colors.text,
-              textDisabledColor: theme.colors.border,
-              monthTextColor: theme.colors.text,
-              arrowColor: theme.colors.primary,
-            }}
-            markedDates={events.reduce((acc: any, ev) => {
-              const d = format(parseISO(ev.event_date), 'yyyy-MM-dd');
-              acc[d] = { marked: true, dotColor: theme.colors.primary };
-              return acc;
-            }, {})}
-            onDayPress={(day: any) => {
-              // Filtrar lista pela data selecionada ou abrir detalhe se houver apenas um?
-              // Por simplicidade, filtra a busca
-              setSearch(day.dateString);
-              setViewMode('LISTA');
-            }}
-          />
-        </View>
-      )}
-
-      {isLeader && (
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={() => router.push('/events/new' as any)}
-        >
-          <Ionicons name="add" size={32} color="#121212" />
-        </TouchableOpacity>
-      )}
+      {renderDepartmentChips()}
+      {renderTabHeader()}
+      {activeTab === 'DISPONIBILIDADE' && renderDisponibilidade()}
+      {activeTab === 'ESCALAS' && renderEscalasTab()}
+      {activeTab === 'MENSAL' && renderMensalTab()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+  deptChipsContainer: {
+    maxHeight: 50,
+    marginBottom: 10,
   },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  deptChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.sm,
-    height: 45,
-    marginRight: theme.spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    color: theme.colors.text,
-    marginLeft: theme.spacing.xs,
-  },
-  modeToggle: {
-    width: 45,
-    height: 45,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.sm,
-  },
-  activeTab: {
-    backgroundColor: theme.colors.primary,
-  },
-  tabText: {
-    color: theme.colors.textSecondary,
-    fontWeight: 'bold',
-  },
-  activeTabText: {
-    color: '#121212',
-  },
-  eventCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.sm,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  dateBadge: {
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    width: 60,
-    marginRight: theme.spacing.md,
+  activeDeptChip: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
-  dayText: {
-    color: theme.colors.primary,
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  monthText: {
-    color: theme.colors.textSecondary,
+  deptChipText: {
     fontSize: 10,
     fontWeight: 'bold',
+    color: theme.colors.textSecondary,
   },
-  eventInfo: {
+  activeDeptChipText: {
+    color: '#000',
+  },
+  tabHeader: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    padding: 2,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  tabButton: {
     flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
   },
-  eventTitle: {
-    color: theme.colors.text,
-    fontSize: 16,
+  activeTabButton: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  tabButtonText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: 'normal',
+  },
+  activeTabButtonText: {
+    color: theme.colors.primary,
     fontWeight: 'bold',
   },
-  eventSubtitle: {
+  tabContent: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: 5,
+  },
+  sectionSubtitle: {
+    fontSize: 11,
     color: theme.colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 16,
+  },
+  dayCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dayName: {
+    fontSize: 15,
+    fontWeight: 'normal',
+    color: theme.colors.text,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+  },
+  radioButtonSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  periodsContainer: {
+    flexDirection: 'row',
+    marginTop: 15,
+    justifyContent: 'flex-start',
+    gap: 10,
+  },
+  periodChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  activePeriodChip: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  periodText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginLeft: 5,
+  },
+  activePeriodText: {
+    fontSize: 11,
+    color: '#000',
+    marginLeft: 5,
+    fontWeight: 'bold',
+  },
+  absenceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 5,
+  },
+  absenceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 10,
+  },
+  absenceInput: {
+    flex: 1,
+  },
+  labelSmall: {
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  dateText: {
+    fontSize: 13,
+    color: theme.colors.text,
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  buttonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  adminActions: {
+    marginBottom: 20,
+  },
+  statusLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
+    gap: 12,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  smallDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 5,
+  },
+  legendText: {
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+  },
+  eventGroup: {
+    marginBottom: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  eventHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+  },
+  activeEventHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  eventDateGroup: {
+    alignItems: 'center',
+    width: 60,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border,
+    marginRight: 15,
+  },
+  eventDayName: {
+    fontSize: 10,
+    textTransform: 'uppercase',
+    color: theme.colors.textSecondary,
+  },
+  eventDayNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+  },
+  eventTitleGroup: {
+    flex: 1,
+  },
+  eventTimeText: {
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+  },
+  eventTitleText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  scheduleTable: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    padding: 10,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    marginBottom: 5,
+  },
+  columnHeader: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.colors.border,
+  },
+  roleCellSmall: {
+    width: 120,
+  },
+  roleTextSmall: {
     fontSize: 12,
-    marginTop: 2,
+    fontWeight: '500',
+    color: theme.colors.text,
+  },
+  volunteerCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarMini: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#333',
+    marginRight: 8,
+  },
+  volunteerNameText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  emptyTableText: {
+    textAlign: 'center',
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    padding: 15,
   },
   emptyState: {
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 60,
-    opacity: 0.5,
   },
   emptyText: {
     color: theme.colors.textSecondary,
     marginTop: 10,
+    fontSize: 13,
   },
-  calendarContainer: {
+  mensalHeader: {
+    marginBottom: 15,
+  },
+  mensalControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    overflow: 'hidden',
-    padding: theme.spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    height: 40,
   },
-  fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
+  dateRangeText: {
+    fontSize: 13,
+    color: theme.colors.text,
+    marginHorizontal: 15,
+  },
+  exportButton: {
     backgroundColor: theme.colors.primary,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    height: 40,
+    width: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+  },
+  dayColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dayHeaderText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+  },
+  roleCell: {
+    width: 100,
+    justifyContent: 'center',
+  },
+  roleText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  nameCellDetailed: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  eventDateLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    textTransform: 'capitalize'
+  },
+  emptyEventsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 20
+  },
+  avatarSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#333',
+    marginBottom: 2,
+  },
+  avatarEmpty: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#1a1a1a',
+    marginBottom: 2,
+  },
+  nameTextSmall: {
+    fontSize: 9,
+    color: theme.colors.textSecondary,
+  },
+  nameTextSmallEmpty: {
+    fontSize: 8,
+    color: theme.colors.border,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: 20,
+  },
+  modalInput: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 10,
+    padding: 15,
+    color: theme.colors.text,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  modalButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
 });

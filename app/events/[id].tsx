@@ -65,8 +65,22 @@ export default function EventDetailScreen() {
     
     if (ev) {
       setEvent(ev);
-      const { data: r } = await supabase.from('roles').select('*').eq('department_id', ev.department_id);
-      setRoles(r || []);
+      // Busca funções de todos os departamentos vinculados ao evento
+      const deptIds = ev.event_departments?.map((ed: any) => ed.departments?.id).filter(Boolean) || [];
+      
+      if (deptIds.length > 0) {
+        const { data: r } = await supabase
+          .from('roles')
+          .select('*')
+          .in('department_id', deptIds);
+        setRoles(r || []);
+      } else if (ev.department_id) {
+        // Fallback para o campo antigo caso a junção falhe
+        const { data: r } = await supabase.from('roles').select('*').eq('department_id', ev.department_id);
+        setRoles(r || []);
+      } else {
+        setRoles([]);
+      }
     }
     
     setSchedules(sch || []);
@@ -178,7 +192,9 @@ export default function EventDetailScreen() {
                 <Text style={styles.descriptionText}>{event?.description || 'Nenhuma descrição fornecida.'}</Text>
                 <View style={styles.deptBadge}>
                   <Ionicons name="pricetag-outline" size={12} color={theme.colors.primary} />
-                  <Text style={styles.deptText}>{event?.departments?.name}</Text>
+                  <Text style={styles.deptText}>
+                    {event?.event_departments?.map((ed: any) => ed.departments?.name).join(', ') || 'Sem departamento'}
+                  </Text>
                 </View>
               </View>
 

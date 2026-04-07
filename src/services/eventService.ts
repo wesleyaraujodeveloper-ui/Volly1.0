@@ -93,6 +93,21 @@ export const eventService = {
    * Lista os próximos eventos com filtros de busca.
    */
   listUpcomingEvents: async (filters?: { name?: string; department_id?: string; date?: string }) => {
+    let eventIds: string[] = [];
+
+    // 1. Se filtrar por departamento, busca os IDs na tabela de junção primeiro
+    if (filters?.department_id) {
+      const { data: junctionData } = await supabase
+        .from('event_departments')
+        .select('event_id')
+        .eq('department_id', filters.department_id);
+      
+      if (junctionData) {
+        eventIds = junctionData.map(ed => ed.event_id);
+      }
+    }
+
+    // 2. Monta a query principal
     let query = supabase
       .from('events')
       .select('*, event_departments(departments(id, name))')
@@ -104,7 +119,12 @@ export const eventService = {
     }
 
     if (filters?.department_id) {
-      query = query.eq('department_id', filters.department_id);
+      // Filtra por ID principal OU IDs encontrados na junção
+      if (eventIds.length > 0) {
+        query = query.or(`department_id.eq.${filters.department_id},id.in.(${eventIds.join(',')})`);
+      } else {
+        query = query.eq('department_id', filters.department_id);
+      }
     }
 
     if (filters?.date) {
@@ -135,7 +155,7 @@ export const eventService = {
   getEventDetails: async (eventId: string) => {
     const { data, error } = await supabase
       .from('events')
-      .select('*, departments(name)')
+      .select('*, event_departments(departments(id, name))')
       .eq('id', eventId)
       .single();
 

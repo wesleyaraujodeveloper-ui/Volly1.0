@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
+import { availabilityService, UserDepartment } from '../../src/services/availabilityService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function PerfilScreen() {
+  const router = useRouter();
   const { user, clearSession } = useAppStore();
   const [loading, setLoading] = useState(false);
+  const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
+  const [loadingDepts, setLoadingDepts] = useState(true);
 
-  // Mock de dados financeiros (isso virá do banco depois)
-  const billInfo = {
-    currentBalance: 125.50,
-    monthlyCost: 45.00,
-    dueDate: '10/10/2026'
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const { data } = await availabilityService.getUserDepartments();
+      setUserDepartments(data || []);
+    } catch (error) {
+      console.error('Error loading depts:', error);
+    } finally {
+      setLoadingDepts(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -27,8 +40,16 @@ export default function PerfilScreen() {
           text: 'Sair', 
           style: 'destructive',
           onPress: async () => {
-            await supabase.auth.signOut();
-            clearSession();
+            try {
+              setLoading(true);
+              await supabase.auth.signOut();
+            } catch (error) {
+              console.error('Logout error:', error);
+            } finally {
+              clearSession();
+              setLoading(false);
+              router.replace('/(auth)/login');
+            }
           }
         }
       ]
@@ -53,7 +74,7 @@ export default function PerfilScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Header com Gradiente */}
       <LinearGradient
         colors={[theme.colors.primary, '#FFA726']}
@@ -71,40 +92,30 @@ export default function PerfilScreen() {
         <Text style={styles.userEmail}>{user?.email}</Text>
       </LinearGradient>
 
-      {/* Seção Financeira */}
+      {/* Seção Equipes (Real time) */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Financeiro</Text>
+        <Text style={styles.sectionTitle}>Minhas Equipes</Text>
         
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.cardLabel}>Saldo Atual</Text>
-              <Text style={[styles.cardValue, { color: '#4CAF50' }]}>
-                R$ {billInfo.currentBalance.toFixed(2)}
-              </Text>
-            </View>
-            <Ionicons name="wallet-outline" size={32} color="#4CAF50" />
+        {loadingDepts ? (
+          <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
+        ) : userDepartments.length > 0 ? (
+          <View style={styles.teamsGrid}>
+            {userDepartments.map((dept, index) => (
+              <View key={index} style={styles.teamCard}>
+                <View style={styles.teamIconBox}>
+                  <Ionicons name="people" size={24} color={theme.colors.primary} />
+                </View>
+                <Text style={styles.teamNameText} numberOfLines={1}>
+                  {dept.departments.name}
+                </Text>
+              </View>
+            ))}
           </View>
-          
-          <View style={styles.divider} />
-          
-          <View style={styles.row}>
-            <View>
-              <Text style={styles.cardLabel}>Gasto do Mês</Text>
-              <Text style={[styles.cardValue, { color: '#F44336' }]}>
-                R$ {billInfo.monthlyCost.toFixed(2)}
-              </Text>
-            </View>
-            <View style={styles.dateInfo}>
-              <Text style={styles.dateLabel}>Vence em</Text>
-              <Text style={styles.dateValue}>{billInfo.dueDate}</Text>
-            </View>
+        ) : (
+          <View style={styles.emptyTeamsCard}>
+            <Text style={styles.emptyTeamsText}>Você ainda não faz parte de nenhuma equipe.</Text>
           </View>
-
-          <TouchableOpacity style={styles.payButton}>
-            <Text style={styles.payButtonText}>Ver Detalhes</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       {/* Configurações */}
@@ -182,6 +193,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   userName: {
     color: '#121212',
@@ -202,58 +214,47 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
   },
-  card: {
+  teamsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  teamCard: {
+    width: '48%',
     backgroundColor: theme.colors.surface,
+    padding: 15,
     borderRadius: 20,
-    padding: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  cardLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  teamIconBox: {
+    width: 45,
+    height: 45,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 106, 0, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  cardValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginTop: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: 15,
-  },
-  dateInfo: {
-    alignItems: 'flex-end',
-  },
-  dateLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 10,
-  },
-  dateValue: {
+  teamNameText: {
     color: theme.colors.text,
     fontSize: 14,
-    fontWeight: '600',
-  },
-  payButton: {
-    backgroundColor: 'rgba(255, 152, 0, 0.1)',
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-  },
-  payButtonText: {
-    color: theme.colors.primary,
     fontWeight: 'bold',
+  },
+  emptyTeamsCard: {
+    backgroundColor: theme.colors.surface,
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  emptyTeamsText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
   },
   menuItem: {
     flexDirection: 'row',

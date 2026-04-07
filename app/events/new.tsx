@@ -194,6 +194,16 @@ export default function EventsScreen() {
               value={title}
               onChangeText={setTitle}
             />
+
+            <Text style={styles.label}>Informações / Descrição</Text>
+            <TextInput
+              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+              placeholder="Ex: Trazer partituras e chegar 15min antes..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
             
             <Text style={styles.label}>Selecione as Datas no Calendário</Text>
             <View style={styles.calendarContainer}>

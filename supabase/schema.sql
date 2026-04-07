@@ -167,13 +167,17 @@ FOR INSERT WITH CHECK (
 -- --- RPCs DE ADMINISTRAÇÃO PRIVILEGIADA ---
 
 -- Função segurada para criar departamentos
-CREATE OR REPLACE FUNCTION create_department(p_name TEXT, p_desc TEXT DEFAULT NULL)
+-- Remover todas as assinaturas possíveis para limpar o conflito (Apenas se for rodar manualmente)
+-- DROP FUNCTION IF EXISTS create_department(TEXT, TEXT);
+-- DROP FUNCTION IF EXISTS create_department(TEXT, TEXT, UUID);
+
+-- Criar a versão definitiva com 3 parâmetros
+CREATE OR REPLACE FUNCTION create_department(p_name TEXT, p_desc TEXT DEFAULT NULL, p_leader_id UUID DEFAULT NULL)
 RETURNS public.departments AS $$
 DECLARE
     v_admin_count INT;
     v_new_dept public.departments;
 BEGIN
-    -- Verifica se quem chama é ADMIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
     WHERE id = auth.uid() AND access_level = 'ADMIN';
 
@@ -181,12 +185,53 @@ BEGIN
         RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem criar departamentos.';
     END IF;
 
-    -- Insere o departamento
-    INSERT INTO public.departments (name, description) 
-    VALUES (p_name, p_desc)
+    INSERT INTO public.departments (name, description, leader_id) 
+    VALUES (p_name, p_desc, p_leader_id)
     RETURNING * INTO v_new_dept;
 
     RETURN v_new_dept;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Adição da função de atualização de líder
+CREATE OR REPLACE FUNCTION update_department_leader(p_dept_id UUID, p_leader_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level = 'ADMIN') THEN
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem alterar líderes de departamentos.';
+    END IF;
+
+    UPDATE public.departments 
+    SET leader_id = p_leader_id
+    WHERE id = p_dept_id;
+
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Função para gerenciar o vínculo entre usuários e departamentos
+CREATE OR REPLACE FUNCTION manage_user_department(p_user_id UUID, p_dept_id UUID, p_action TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_admin_count INT;
+BEGIN
+    SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
+    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER');
+
+    IF v_admin_count = 0 THEN
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e LÍDERES podem gerenciar membros.';
+    END IF;
+
+    IF p_action = 'ADD' THEN
+        INSERT INTO public.user_departments (user_id, department_id)
+        VALUES (p_user_id, p_dept_id)
+        ON CONFLICT DO NOTHING;
+    ELSIF p_action = 'REMOVE' THEN
+        DELETE FROM public.user_departments
+        WHERE user_id = p_user_id AND department_id = p_dept_id;
+    END IF;
+
+    RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -293,3 +338,21 @@ CREATE TABLE IF NOT EXISTS public.event_departments (
 
 ALTER TABLE public.event_departments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Leitura global de departamentos do evento" ON public.event_departments FOR SELECT USING (true);
+
+-- --- DISPONIBILIDADE POR EVENTO ESPECÍFICO ---
+
+CREATE TABLE IF NOT EXISTS public.user_event_availabilities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    event_id UUID REFERENCES public.events(id) ON DELETE CASCADE,
+    periods TEXT[] DEFAULT '{}',
+    is_available BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, event_id)
+);
+
+ALTER TABLE public.user_event_availabilities ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuários gerenciam própria disponibilidade por evento" 
+ON public.user_event_availabilities FOR ALL USING (auth.uid() = user_id);
