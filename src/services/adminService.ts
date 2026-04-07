@@ -45,11 +45,18 @@ export const adminService = {
          body: {
            email: cleanEmail,
            name: name,
-           inviteUrl: 'https://seusistema.volly.app.br' // Substitua pela URL final!
-         }
-       }).then(res => console.log('Edge Function (E-mail) Response:', res.data))
-         .catch(err => console.error('Erro ao chamar Edge Function (E-mail):', err));
-    }
+           inviteUrl: 'https://volly-app-nu.vercel.app'
+          }
+        }).then(res => {
+          if (res.error) {
+            console.error('Erro retornado pela Edge Function:', res.error);
+          } else {
+            console.log('E-mail enviado com sucesso! Resposta do Resend:', res.data);
+          }
+        }).catch(err => {
+          console.error('Falha crítica ao chamar Edge Function:', err);
+        });
+     }
 
     return { data, error };
   },
