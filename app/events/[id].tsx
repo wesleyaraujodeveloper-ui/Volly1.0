@@ -17,7 +17,7 @@ type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAppStore();
+  const { user, providerToken } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>('INFO');
   const [loading, setLoading] = useState(true);
   
@@ -61,7 +61,7 @@ export default function EventDetailScreen() {
     setLoading(true);
     const { data: ev } = await eventService.getEventDetails(id);
     const { data: sch } = await scheduleService.listSchedulesByEvent(id);
-    const { data: pl } = await supabase.from('playlists').select('*').eq('event_id', id).single();
+    const { data: pl } = await supabase.from('playlists').select('*').eq('event_id', id).maybeSingle();
     
     if (ev) {
       setEvent(ev);
@@ -77,7 +77,7 @@ export default function EventDetailScreen() {
     await loadMessages();
 
     if (ev && user) {
-      const active = chatService.isChatActive(ev.event_date, ev.chat_window_hours || 4);
+      const active = chatService.isChatActive(ev.event_date, ev.end_date);
       const can = await chatService.canUserPost(id, user.id, user.role || 'VOLUNTÁRIO');
       setChatActive(active);
       setCanChat(can);
@@ -137,7 +137,7 @@ export default function EventDetailScreen() {
       user_id: userId,
       role_id: selectedRoleId,
       status: 'PENDENTE'
-    });
+    }, providerToken);
 
     if (error) {
       Alert.alert('Erro', error.message);
@@ -152,13 +152,13 @@ export default function EventDetailScreen() {
   return (
     <View style={globalStyles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/')}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{event?.title}</Text>
           <Text style={styles.headerDate}>
-            {format(parseISO(event?.event_date), "eeee, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+            {event?.event_date && format(parseISO(event.event_date), "eeee, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
           </Text>
         </View>
       </View>
@@ -249,7 +249,7 @@ export default function EventDetailScreen() {
                         {assigned ? (
                           <View style={styles.assignedUserCard}>
                             <Text style={styles.assignedUserName}>{assigned.profiles?.full_name}</Text>
-                            <TouchableOpacity onPress={() => scheduleService.removeSchedule(assigned.id!).then(() => loadData())}>
+                            <TouchableOpacity onPress={() => scheduleService.removeSchedule(assigned.id!, providerToken).then(() => loadData())}>
                               <Ionicons name="close-circle" size={18} color={theme.colors.error} />
                             </TouchableOpacity>
                           </View>

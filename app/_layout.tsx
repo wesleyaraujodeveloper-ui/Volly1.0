@@ -4,9 +4,11 @@ import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-rout
 import { useAppStore } from '../src/store/useAppStore';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/services/supabase';
+import { useNotifications } from '../src/hooks/useNotifications';
 
 export default function RootLayout() {
-  const { user, setUser, isLoadingData, setIsLoadingData } = useAppStore();
+  useNotifications();
+  const { user, setUser, isLoadingData, setIsLoadingData, setProviderToken } = useAppStore();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
@@ -20,6 +22,10 @@ export default function RootLayout() {
       try {
         if (session?.user) {
           console.log('DEBUG: Usuário autenticado:', session.user.email);
+          
+          if (session.provider_token) {
+            setProviderToken(session.provider_token);
+          }
           
           // Busca o perfil pelo ID (já deve ter sido criado pelo Trigger no BD)
           const { data: profile, error } = await supabase
@@ -50,6 +56,7 @@ export default function RootLayout() {
         } else {
           console.log('DEBUG: Nenhuma sessão ativa.');
           setUser(null);
+          setProviderToken(null);
         }
       } catch (err) {
         console.error('DEBUG: Crash no handleSession:', err);

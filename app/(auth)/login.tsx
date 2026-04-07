@@ -14,6 +14,13 @@ export default function LoginScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const handleGoogleLogin = async () => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement && typeof activeElement.blur === 'function') {
+        activeElement.blur();
+      }
+    }
+
     try {
       setIsAuthenticating(true);
       console.log('--- INICIANDO OAUTH ---');
@@ -29,8 +36,10 @@ export default function LoginScreen() {
         provider: 'google',
         options: {
           redirectTo,
+          scopes: 'https://www.googleapis.com/auth/calendar.events',
           queryParams: {
-            prompt: 'select_account',
+            prompt: 'consent',
+            access_type: 'offline',
           },
         },
       });

@@ -6,22 +6,86 @@ export interface Event {
   title: string;
   description?: string;
   event_date: string;
+  end_date?: string; // Novo campo para horário de término
   department_id?: string;
+  department_ids?: string[];
   chat_window_hours?: number;
   created_at?: string;
   updated_at?: string;
+  // Campo de retorno virtual
+  event_departments?: { departments: { name: string, id: string } }[];
 }
 
 export const eventService = {
   /**
-   * Cria um novo evento.
+   * Cria múltiplos eventos (um por data) ou evento único.
    */
-  createEvent: async (event: Event) => {
+  createEvents: async (events: Event[]) => {
+    const results = [];
+    for (const event of events) {
+      const { department_ids, ...rest } = event;
+      const eventData = { 
+        ...rest, 
+        department_id: department_ids && department_ids.length > 0 ? department_ids[0] : undefined 
+      };
+      
+      // 1. Inserir Evento
+      const { data: newEvent, error: eventErr } = await supabase
+        .from('events')
+        .insert([eventData])
+        .select()
+        .single();
+      
+      if (eventErr) return { error: eventErr };
+
+      // 2. Junção de departamentos
+      if (department_ids && department_ids.length > 0) {
+        const junctionData = department_ids.map(deptId => ({
+          event_id: newEvent.id,
+          department_id: deptId
+        }));
+        await supabase.from('event_departments').insert(junctionData);
+      }
+      results.push(newEvent);
+    }
+    return { data: results, error: null };
+  },
+
+  updateEvent: async (id: string, event: Partial<Event>) => {
+    const { department_ids, ...eventData } = event;
     const { data, error } = await supabase
       .from('events')
-      .insert([event])
-      .select();
+      .update(eventData)
+      .eq('id', id)
+      .select()
+      .single();
 
+    if (error) return { error };
+
+    if (department_ids) {
+      // Atualiza departamentos (delete + insert)
+      await supabase.from('event_departments').delete().eq('event_id', id);
+      const junctionData = department_ids.map(deptId => ({
+        event_id: id,
+        department_id: deptId
+      }));
+      await supabase.from('event_departments').insert(junctionData);
+    }
+
+    return { data, error };
+  },
+
+  deleteEvent: async (id: string) => {
+    return await supabase.from('events').delete().eq('id', id);
+  },
+
+  listHistory: async (startDate: string, endDate: string) => {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*, event_departments(departments(id, name))')
+      .gte('event_date', `${startDate}T00:00:00Z`)
+      .lte('event_date', `${endDate}T23:59:59Z`)
+      .order('event_date', { ascending: false });
     return { data, error };
   },
 
@@ -31,7 +95,7 @@ export const eventService = {
   listUpcomingEvents: async (filters?: { name?: string; department_id?: string; date?: string }) => {
     let query = supabase
       .from('events')
-      .select('*, departments(name)')
+      .select('*, event_departments(departments(id, name))')
       .gte('event_date', new Date().toISOString())
       .order('event_date', { ascending: true });
 
@@ -57,7 +121,7 @@ export const eventService = {
   listPastEvents: async (limit: number = 10) => {
     const { data, error } = await supabase
       .from('events')
-      .select('*, departments(name)')
+      .select('*, event_departments(departments(id, name))')
       .lt('event_date', new Date().toISOString())
       .order('event_date', { ascending: false })
       .limit(limit);

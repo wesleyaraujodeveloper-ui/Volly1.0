@@ -47,4 +47,28 @@ To learn more about developing your project with Expo, look at the following res
 Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Deployment to Vercel
+
+This project is configured for deployment on [Vercel](https://vercel.com) as a web application.
+
+### Prerequisites
+
+- A [Vercel](https://vercel.com) account.
+- Your project pushed to a [GitHub](https://github.com) repository.
+
+### Configuration
+
+1. **Vercel Project Setup**:
+   - In the Vercel dashboard, click **Add New** > **Project**.
+   - Connect your GitHub repository.
+   - Vercel will automatically detect the configuration in `vercel.json`.
+
+2. **Environment Variables**:
+   - In the Vercel project settings, go to **Environment Variables**.
+   - Add the following keys from your `.env` file:
+     - `EXPO_PUBLIC_SUPABASE_URL`
+     - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+3. **Deploy**:
+   - Click **Deploy**. Vercel will run `npx expo export --platform web` and serve the `dist` folder.
+

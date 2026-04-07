@@ -27,11 +27,14 @@ export const chatService = {
       .limit(limit);
   },
 
-  isChatActive(eventDate: string, windowHours: number = 4): boolean {
-    const start = new Date(eventDate).getTime();
-    const end = start + (windowHours * 60 * 60 * 1000);
+  isChatActive(eventDate: string, endDate?: string): boolean {
+    const chatStart = new Date(eventDate).getTime() - (60 * 60 * 1000); // 1h antes
+    const chatEnd = endDate 
+      ? new Date(endDate).getTime() + (60 * 60 * 1000) // 1h depois do fim
+      : new Date(eventDate).getTime() + (4 * 60 * 60 * 1000); // Default 4h se não houver fim
+      
     const now = new Date().getTime();
-    return now < end;
+    return now >= chatStart && now <= chatEnd;
   },
 
   async canUserPost(eventId: string, userId: string, role: string): Promise<boolean> {
