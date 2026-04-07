@@ -27,7 +27,7 @@ export default function LoginScreen() {
       
       const redirectTo = AuthSession.makeRedirectUri({
         scheme: 'vollyapp',
-        path: '(auth)/auth-callback',
+        path: 'auth-callback',
       });
       
       console.log('DEBUG: URL de Redirecionamento gerada:', redirectTo);
