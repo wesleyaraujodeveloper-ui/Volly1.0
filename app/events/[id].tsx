@@ -39,6 +39,7 @@ export default function EventDetailScreen() {
   const [roles, setRoles] = useState<any[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [balancedVolunteers, setBalancedVolunteers] = useState<any[]>([]);
+  const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -125,41 +126,57 @@ export default function EventDetailScreen() {
 
   const canEditPlaylist = user?.role === 'ADMIN' || user?.role === 'LÍDER';
 
-  const handleAddSong = async () => {
-    if (!newSong.name || !canEditPlaylist) return;
-    const updatedSongs = [...songs, newSong];
-    
-    const { error } = await supabase
-      .from('playlists')
-      .upsert({ event_id: id, name: 'Default', links: updatedSongs }, { onConflict: 'event_id' });
-
-    if (!error) {
-      setSongs(updatedSongs);
-      setNewSong({ name: '', youtube: '', spotify: '' });
+  const handleAddSongToList = () => {
+    if (!newSong.name) {
+      Alert.alert('Erro', 'O nome da música é obrigatório.');
+      return;
     }
+    setSongs([...songs, { ...newSong }]);
+    setNewSong({ name: '', youtube: '', spotify: '' });
   };
 
-  const handleRemoveSong = async (index: number) => {
+  const handleRemoveSongFromList = (index: number) => {
+    const updatedSongs = songs.filter((_, i) => i !== index);
+    setSongs(updatedSongs);
+  };
+
+  const handleConfirmPlaylist = async () => {
     if (!canEditPlaylist) return;
     
-    const updatedSongs = songs.filter((_, i) => i !== index);
-    
-    const { error } = await supabase
-      .from('playlists')
-      .upsert({ event_id: id, name: 'Default', links: updatedSongs }, { onConflict: 'event_id' });
+    setIsSavingPlaylist(true);
+    try {
+      const { error } = await supabase
+        .from('playlists')
+        .upsert({ 
+          event_id: id, 
+          name: 'Setlist Principal', 
+          links: songs 
+        }, { onConflict: 'event_id' });
 
-    if (!error) {
-      setSongs(updatedSongs);
-    } else {
-      Alert.alert('Erro', 'Não foi possível remover a música.');
+      if (error) throw error;
+      
+      Alert.alert('Sucesso', 'Playlist atualizada com sucesso!');
+    } catch (error: any) {
+      Alert.alert('Erro', 'Não foi possível salvar a playlist: ' + error.message);
+    } finally {
+      setIsSavingPlaylist(false);
     }
   };
 
   const openSearchVolunteers = async (roleId: string) => {
     setSelectedRoleId(roleId);
     setIsAddingSchedule(true);
-    const { data } = await scheduleService.getVolunteerBalancing(event.department_id, event.event_date);
-    setBalancedVolunteers(data || []);
+    
+    // Encontrar o departamento correto desta função específica
+    const role = roles.find(r => r.id === roleId);
+    const deptId = role?.department_id || event.department_id;
+
+    if (deptId) {
+      const { data } = await scheduleService.getVolunteerBalancing(deptId, event.event_date);
+      setBalancedVolunteers(data || []);
+    } else {
+      setBalancedVolunteers([]);
+    }
   };
 
   const assignVolunteer = async (userId: string) => {
@@ -218,28 +235,39 @@ export default function EventDetailScreen() {
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Playlist / Setlist</Text>
-                {songs.length > 0 ? (
+                {songs && songs.length > 0 ? (
                   songs.map((song, index) => (
                     <View key={index} style={styles.songCard}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.songName} numberOfLines={1}>{song.name}</Text>
+                        <Text style={styles.songName} numberOfLines={1}>
+                          {song.name}
+                        </Text>
                       </View>
                       <View style={styles.songActions}>
-                        {song.youtube && (
-                          <TouchableOpacity onPress={() => Linking.openURL(song.youtube)} style={styles.actionButtonCircle}>
+                        {song.youtube ? (
+                          <TouchableOpacity 
+                            onPress={() => Linking.openURL(song.youtube!)} 
+                            style={styles.actionButtonCircle}
+                          >
                             <Ionicons name="logo-youtube" size={18} color="#FF0000" />
                           </TouchableOpacity>
-                        )}
-                        {song.spotify && (
-                          <TouchableOpacity onPress={() => Linking.openURL(song.spotify)} style={styles.actionButtonCircle}>
+                        ) : null}
+                        {song.spotify ? (
+                          <TouchableOpacity 
+                            onPress={() => Linking.openURL(song.spotify!)} 
+                            style={styles.actionButtonCircle}
+                          >
                             <Ionicons name="musical-notes" size={18} color="#1DB954" />
                           </TouchableOpacity>
-                        )}
-                        {canEditPlaylist && (
-                          <TouchableOpacity onPress={() => handleRemoveSong(index)} style={styles.actionButtonCircle}>
+                        ) : null}
+                        {canEditPlaylist ? (
+                          <TouchableOpacity 
+                            onPress={() => handleRemoveSongFromList(index)} 
+                            style={styles.actionButtonCircle}
+                          >
                             <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
                           </TouchableOpacity>
-                        )}
+                        ) : null}
                       </View>
                     </View>
                   ))
@@ -247,9 +275,9 @@ export default function EventDetailScreen() {
                   <Text style={styles.emptyTextSmaller}>Nenhuma música adicionada ainda.</Text>
                 )}
 
-                {canEditPlaylist && (
+                {canEditPlaylist ? (
                   <View style={styles.addSongForm}>
-                    <Text style={styles.addSongTitle}>Adicionar música ao repertório</Text>
+                    <Text style={styles.addSongTitle}>Adicionar música ao rascunho</Text>
                     <TextInput
                       style={styles.songInput}
                       placeholder="Nome da música"
@@ -273,11 +301,28 @@ export default function EventDetailScreen() {
                         onChangeText={(t) => setNewSong({ ...newSong, spotify: t })}
                       />
                     </View>
-                    <TouchableOpacity style={styles.confirmAddSong} onPress={handleAddSong}>
-                      <Text style={styles.confirmAddSongText}>Confirmar Músicas</Text>
+                    
+                    <TouchableOpacity 
+                      style={styles.addToListBtn} 
+                      onPress={handleAddSongToList}
+                    >
+                      <Ionicons name="add-circle" size={20} color="#121212" />
+                      <Text style={styles.addToListBtnText}>Adicionar à Lista</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={[styles.confirmAddSong, isSavingPlaylist ? { opacity: 0.7 } : null]} 
+                      onPress={handleConfirmPlaylist}
+                      disabled={isSavingPlaylist}
+                    >
+                      {isSavingPlaylist ? (
+                        <ActivityIndicator size="small" color="#121212" />
+                      ) : (
+                        <Text style={styles.confirmAddSongText}>Confirmar Músicas</Text>
+                      )}
                     </TouchableOpacity>
                   </View>
-                )}
+                ) : null}
               </View>
             </View>
           </ScrollView>
@@ -531,10 +576,26 @@ const styles = StyleSheet.create({
   },
   confirmAddSong: {
     backgroundColor: theme.colors.primary,
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    marginTop: 12,
+    elevation: 2,
+  },
+  addToListBtn: {
+    backgroundColor: theme.colors.text,
+    padding: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
+  },
+  addToListBtnText: {
+    color: '#121212',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    fontSize: 13,
   },
   confirmAddSongText: {
     color: '#121212',

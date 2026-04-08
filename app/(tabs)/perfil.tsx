@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -10,8 +10,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function PerfilScreen() {
   const router = useRouter();
-  const { user, clearSession } = useAppStore();
+  const { user, clearSession, setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
 
@@ -56,6 +57,50 @@ export default function PerfilScreen() {
     );
   };
 
+  const handleSyncGooglePhoto = async () => {
+    try {
+      setIsSyncing(true);
+      
+      // 1. Pegar dados atuais do usuário logado no Supabase Auth
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !authUser) {
+        throw new Error('Não foi possível obter dados da sua conta Google.');
+      }
+
+      // 2. Extrair a foto (o Google geralmente usa 'picture' ou 'avatar_url' no metadata)
+      const photoUrl = authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url;
+
+      if (!photoUrl) {
+        Alert.alert('Aviso', 'Não encontramos uma foto vinculada à sua conta Google.');
+        return;
+      }
+
+      // 3. Atualizar a tabela public.profiles
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: photoUrl })
+        .eq('id', user?.id);
+
+      if (updateError) throw updateError;
+
+      // 4. Atualizar o estado global (Zustand) para refletir no app todo imediatamente
+      if (user) {
+        setUser({
+          ...user,
+          avatar_url: photoUrl
+        });
+      }
+
+      Alert.alert('Sucesso', 'Sua foto do Google foi sincronizada com sucesso!');
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      Alert.alert('Erro', error.message || 'Falha ao sincronizar foto.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Excluir Conta',
@@ -82,14 +127,34 @@ export default function PerfilScreen() {
       >
         <View style={styles.avatarContainer}>
            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={50} color={theme.colors.primary} />
+              {user?.avatar_url ? (
+                <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={50} color={theme.colors.primary} />
+              )}
            </View>
            <View style={styles.roleBadge}>
              <Text style={styles.roleBadgeText}>{user?.role}</Text>
            </View>
+           
+           <TouchableOpacity 
+             style={styles.syncIconButton} 
+             onPress={handleSyncGooglePhoto}
+             disabled={isSyncing}
+           >
+             {isSyncing ? (
+               <ActivityIndicator size="small" color="white" />
+             ) : (
+               <Ionicons name="sync-outline" size={16} color="white" />
+             )}
+           </TouchableOpacity>
         </View>
         <Text style={styles.userName}>{user?.name || 'Voluntário'}</Text>
         <Text style={styles.userEmail}>{user?.email}</Text>
+        
+        <TouchableOpacity style={styles.syncLink} onPress={handleSyncGooglePhoto}>
+          <Text style={styles.syncLinkText}>Sincronizar foto do Google</Text>
+        </TouchableOpacity>
       </LinearGradient>
 
       {/* Seção Equipes (Real time) */}
@@ -177,6 +242,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: 'white',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  syncIconButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: theme.colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   roleBadge: {
     position: 'absolute',
@@ -203,6 +286,18 @@ const styles = StyleSheet.create({
   userEmail: {
     color: 'rgba(0,0,0,0.6)',
     fontSize: 14,
+    marginBottom: 10,
+  },
+  syncLink: {
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  syncLinkText: {
+    color: '#121212',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   section: {
     paddingHorizontal: 20,

@@ -1,112 +1,578 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { globalStyles, theme } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useState, useEffect, useCallback } from 'react';
+import { feedService } from '../../src/services/feedService';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function FeedScreen() {
-  const user = useAppStore(state => state.user);
+  const { user } = useAppStore();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [nextEvent, setNextEvent] = useState<any>(null);
+  const [songs, setSongs] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [nextEv, recommendedSongs, socialPosts] = await Promise.all([
+        feedService.getNextUserEvent(user.id),
+        feedService.getRecommendedSongs(10),
+        feedService.listPosts()
+      ]);
+
+      setNextEvent(nextEv.data);
+      setSongs(recommendedSongs.data || []);
+      setPosts(socialPosts.data || []);
+    } catch (error) {
+      console.error('Error loading feed:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleImagePick = async () => {
+    Alert.alert(
+      'Selecionar Foto',
+      'Escolha de onde você deseja selecionar a imagem para o mural:',
+      [
+        {
+          text: 'Câmera',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permissão Negada', 'Precisamos de acesso à câmera para tirar fotos.');
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.8,
+            });
+            if (!result.canceled) setSelectedImage(result.assets[0].uri);
+          }
+        },
+        {
+          text: 'Galeria',
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permissão Negada', 'Precisamos de acesso à galeria para selecionar fotos.');
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.8,
+            });
+            if (!result.canceled) setSelectedImage(result.assets[0].uri);
+          }
+        },
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
+  };
+
+  const handleCreatePost = async () => {
+    if ((!newPostContent.trim() && !selectedImage) || !user) return;
+    setIsPosting(true);
+    
+    try {
+      let imageUrl = null;
+
+      // Se houver uma imagem selecionada, faz o upload primeiro
+      if (selectedImage) {
+        const uploadRes = await feedService.uploadPostImage(selectedImage);
+        if (uploadRes.error) {
+          throw new Error('Falha ao fazer upload da imagem.');
+        }
+        imageUrl = uploadRes.publicUrl;
+      }
+
+      const { error } = await feedService.createPost(user.id, newPostContent.trim(), imageUrl || undefined);
+      
+      if (!error) {
+        setNewPostContent('');
+        setSelectedImage(null);
+        loadData();
+      } else {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Error creating post:', error);
+      Alert.alert('Erro', error.message || 'Falha ao criar postagem.');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+
+  const handleLike = async (postId: string) => {
+    if (!user) return;
+    await feedService.toggleLike(postId, user.id);
+    loadData(); // Recarrega para atualizar contador
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View style={[globalStyles.container, globalStyles.center]}>
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.dateText}>{format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
+        <Text style={styles.greeting}>Olá, {user?.name?.split(' ')[0] || 'Voluntário'}! 👋</Text>
+      </View>
+      <View style={styles.avatarContainer}>
+        {user?.avatar_url ? (
+          <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderNextMission = () => {
+    if (!nextEvent) return null;
+
+    const event = nextEvent.events;
+    const role = nextEvent.roles;
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sua Próxima Missão</Text>
+        <TouchableOpacity style={styles.missionCard} activeOpacity={0.9}>
+          <View style={styles.missionHeader}>
+            <View style={styles.missionTag}>
+              <Text style={styles.missionTagText}>EM BREVE</Text>
+            </View>
+            <Text style={styles.missionTime}>{format(new Date(event.event_date), 'HH:mm')}</Text>
+          </View>
+          
+          <Text style={styles.missionTitle}>{event.title}</Text>
+          <Text style={styles.missionRole}>Sua função: <Text style={{ color: theme.colors.primary }}>{role?.name || 'Geral'}</Text></Text>
+          
+          <View style={styles.missionFooter}>
+            <View style={styles.deptInfo}>
+              <Ionicons name="people-outline" size={14} color={theme.colors.textSecondary} />
+              <Text style={styles.deptName}>
+                {event.event_departments?.[0]?.departments?.name || 'Equipe Principal'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderRecommendedSongs = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Músicas para se Inspirar</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.songsScroll}>
+        {songs.length > 0 ? songs.map((song, index) => (
+          <TouchableOpacity 
+            key={index} 
+            style={styles.songCard}
+            onPress={() => song.youtube ? Linking.openURL(song.youtube) : song.spotify ? Linking.openURL(song.spotify) : null}
+          >
+            <View style={styles.songIconBox}>
+              <Ionicons name={song.youtube ? "logo-youtube" : "musical-notes"} size={24} color={song.youtube ? '#FF0000' : theme.colors.primary} />
+            </View>
+            <View style={styles.songDetails}>
+              <Text style={styles.songName} numberOfLines={1}>{song.name}</Text>
+              <Text style={styles.songSub}>Tocado recentemente</Text>
+            </View>
+          </TouchableOpacity>
+        )) : (
+          <Text style={styles.emptyText}>Nenhuma música sugerida no momento.</Text>
+        )}
+      </ScrollView>
+    </View>
+  );
 
   return (
-    <ScrollView style={globalStyles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Olá, {user?.name || 'Voluntário'}</Text>
-        <Text style={styles.subtitle}>Confira os próximos eventos e recados.</Text>
-      </View>
+    <View style={globalStyles.container}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+      >
+        {renderHeader()}
+        {renderNextMission()}
+        {renderRecommendedSongs()}
 
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Geral - Louvor</Text>
-          <Ionicons name="megaphone-outline" size={24} color={theme.colors.primary} />
-        </View>
-        <Text style={styles.cardBody}>
-          Temos um novo ensaio programado para sexta-feira. Confirmem presença!
-        </Text>
-      </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Mural da Comunidade</Text>
+          
+          <View style={styles.newPostContainer}>
+            <View style={styles.newPostCard}>
+              <TextInput
+                style={styles.newPostInput}
+                placeholder="No que você está pensando?"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={newPostContent}
+                onChangeText={setNewPostContent}
+                multiline
+              />
+              <View style={styles.newPostActions}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleImagePick}>
+                  <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.postButton, (!newPostContent.trim() && !selectedImage) && styles.postButtonDisabled]} 
+                  onPress={handleCreatePost}
+                  disabled={isPosting || (!newPostContent.trim() && !selectedImage)}
+                >
+                  {isPosting ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="send" size={18} color="#000" />}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      <TouchableOpacity style={styles.eventCard}>
-        <View style={styles.eventDate}>
-          <Text style={styles.eventDateDay}>12</Text>
-          <Text style={styles.eventDateMonth}>OUT</Text>
+            {selectedImage && (
+              <View style={styles.previewContainer}>
+                <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+                <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
+                  <Ionicons name="close-circle" size={24} color={theme.colors.error} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+
+          {posts.map((post) => (
+            <View key={post.id} style={styles.postCard}>
+              <View style={styles.postHeader}>
+                <Image 
+                  source={{ uri: post.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + post.profiles?.full_name }} 
+                  style={styles.postAvatar} 
+                />
+                <View style={styles.postAuthorInfo}>
+                  <Text style={styles.postAuthor}>{post.profiles?.full_name}</Text>
+                  <Text style={styles.postTime}>{format(new Date(post.created_at), "dd/MM 'às' HH:mm")}</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.postContent}>{post.content}</Text>
+              
+              {post.image_url && (
+                <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />
+              )}
+
+              <View style={styles.postFooter}>
+                <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
+                  <Ionicons 
+                    name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
+                    size={20} 
+                    color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
+                  />
+                  <Text style={styles.interactionText}>{post.likesCount}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.interactionBtn}>
+                  <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
+                  <Text style={styles.interactionText}>{post.commentsCount}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
         </View>
-        <View style={styles.eventInfo}>
-          <Text style={styles.eventTitle}>Culto de Domingo</Text>
-          <Text style={styles.eventTime}>19:00 - Escala: Bateria, Baixo</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-      </TouchableOpacity>
-    </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  greeting: {
-    ...globalStyles.textTitle,
-    marginBottom: theme.spacing.xs,
-  },
-  subtitle: {
-    ...globalStyles.textBody,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    paddingVertical: 20,
+    marginBottom: 10,
   },
-  cardTitle: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: theme.colors.text,
-  },
-  cardBody: {
+  dateText: {
     color: theme.colors.textSecondary,
-    lineHeight: 22,
-  },
-  eventCard: {
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  eventDate: {
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    width: 60,
-  },
-  eventDateDay: {
-    fontWeight: 'bold',
-    fontSize: 20,
-    color: theme.colors.primary,
-  },
-  eventDateMonth: {
     fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  eventInfo: {
-    flex: 1,
-    marginLeft: theme.spacing.md,
-  },
-  eventTitle: {
+    textTransform: 'uppercase',
     fontWeight: 'bold',
-    fontSize: 16,
+    letterSpacing: 1,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginTop: 4,
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    padding: 2,
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+  },
+  avatarPlaceholder: {
+    backgroundColor: theme.colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  section: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    marginBottom: 15,
+  },
+  missionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    borderLeftWidth: 5,
+    borderLeftColor: theme.colors.primary,
+    // Sombra
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  missionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  missionTag: {
+    backgroundColor: 'rgba(255, 107, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  missionTagText: {
+    color: theme.colors.primary,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  missionTime: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  missionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: 4,
   },
-  eventTime: {
-    color: theme.colors.textSecondary,
+  missionRole: {
     fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 20,
   },
+  missionFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
+    paddingTop: 15,
+  },
+  deptInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deptName: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginLeft: 6,
+  },
+  songsScroll: {
+    paddingRight: 20,
+  },
+  songCard: {
+    backgroundColor: theme.colors.surface,
+    width: 160,
+    borderRadius: 16,
+    padding: 12,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  songIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  songDetails: {},
+  songName: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  songSub: {
+    color: theme.colors.textSecondary,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  newPostContainer: {
+    marginBottom: 20,
+  },
+  newPostCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  newPostInput: {
+    flex: 1,
+    color: theme.colors.text,
+    fontSize: 14,
+    maxHeight: 100,
+    paddingTop: 8,
+  },
+  newPostActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  previewContainer: {
+    marginTop: 10,
+    position: 'relative',
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
+  },
+  postButton: {
+    backgroundColor: theme.colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 5,
+  },
+  postButtonDisabled: {
+    backgroundColor: theme.colors.border,
+    opacity: 0.5,
+  },
+  postCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  postHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  postAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.border,
+  },
+  postAuthorInfo: {
+    marginLeft: 12,
+  },
+  postAuthor: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  postTime: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+  },
+  postContent: {
+    color: theme.colors.text,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: theme.colors.border,
+  },
+  postFooter: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
+    paddingTop: 12,
+  },
+  interactionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  interactionText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontStyle: 'italic',
+  }
 });

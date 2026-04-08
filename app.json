@@ -41,7 +41,14 @@
       ],
       "expo-web-browser",
       "expo-font",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir que o Volly acesse suas fotos para compartilhar no mural.",
+          "cameraPermission": "Permitir que o Volly use sua câmera para tirar fotos para o mural."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
