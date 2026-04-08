@@ -20,12 +20,17 @@ export default function EventosScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
   const isLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
 
   const loadEvents = async () => {
     setLoading(true);
-    if (listTab === 'PROXIMOS') {
+    // Se houver uma data selecionada pelo calendário, priorizamos ela
+    if (selectedDate) {
+      const { data } = await eventService.listUpcomingEvents({ date: selectedDate });
+      setEvents(data || []);
+    } else if (listTab === 'PROXIMOS') {
       const { data } = await eventService.listUpcomingEvents({ name: search });
       setEvents(data || []);
     } else {
@@ -37,7 +42,7 @@ export default function EventosScreen() {
 
   useEffect(() => {
     loadEvents();
-  }, [listTab, search]);
+  }, [listTab, search, selectedDate]);
 
   const renderEventItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
@@ -65,11 +70,19 @@ export default function EventosScreen() {
           <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar eventos..."
+            placeholder={selectedDate ? `Filtrando: ${format(parseISO(selectedDate), 'dd/MM/yyyy')}` : "Buscar eventos..."}
             placeholderTextColor={theme.colors.textSecondary}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(text) => {
+              setSearch(text);
+              if (selectedDate) setSelectedDate(null); // Limpa data ao digitar texto
+            }}
           />
+          {(search !== '' || selectedDate !== null) && (
+            <TouchableOpacity onPress={() => { setSearch(''); setSelectedDate(null); }}>
+              <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity 
           style={styles.modeToggle}
@@ -134,7 +147,8 @@ export default function EventosScreen() {
               return acc;
             }, {})}
             onDayPress={(day: any) => {
-              setSearch(day.dateString);
+              setSelectedDate(day.dateString);
+              setSearch(''); // Limpa busca por texto
               setViewMode('LISTA');
             }}
           />

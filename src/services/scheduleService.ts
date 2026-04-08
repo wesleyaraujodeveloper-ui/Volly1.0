@@ -96,10 +96,11 @@ export const scheduleService = {
 
     // 3. Montar o ranking de balanceamento
     const balancing = volunteers.map(v => {
-      const count = monthlySchedules.filter(s => s.user_id === v.user_id).length;
+      // monthlySchedules pode vir com eventos como objeto ou array dependendo da versão do postgrest/join
+      const count = monthlySchedules?.filter(s => s.user_id === v.user_id).length || 0;
       return {
         id: v.user_id,
-        name: (v.profiles as any)?.full_name || (v.profiles as any)?.email,
+        name: (v.profiles as any)?.full_name || (v.profiles as any)?.email || 'Voluntário',
         count,
       };
     });
@@ -153,11 +154,18 @@ export const scheduleService = {
     if (balErr || !balancing) return { error: 'Erro ao calcular balanceamento da equipe.' };
 
     const results = [];
+    const usedInThisEvent = [...existingRoleIds.map(rid => existing?.find(s => s.role_id === rid)?.user_id).filter(Boolean)];
+    
+    // Lista de IDs de usuários já escalados neste evento (para não repetir a mesma pessoa em 2 funções)
+    const assignedUserIds = new Set(existing?.map(s => s.user_id) || []);
+
     for (const role of roles) {
       if (existingRoleIds.includes(role.id)) continue; 
 
-      // Encontrar voluntário disponível para este evento que esteja no ranking de balanceamento
-      const candidate = balancing.find(b => availableUserIds.includes(b.id));
+      // Encontrar voluntário disponível que ainda NÃO esteja escalado neste evento
+      const candidate = balancing.find(b => 
+        availableUserIds.includes(b.id) && !assignedUserIds.has(b.id)
+      );
 
       if (candidate) {
         const { data, error: assignErr } = await scheduleService.assignVolunteer({
@@ -169,8 +177,11 @@ export const scheduleService = {
         
         if (data) {
           results.push(data);
+          assignedUserIds.add(candidate.id); // Marca como ocupado para a próxima função
           candidate.count++;
           balancing.sort((a, b) => a.count - b.count);
+        } else if (assignErr) {
+          console.error(`Erro ao escalar ${candidate.name}:`, assignErr);
         }
       }
     }

@@ -34,6 +34,7 @@ export default function EventsScreen() {
 
   // --- ESTADOS DO MODO GERENCIAR ---
   const [futureEvents, setFutureEvents] = useState<Event[]>([]);
+  const [eventToDelete, setEventToDelete] = useState<any | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -137,13 +138,21 @@ export default function EventsScreen() {
   };
 
   const handleDeleteEvent = (id: string) => {
-    Alert.alert('Excluir Evento', 'Tem certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: async () => {
-        await eventService.deleteEvent(id);
-        loadInitialData();
-      }}
-    ]);
+    const ev = futureEvents.find(e => e.id === id);
+    if (ev) setEventToDelete(ev);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    setLoading(true);
+    const { error } = await eventService.deleteEvent(eventToDelete.id!);
+    setLoading(false);
+    if (error) {
+      Alert.alert('Erro', error.message);
+    } else {
+      setEventToDelete(null);
+      loadInitialData();
+    }
   };
 
   const handleCopyEvent = (ev: Event) => {
@@ -289,6 +298,44 @@ export default function EventsScreen() {
           />
         </View>
       )}
+
+      {eventToDelete && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Excluir Evento</Text>
+              <TouchableOpacity onPress={() => setEventToDelete(null)}>
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ marginBottom: 30, alignItems: 'center' }}>
+              <Ionicons name="warning-outline" size={64} color={theme.colors.error} style={{ marginBottom: 16 }} />
+              <Text style={[globalStyles.textTitle, { textAlign: 'center', fontSize: 18 }]}>Tem certeza?</Text>
+              <Text style={[globalStyles.textBody, { textAlign: 'center', marginTop: 8 }]}>
+                Deseja realmente excluir o evento <Text style={{fontWeight: 'bold', color: theme.colors.primary}}>{eventToDelete.title}</Text>?
+              </Text>
+              <Text style={{ color: theme.colors.error, fontSize: 11, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                Esta ação removerá o evento e todas as escalas vinculadas permanentemente.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                style={[styles.cancelBtn, { flex: 1 }]} 
+                onPress={() => setEventToDelete(null)}
+              >
+                <Text style={styles.cancelBtnText}>CANCELAR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.deleteConfirmBtn, { flex: 1 }, loading && { opacity: 0.7 }]} 
+                onPress={confirmDeleteEvent}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.deleteConfirmBtnText}>EXCLUIR EVENTO</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -323,6 +370,14 @@ const styles = StyleSheet.create({
   eventDate: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 4 },
   eventActions: { flexDirection: 'row' },
   actionBtn: { padding: 10, marginLeft: 5 },
-  emptyText: { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 40 }
+  emptyText: { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 40 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: theme.colors.surface, borderRadius: 24, padding: 20, width: '100%', maxWidth: 400 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { color: theme.colors.text, fontSize: 18, fontWeight: 'bold' },
+  cancelBtn: { backgroundColor: theme.colors.background, padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  cancelBtnText: { color: theme.colors.text, fontWeight: 'bold' },
+  deleteConfirmBtn: { backgroundColor: theme.colors.error, padding: 16, borderRadius: 12, alignItems: 'center' },
+  deleteConfirmBtnText: { color: '#FFFFFF', fontWeight: 'bold' }
 });
 

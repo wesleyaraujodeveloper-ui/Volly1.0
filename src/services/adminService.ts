@@ -13,7 +13,7 @@ export const adminService = {
   /**
    * Registra um novo voluntário na tabela de convites (invitations).
    */
-  inviteVolunteer: async (email: string, name: string = '') => {
+  inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null) => {
     const cleanEmail = email.toLowerCase().trim();
 
     // 1. Verifica se já não é um membro ativo
@@ -33,7 +33,8 @@ export const adminService = {
       .upsert([
         { 
           email: cleanEmail, 
-          role: 'VOLUNTÁRIO'
+          role: 'VOLUNTÁRIO',
+          department_id: departmentId
         }
       ])
       .select();
@@ -214,6 +215,28 @@ export const adminService = {
       p_user_id: userId,
       p_role_id: roleId,
       p_action: action
+    });
+    return { data, error };
+  },
+
+  /**
+   * Exclui um departamento (Apenas ADMIN).
+   */
+  deleteDepartment: async (deptId: string) => {
+    const { data, error } = await supabase.rpc('delete_department', {
+      p_dept_id: deptId
+    });
+    return { data, error };
+  },
+
+  /**
+   * Atualiza nome e descrição de um departamento (Apenas ADMIN).
+   */
+  updateDepartment: async (deptId: string, name: string, description: string = '') => {
+    const { data, error } = await supabase.rpc('update_department', {
+      p_dept_id: deptId,
+      p_name: name,
+      p_desc: description
     });
     return { data, error };
   }

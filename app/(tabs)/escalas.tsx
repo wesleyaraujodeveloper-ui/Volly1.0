@@ -13,7 +13,6 @@ import { ptBR } from 'date-fns/locale';
 type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 
 const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
-const PERIODS = ['Manhã', 'Tarde', 'Noite'];
 
 export default function EscalasTabsScreen() {
   const { user, providerToken } = useAppStore();
@@ -188,19 +187,6 @@ export default function EscalasTabsScreen() {
     }
   };
 
-  const toggleEventPeriod = (eventId: string, period: string) => {
-    setEventAvailabilities(prev => {
-      const existing = prev.find(a => a.event_id === eventId);
-      if (existing) {
-        const newPeriods = existing.periods.includes(period)
-          ? existing.periods.filter((p: string) => p !== period)
-          : [...existing.periods, period];
-        return prev.map(a => a.event_id === eventId ? { ...a, periods: newPeriods, is_available: true } : a);
-      }
-      return [...prev, { user_id: user?.id!, event_id: eventId, periods: [period], is_available: true }];
-    });
-  };
-
   const handleSaveAvailability = async () => {
     setSaving(true);
     try {
@@ -263,7 +249,12 @@ export default function EscalasTabsScreen() {
   };
 
   const renderDepartmentChips = () => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deptChipsContainer}>
+    <ScrollView 
+      horizontal 
+      showsHorizontalScrollIndicator={false} 
+      style={styles.deptChipsContainer}
+      contentContainerStyle={styles.deptChipsContent}
+    >
       {departments.map((dept) => (
         <TouchableOpacity 
           key={dept.department_id} 
@@ -336,28 +327,6 @@ export default function EscalasTabsScreen() {
                     {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
                   </View>
                 </TouchableOpacity>
-                
-                {isEnabled && (
-                  <View style={styles.periodsContainer}>
-                    {PERIODS.map(period => {
-                      const isSelected = avail?.periods.includes(period);
-                      return (
-                        <TouchableOpacity 
-                          key={period} 
-                          style={[styles.periodChip, isSelected && styles.activePeriodChip]}
-                          onPress={() => toggleEventPeriod(event.id!, period)}
-                        >
-                          <Ionicons 
-                            name={period === 'Manhã' ? 'sunny-outline' : period === 'Tarde' ? 'sunny' : 'moon-outline'} 
-                            size={14} 
-                            color={isSelected ? '#000' : theme.colors.textSecondary} 
-                          />
-                          <Text style={[styles.periodText, isSelected && styles.activePeriodText]}>{period}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
               </View>
             );
           })
@@ -581,25 +550,39 @@ export default function EscalasTabsScreen() {
 
 const styles = StyleSheet.create({
   deptChipsContainer: {
-    maxHeight: 50,
-    marginBottom: 10,
+    maxHeight: 52,
+    marginBottom: 8,
+  },
+  deptChipsContent: {
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    height: '100%',
   },
   deptChip: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: theme.colors.surface,
     marginRight: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   activeDeptChip: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
+    // Sombra leve para destacar o ativo
+    elevation: 2,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   deptChipText: {
     fontSize: 10,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
     color: theme.colors.textSecondary,
   },
   activeDeptChipText: {
@@ -677,37 +660,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  periodsContainer: {
-    flexDirection: 'row',
-    marginTop: 15,
-    justifyContent: 'flex-start',
-    gap: 10,
-  },
-  periodChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  activePeriodChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  periodText: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginLeft: 5,
-  },
-  activePeriodText: {
-    fontSize: 11,
-    color: '#000',
-    marginLeft: 5,
-    fontWeight: 'bold',
   },
   absenceHeader: {
     flexDirection: 'row',

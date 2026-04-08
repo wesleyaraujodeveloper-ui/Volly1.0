@@ -22,9 +22,12 @@ export default function GestaoMembrosScreen() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [leaderTeams, setLeaderTeams] = useState<string[]>([]); 
+  const [selectedInviteDeptId, setSelectedInviteDeptId] = useState<string | null>(null);
   const [managingTeamProfile, setManagingTeamProfile] = useState<Profile | null>(null);
   const [userDepts, setUserDepts] = useState<string[]>([]);
   const [deptChangingLeader, setDeptChangingLeader] = useState<string | null>(null);
+  const [editingDept, setEditingDept] = useState<any | null>(null);
+  const [deptToDelete, setDeptToDelete] = useState<any | null>(null);
 
   const [roles, setRoles] = useState<any[]>([]);
   const [newRoleName, setNewRoleName] = useState('');
@@ -76,7 +79,11 @@ export default function GestaoMembrosScreen() {
     loadRoles();
     if (user?.id) {
        adminService.getLeaderDepartments(user.id).then(({ data }) => {
-         if (data) setLeaderTeams(data.map(d => d.id));
+         if (data) {
+           const ids = data.map(d => d.id);
+           setLeaderTeams(ids);
+           if (ids.length === 1) setSelectedInviteDeptId(ids[0]);
+         }
        });
     }
   }, []);
@@ -92,11 +99,12 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.inviteVolunteer(email, name);
+    const { error } = await adminService.inviteVolunteer(email, name, selectedInviteDeptId);
     if (error) Alert.alert('Erro', error.message);
     else {
       Alert.alert('Sucesso', 'Membro convidado.');
       setEmail(''); setName('');
+      if (leaderTeams.length !== 1) setSelectedInviteDeptId(null);
       loadVolunteers();
     }
     setLoading(false);
@@ -127,6 +135,41 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
     else {
       setDeptChangingLeader(null);
+      loadDepartments();
+    }
+  };
+
+  const handleDeleteDepartment = (dept: any) => {
+    console.log('Abrindo modal de confirmação para:', dept.name);
+    setDeptToDelete(dept);
+  };
+
+  const confirmDeleteAction = async () => {
+    if (!deptToDelete) return;
+    try {
+      setLoading(true);
+      const { error } = await adminService.deleteDepartment(deptToDelete.id);
+      if (error) {
+        Alert.alert('Erro ao Excluir', error.message);
+      } else {
+        setDeptToDelete(null);
+        loadDepartments();
+      }
+    } catch (err: any) {
+      Alert.alert('Erro', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveEditDepartment = async () => {
+    if (!editingDept || !editingDept.name.trim()) return;
+    setLoading(true);
+    const { error } = await adminService.updateDepartment(editingDept.id, editingDept.name, editingDept.description);
+    setLoading(false);
+    if (error) Alert.alert('Erro', error.message);
+    else {
+      setEditingDept(null);
       loadDepartments();
     }
   };
@@ -256,6 +299,32 @@ export default function GestaoMembrosScreen() {
                   <TextInput style={styles.searchInput} placeholder="Buscar membro..." placeholderTextColor={theme.colors.textSecondary} value={searchTerm} onChangeText={setSearchTerm} />
                 </View>
                 <TextInput style={styles.input} placeholder="E-mail do Google" placeholderTextColor={theme.colors.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" />
+                
+                {((user?.role === 'ADMIN' ? departments.length : leaderTeams.length) > 0) && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={styles.inputLabel}>Vincular à Equipe:</Text>
+                    <View style={styles.chipsContainer}>
+                      {(user?.role === 'ADMIN' ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
+                        <TouchableOpacity 
+                          key={dept.id} 
+                          style={[
+                            styles.chip, 
+                            selectedInviteDeptId === dept.id && styles.chipSelected
+                          ]} 
+                          onPress={() => setSelectedInviteDeptId(selectedInviteDeptId === dept.id ? null : dept.id)}
+                        >
+                          <Text style={[
+                            styles.chipText, 
+                            selectedInviteDeptId === dept.id && styles.chipTextSelected
+                          ]}>
+                            {dept.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 <TouchableOpacity style={[styles.addButton, loading && { opacity: 0.7 }]} onPress={handleAddVolunteer} disabled={loading}>
                   {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>Convidar Membro</Text>}
                 </TouchableOpacity>
@@ -324,9 +393,17 @@ export default function GestaoMembrosScreen() {
                     <Text style={styles.memberEmail}>Líder: <Text style={{ color: theme.colors.primary }}>{item.leader?.full_name || 'N/A'}</Text></Text>
                   </View>
                   {user?.role === 'ADMIN' && (
-                    <TouchableOpacity onPress={() => handleUpdateLeader(item.id)}>
-                      <Ionicons name="settings-outline" size={20} color={theme.colors.primary} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '' })}>
+                        <Ionicons name="pencil-outline" size={20} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateLeader(item.id)}>
+                        <Ionicons name="person-add-outline" size={20} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteDepartment(item)}>
+                        <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </View>
               )}
@@ -513,6 +590,79 @@ export default function GestaoMembrosScreen() {
           </View>
         </View>
       )}
+
+      {editingDept && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar Equipe</Text>
+              <TouchableOpacity onPress={() => setEditingDept(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+            </View>
+            <View style={{ marginBottom: 20 }}>
+              <Text style={styles.inputLabel}>Nome da Equipe:</Text>
+              <TextInput 
+                style={styles.input} 
+                value={editingDept.name} 
+                onChangeText={(text) => setEditingDept({...editingDept, name: text})}
+                placeholder="Ex: Louvor, Recepção..."
+                placeholderTextColor={theme.colors.textSecondary}
+              />
+              <Text style={styles.inputLabel}>Descrição (Opcional):</Text>
+              <TextInput 
+                style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
+                value={editingDept.description} 
+                onChangeText={(text) => setEditingDept({...editingDept, description: text})}
+                placeholder="Sobre o que é esta equipe..."
+                placeholderTextColor={theme.colors.textSecondary}
+                multiline
+              />
+            </View>
+            <TouchableOpacity 
+              style={[styles.addButton, loading && { opacity: 0.7 }]} 
+              onPress={handleSaveEditDepartment}
+              disabled={loading}
+            >
+              {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>SALVAR ALTERAÇÕES</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {deptToDelete && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Excluir Equipe</Text>
+              <TouchableOpacity onPress={() => setDeptToDelete(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+            </View>
+            <View style={{ marginBottom: 30, alignItems: 'center' }}>
+              <Ionicons name="warning-outline" size={64} color={theme.colors.error} style={{ marginBottom: 16 }} />
+              <Text style={[globalStyles.textTitle, { textAlign: 'center', fontSize: 18 }]}>Tem certeza?</Text>
+              <Text style={[globalStyles.textBody, { textAlign: 'center', marginTop: 8 }]}>
+                Deseja realmente excluir a equipe <Text style={{fontWeight: 'bold', color: theme.colors.primary}}>{deptToDelete.name}</Text>?
+              </Text>
+              <Text style={{ color: theme.colors.error, fontSize: 11, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
+                Esta ação é irreversível e removerá todos os vínculos desta equipe.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                style={[styles.addButton, { flex: 1, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border }]} 
+                onPress={() => setDeptToDelete(null)}
+              >
+                <Text style={[styles.addButtonText, { color: theme.colors.text }]}>CANCELAR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.addButton, { flex: 1, backgroundColor: theme.colors.error }, loading && { opacity: 0.7 }]} 
+                onPress={confirmDeleteAction}
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.addButtonText, { color: '#FFFFFF' }]}>EXCLUIR AGORA</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -550,5 +700,10 @@ const styles = StyleSheet.create({
   leaderPickerGrid: { backgroundColor: theme.colors.background, borderRadius: 8, marginBottom: 12, padding: 4, borderWidth: 1, borderColor: theme.colors.border },
   leaderPickerItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   leaderPickerItemSelected: { backgroundColor: 'rgba(255, 144, 0, 0.05)' },
-  leaderPickerLabel: { color: theme.colors.text, fontSize: 14, marginLeft: 10 }
+  leaderPickerLabel: { color: theme.colors.text, fontSize: 14, marginLeft: 10 },
+  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
+  chip: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 8, marginBottom: 8 },
+  chipSelected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: 'bold' },
+  chipTextSelected: { color: '#121212' }
 });

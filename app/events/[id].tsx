@@ -123,8 +123,10 @@ export default function EventDetailScreen() {
     }
   };
 
+  const canEditPlaylist = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+
   const handleAddSong = async () => {
-    if (!newSong.name) return;
+    if (!newSong.name || !canEditPlaylist) return;
     const updatedSongs = [...songs, newSong];
     
     const { error } = await supabase
@@ -134,6 +136,22 @@ export default function EventDetailScreen() {
     if (!error) {
       setSongs(updatedSongs);
       setNewSong({ name: '', youtube: '', spotify: '' });
+    }
+  };
+
+  const handleRemoveSong = async (index: number) => {
+    if (!canEditPlaylist) return;
+    
+    const updatedSongs = songs.filter((_, i) => i !== index);
+    
+    const { error } = await supabase
+      .from('playlists')
+      .upsert({ event_id: id, name: 'Default', links: updatedSongs }, { onConflict: 'event_id' });
+
+    if (!error) {
+      setSongs(updatedSongs);
+    } else {
+      Alert.alert('Erro', 'Não foi possível remover a música.');
     }
   };
 
@@ -200,52 +218,66 @@ export default function EventDetailScreen() {
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Playlist / Setlist</Text>
-                {songs.map((song, index) => (
-                  <View key={index} style={styles.songCard}>
-                    <View style={{ flex: 1 }}><Text style={styles.songName}>{song.name}</Text></View>
-                    <View style={styles.songActions}>
-                      {song.youtube && (
-                        <TouchableOpacity onPress={() => Linking.openURL(song.youtube)}>
-                          <Ionicons name="logo-youtube" size={20} color="#FF0000" style={styles.songIcon} />
-                        </TouchableOpacity>
-                      )}
-                      {song.spotify && (
-                        <TouchableOpacity onPress={() => Linking.openURL(song.spotify)}>
-                          <Ionicons name="musical-notes" size={20} color="#1DB954" style={styles.songIcon} />
-                        </TouchableOpacity>
-                      )}
+                {songs.length > 0 ? (
+                  songs.map((song, index) => (
+                    <View key={index} style={styles.songCard}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.songName} numberOfLines={1}>{song.name}</Text>
+                      </View>
+                      <View style={styles.songActions}>
+                        {song.youtube && (
+                          <TouchableOpacity onPress={() => Linking.openURL(song.youtube)} style={styles.actionButtonCircle}>
+                            <Ionicons name="logo-youtube" size={18} color="#FF0000" />
+                          </TouchableOpacity>
+                        )}
+                        {song.spotify && (
+                          <TouchableOpacity onPress={() => Linking.openURL(song.spotify)} style={styles.actionButtonCircle}>
+                            <Ionicons name="musical-notes" size={18} color="#1DB954" />
+                          </TouchableOpacity>
+                        )}
+                        {canEditPlaylist && (
+                          <TouchableOpacity onPress={() => handleRemoveSong(index)} style={styles.actionButtonCircle}>
+                            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  ))
+                ) : (
+                  <Text style={styles.emptyTextSmaller}>Nenhuma música adicionada ainda.</Text>
+                )}
 
-                <View style={styles.addSongForm}>
-                  <TextInput
-                    style={styles.songInput}
-                    placeholder="Nome da música"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    value={newSong.name}
-                    onChangeText={(t) => setNewSong({ ...newSong, name: t })}
-                  />
-                  <View style={styles.row}>
+                {canEditPlaylist && (
+                  <View style={styles.addSongForm}>
+                    <Text style={styles.addSongTitle}>Adicionar música ao repertório</Text>
                     <TextInput
-                      style={[styles.songInput, { flex: 1, marginRight: 4 }]}
-                      placeholder="Link YouTube"
+                      style={styles.songInput}
+                      placeholder="Nome da música"
                       placeholderTextColor={theme.colors.textSecondary}
-                      value={newSong.youtube}
-                      onChangeText={(t) => setNewSong({ ...newSong, youtube: t })}
+                      value={newSong.name}
+                      onChangeText={(t) => setNewSong({ ...newSong, name: t })}
                     />
-                    <TextInput
-                      style={[styles.songInput, { flex: 1, marginLeft: 4 }]}
-                      placeholder="Link Spotify"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={newSong.spotify}
-                      onChangeText={(t) => setNewSong({ ...newSong, spotify: t })}
-                    />
+                    <View style={styles.row}>
+                      <TextInput
+                        style={[styles.songInput, { flex: 1, marginRight: 4 }]}
+                        placeholder="Link YouTube"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={newSong.youtube}
+                        onChangeText={(t) => setNewSong({ ...newSong, youtube: t })}
+                      />
+                      <TextInput
+                        style={[styles.songInput, { flex: 1, marginLeft: 4 }]}
+                        placeholder="Link Spotify"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={newSong.spotify}
+                        onChangeText={(t) => setNewSong({ ...newSong, spotify: t })}
+                      />
+                    </View>
+                    <TouchableOpacity style={styles.confirmAddSong} onPress={handleAddSong}>
+                      <Text style={styles.confirmAddSongText}>Confirmar Músicas</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity style={styles.confirmAddSong} onPress={handleAddSong}>
-                    <Text style={styles.confirmAddSongText}>Adicionar Música</Text>
-                  </TouchableOpacity>
-                </View>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -456,40 +488,65 @@ const styles = StyleSheet.create({
   songName: {
     color: theme.colors.text,
     fontSize: 14,
+    fontWeight: '500',
   },
   songActions: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  songIcon: {
-    marginLeft: 12,
+  actionButtonCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   addSongForm: {
-    marginTop: 16,
+    marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: theme.colors.background,
   },
+  addSongTitle: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
   songInput: {
     backgroundColor: theme.colors.background,
     color: theme.colors.text,
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 10,
     marginBottom: 8,
     fontSize: 13,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   row: {
     flexDirection: 'row',
   },
   confirmAddSong: {
-    backgroundColor: theme.colors.primaryLight,
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary,
+    padding: 12,
+    borderRadius: 10,
     alignItems: 'center',
+    marginTop: 4,
   },
   confirmAddSongText: {
     color: '#121212',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
+  },
+  emptyTextSmaller: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 10,
   },
   scalesContent: {},
   roleAssignmentRow: {

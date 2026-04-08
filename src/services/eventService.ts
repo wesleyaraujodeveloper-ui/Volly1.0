@@ -110,9 +110,14 @@ export const eventService = {
     // 2. Monta a query principal
     let query = supabase
       .from('events')
-      .select('*, event_departments(departments(id, name))')
-      .gte('event_date', new Date().toISOString())
-      .order('event_date', { ascending: true });
+      .select('*, event_departments(departments(id, name))');
+
+    // Se NÃO houver data específica, filtramos apenas os próximos
+    if (!filters?.date) {
+      query = query.gte('event_date', new Date().toISOString());
+    }
+
+    query = query.order('event_date', { ascending: true });
 
     if (filters?.name) {
       query = query.ilike('title', `%${filters.name}%`);
