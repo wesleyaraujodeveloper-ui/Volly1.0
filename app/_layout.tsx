@@ -5,13 +5,22 @@ import { useAppStore } from '../src/store/useAppStore';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/services/supabase';
 import { useNotifications } from '../src/hooks/useNotifications';
+import { useFonts } from 'expo-font';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'CreamCake': require('../assets/fonts/Cream Cake.otf'),
+  });
+
   useNotifications();
   const { user, setUser, isLoadingData, setIsLoadingData, setProviderToken } = useAppStore();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   useEffect(() => {
     if (!navigationState?.key) return;
@@ -40,11 +49,29 @@ export default function RootLayout() {
 
           if (profile) {
             console.log('DEBUG: Perfil encontrado:', profile.email, 'Role:', profile.access_level);
+            
+            // Auto Update do Avatar (Google Picture)
+            const googlePhotoUrl = session.user.user_metadata?.picture || session.user.user_metadata?.avatar_url;
+            if (googlePhotoUrl && profile.avatar_url !== googlePhotoUrl) {
+              console.log('DEBUG: Sincronizando avatar_url com foto do Google: ', googlePhotoUrl);
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: googlePhotoUrl })
+                .eq('id', session.user.id);
+                
+              if (!updateError) {
+                profile.avatar_url = googlePhotoUrl;
+              } else {
+                console.log('DEBUG: Erro ao sincronizar avatar:', updateError);
+              }
+            }
+
             setUser({
               id: profile.id,
               name: profile.full_name || '',
               email: profile.email || session.user.email || '',
-              role: (profile.access_level as any) || 'VOLUNTÁRIO'
+              role: (profile.access_level as any) || 'VOLUNTÁRIO',
+              avatar_url: profile.avatar_url
             });
           } else {
             console.log('DEBUG: Perfil não encontrado no banco para o ID:', session.user.id);

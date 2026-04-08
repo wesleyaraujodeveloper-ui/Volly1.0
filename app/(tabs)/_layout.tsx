@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import { theme } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../src/store/useAppStore';
-import { Image, View } from 'react-native';
+import { Image, View, Text } from 'react-native';
 
 export default function TabsLayout() {
   const { user } = useAppStore();
@@ -24,12 +24,15 @@ export default function TabsLayout() {
           fontWeight: 'bold',
         },
         headerRight: () => (
-          <View style={{ marginRight: 15 }}>
+          <View style={{ marginRight: 15, flexDirection: 'row', alignItems: 'center' }}>
             <Image 
               source={require('../../assets/images/icons/Volly.png')} 
-              style={{ width: 60, height: 30 }}
+              style={{ width: 32, height: 32 }}
               resizeMode="contain"
             />
+            <Text style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 30, marginLeft: 6 }}>
+              Volly
+            </Text>
           </View>
         ),
         tabBarStyle: {

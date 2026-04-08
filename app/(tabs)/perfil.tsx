@@ -12,7 +12,6 @@ export default function PerfilScreen() {
   const router = useRouter();
   const { user, clearSession, setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
 
@@ -66,49 +65,7 @@ export default function PerfilScreen() {
     );
   };
 
-  const handleSyncGooglePhoto = async () => {
-    try {
-      setIsSyncing(true);
-      
-      // 1. Pegar dados atuais do usuário logado no Supabase Auth
-      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !authUser) {
-        throw new Error('Não foi possível obter dados da sua conta Google.');
-      }
 
-      // 2. Extrair a foto (o Google geralmente usa 'picture' ou 'avatar_url' no metadata)
-      const photoUrl = authUser.user_metadata?.picture || authUser.user_metadata?.avatar_url;
-
-      if (!photoUrl) {
-        Alert.alert('Aviso', 'Não encontramos uma foto vinculada à sua conta Google.');
-        return;
-      }
-
-      // 3. Atualizar a tabela public.profiles
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: photoUrl })
-        .eq('id', user?.id);
-
-      if (updateError) throw updateError;
-
-      // 4. Atualizar o estado global (Zustand) para refletir no app todo imediatamente
-      if (user) {
-        setUser({
-          ...user,
-          avatar_url: photoUrl
-        });
-      }
-
-      Alert.alert('Sucesso', 'Sua foto do Google foi sincronizada com sucesso!');
-    } catch (error: any) {
-      console.error('Sync error:', error);
-      Alert.alert('Erro', error.message || 'Falha ao sincronizar foto.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -145,26 +102,10 @@ export default function PerfilScreen() {
            <View style={styles.roleBadge}>
              <Text style={styles.roleBadgeText}>{user?.role}</Text>
            </View>
-           
-           <TouchableOpacity 
-             style={styles.syncIconButton} 
-             onPress={handleSyncGooglePhoto}
-             disabled={isSyncing}
-           >
-             {isSyncing ? (
-               <ActivityIndicator size="small" color="white" />
-             ) : (
-               <Ionicons name="sync-outline" size={16} color="white" />
-             )}
-           </TouchableOpacity>
-        </View>
-        <Text style={styles.userName}>{user?.name || 'Voluntário'}</Text>
-        <Text style={styles.userEmail}>{user?.email}</Text>
-        
-        <TouchableOpacity style={styles.syncLink} onPress={handleSyncGooglePhoto}>
-          <Text style={styles.syncLinkText}>Sincronizar foto do Google</Text>
-        </TouchableOpacity>
-      </LinearGradient>
+         </View>
+         <Text style={styles.userName}>{user?.name || 'Voluntário'}</Text>
+         <Text style={styles.userEmail}>{user?.email}</Text>
+       </LinearGradient>
 
       {/* Seção Equipes (Real time) */}
       <View style={styles.section}>
@@ -264,19 +205,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  syncIconButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: theme.colors.primary,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
+
   roleBadge: {
     position: 'absolute',
     bottom: 0,
@@ -304,17 +233,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10,
   },
-  syncLink: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    paddingHorizontal: 15,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  syncLinkText: {
-    color: '#121212',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
+
   section: {
     paddingHorizontal: 20,
     marginTop: 30,

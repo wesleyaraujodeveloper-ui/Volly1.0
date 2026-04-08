@@ -94,11 +94,16 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
-        <Image 
-          source={require('../../assets/images/icons/Volly.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image 
+            source={require('../../assets/images/icons/Volly.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 64, marginLeft: 10 }}>
+            Volly
+          </Text>
+        </View>
         <Text style={styles.sloganText}>Juntos Fazemos a Diferença</Text>
       </View>
 
@@ -141,8 +146,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xxl,
   },
   logoImage: {
-    width: 180,
-    height: 100,
+    width: 65,
+    height: 65,
   },
   sloganText: {
     fontSize: 14,
