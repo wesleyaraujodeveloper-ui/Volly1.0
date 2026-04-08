@@ -3,6 +3,7 @@ import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
+import { notificationService } from '../../src/services/notificationService';
 import { supabase } from '../../src/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInHours, parseISO } from 'date-fns';
@@ -111,6 +112,13 @@ export default function EventsScreen() {
       
       if (error) {
         throw error;
+      }
+
+      // Dispara notificações para os departamentos envolvidos
+      try {
+        await notificationService.notifyNewEvent(title, selectedDeptIds);
+      } catch (notifyErr) {
+        console.error('Erro silencioso ao notificar:', notifyErr);
       }
 
       // Reset form states

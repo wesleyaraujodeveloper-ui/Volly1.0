@@ -1,4 +1,7 @@
 import { supabase } from './supabase';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { format } from 'date-fns';
 
 export interface ChatMessage {
   id: string;
@@ -50,5 +53,51 @@ export const chatService = {
       .single();
 
     return !!data;
+  },
+
+  async downloadChatHistory(eventId: string, eventTitle: string) {
+    try {
+      // 1. Buscar todas as mensagens com nomes
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*, profiles(full_name)')
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      if (!messages || messages.length === 0) {
+        throw new Error('Não há mensagens para exportar neste evento.');
+      }
+
+      // 2. Formatar o conteúdo
+      let content = `HISTÓRICO DE CHAT - ${eventTitle.toUpperCase()}\n`;
+      content += `Exportado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}\n`;
+      content += '--------------------------------------------------\n\n';
+
+      messages.forEach(msg => {
+        const time = format(new Date(msg.created_at), 'HH:mm');
+        const user = msg.profiles?.full_name || 'Usuário';
+        content += `[${time}] ${user}: ${msg.content}\n`;
+      });
+
+      // 3. Salvar em arquivo temporário
+      const fileName = `chat_${eventId.substring(0, 8)}.txt`;
+      const fileUri = (FileSystem as any).cacheDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: (FileSystem as any).EncodingType.UTF8,
+      });
+
+      // 4. Compartilhar
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/plain',
+        dialogTitle: `Baixar histórico: ${eventTitle}`,
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Erro ao exportar chat:', error);
+      return { success: false, error: error.message };
+    }
   }
 };

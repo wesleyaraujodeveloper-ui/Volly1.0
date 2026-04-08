@@ -73,7 +73,10 @@ export default function HistoryScreen() {
           keyExtractor={item => item.id!}
           contentContainerStyle={{ paddingBottom: 40 }}
           renderItem={({ item }) => (
-            <View style={styles.eventCard}>
+            <TouchableOpacity 
+              style={styles.eventCard}
+              onPress={() => router.push(`/events/${item.id}?tab=CHAT`)}
+            >
               <View style={styles.eventInfo}>
                 <Text style={styles.eventTitle}>{item.title}</Text>
                 <Text style={styles.eventMeta}>
@@ -87,7 +90,8 @@ export default function HistoryScreen() {
                    ))}
                 </View>
               </View>
-            </View>
+              <Ionicons name="chatbubbles-outline" size={18} color={theme.colors.primary} />
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

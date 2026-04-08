@@ -124,9 +124,18 @@ export default function EventDetailScreen() {
 
     if (!error) {
       setNewMessage('');
-      // listRef.current?.scrollToOffset({ offset: 0, animated: true }); // Inverted list
     } else {
        Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
+    }
+  };
+
+  const handleDownloadChat = async () => {
+    setLoading(true);
+    const result = await chatService.downloadChatHistory(id, event?.title || 'Evento');
+    setLoading(false);
+    
+    if (!result.success) {
+      Alert.alert('Erro ao Baixar', result.error);
     }
   };
 
@@ -375,6 +384,14 @@ export default function EventDetailScreen() {
 
         {activeTab === 'CHAT' && (
           <View style={styles.chatContainer}>
+            <View style={styles.chatHeader}>
+              <Text style={styles.chatHeaderText}>Mensagens da Equipe</Text>
+              <TouchableOpacity style={styles.downloadChatBtn} onPress={handleDownloadChat}>
+                 <Ionicons name="download-outline" size={20} color={theme.colors.primary} />
+                 <Text style={styles.downloadChatText}>Baixar</Text>
+              </TouchableOpacity>
+            </View>
+
             <FlatList
               ref={listRef}
               data={messages}
@@ -394,16 +411,21 @@ export default function EventDetailScreen() {
                    </Text>
                 </View>
               )}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyTextSmaller}>Nenhuma mensagem ainda.</Text>
+                </View>
+              }
             />
             
             {!chatActive ? (
               <View style={styles.chatLocked}>
-                <Ionicons name="lock-closed" size={20} color={theme.colors.textSecondary} />
-                <Text style={styles.chatLockedText}>Chat encerrado para este evento.</Text>
+                <Ionicons name="lock-closed" size={16} color={theme.colors.textSecondary} />
+                <Text style={styles.chatLockedText}>Chat encerrado. Histórico disponível para leitura.</Text>
               </View>
             ) : !canChat ? (
               <View style={styles.chatLocked}>
-                <Ionicons name="warning" size={20} color={theme.colors.primary} />
+                <Ionicons name="warning" size={16} color={theme.colors.primary} />
                 <Text style={styles.chatLockedText}>Apenas voluntários escalados ou líderes podem falar aqui.</Text>
               </View>
             ) : (
@@ -799,5 +821,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 8,
     fontWeight: 'bold',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
+  },
+  chatHeaderText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  downloadChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '40',
+  },
+  downloadChatText: {
+    color: theme.colors.primary,
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
   },
 });
