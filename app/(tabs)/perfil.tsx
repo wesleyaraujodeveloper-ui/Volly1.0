@@ -16,6 +16,15 @@ export default function PerfilScreen() {
   const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
 
+  const getTeamIcon = (name: string) => {
+    const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (normalized.includes('streaming')) return require('../../assets/images/icons/Streaming.png');
+    if (normalized.includes('iluminacao')) return require('../../assets/images/icons/Iluminação.png');
+    if (normalized.includes('projecao')) return require('../../assets/images/icons/Projeção.png');
+    if (normalized.includes('audio')) return require('../../assets/images/icons/Tecnica de Audio.png');
+    return null;
+  };
+
   useEffect(() => {
     loadDepartments();
   }, []);
@@ -165,16 +174,23 @@ export default function PerfilScreen() {
           <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
         ) : userDepartments.length > 0 ? (
           <View style={styles.teamsGrid}>
-            {userDepartments.map((dept, index) => (
-              <View key={index} style={styles.teamCard}>
-                <View style={styles.teamIconBox}>
-                  <Ionicons name="people" size={24} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.teamNameText} numberOfLines={1}>
-                  {dept.departments.name}
-                </Text>
-              </View>
-            ))}
+              {userDepartments.map((dept, index) => {
+                const teamIcon = getTeamIcon(dept.departments.name);
+                return (
+                  <View key={index} style={styles.teamCard}>
+                    <View style={styles.teamIconBox}>
+                      {teamIcon ? (
+                        <Image source={teamIcon} style={styles.teamIconImage} />
+                      ) : (
+                        <Ionicons name="people" size={24} color={theme.colors.primary} />
+                      )}
+                    </View>
+                    <Text style={styles.teamNameText} numberOfLines={1}>
+                      {dept.departments.name}
+                    </Text>
+                  </View>
+                );
+              })}
           </View>
         ) : (
           <View style={styles.emptyTeamsCard}>
@@ -324,13 +340,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamIconBox: {
-    width: 45,
-    height: 45,
+    width: 50,
+    height: 50,
     borderRadius: 15,
-    backgroundColor: 'rgba(255, 106, 0, 0.1)',
+    backgroundColor: 'rgba(255, 106, 0, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  teamIconImage: {
+    width: '80%',
+    height: '80%',
+    resizeMode: 'contain',
   },
   teamNameText: {
     color: theme.colors.text,

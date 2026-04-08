@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform, Image } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useState } from 'react';
@@ -94,7 +94,11 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>VOLLY</Text>
+        <Image 
+          source={require('../../assets/images/icons/Volly.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.sloganText}>Juntos Fazemos a Diferença</Text>
       </View>
 
@@ -136,11 +140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.xxl,
   },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: theme.colors.primary,
-    letterSpacing: 2,
+  logoImage: {
+    width: 180,
+    height: 100,
   },
   sloganText: {
     fontSize: 14,

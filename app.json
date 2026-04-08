@@ -4,7 +4,7 @@
     "slug": "volly-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icons/Volly.png",
     "scheme": "vollyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
