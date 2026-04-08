@@ -32,7 +32,7 @@ export default function AuthCallback() {
     <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
       <ActivityIndicator size="large" color="#FF8C00" />
       <Text style={{ color: '#FFFFFF', marginTop: 20, fontSize: 16 }}>
-        Finalizando login...
+        Bem vindo ao Volly
       </Text>
     </View>
   );

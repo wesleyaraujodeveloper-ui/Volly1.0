@@ -24,43 +24,42 @@ export default function FeedScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(() => {
     if (!user) return;
-    setLoading(true);
-    try {
-      const [nextEv, nextGlobalEv, recommendedSongs, socialPosts] = await Promise.all([
-        feedService.getNextUserEvent(user.id),
-        feedService.getNextGlobalEvent(),
-        feedService.getRecommendedSongs(10),
-        feedService.listPosts()
-      ]);
-
+    
+    // Inicia o carregamento das seções de forma não bloqueante
+    feedService.getNextUserEvent(user.id).then(nextEv => {
       setNextEvent(nextEv.data);
-      setNextGlobalEvent(nextGlobalEv.data);
-      setSongs(recommendedSongs.data || []);
-      setPosts(socialPosts.data || []);
-
       const eventData = nextEv.data?.events as any;
       if (eventData) {
-        const active = chatService.isChatActive(
-          eventData.event_date,
-          eventData.end_date
-        );
-        setIsChatActive(active);
+        setIsChatActive(chatService.isChatActive(eventData.event_date, eventData.end_date));
       } else {
         setIsChatActive(false);
       }
-    } catch (error) {
-      console.error('Error loading feed data:', error);
-    } finally {
+    });
+
+    feedService.getNextGlobalEvent().then(nextGlobalEv => {
+      setNextGlobalEvent(nextGlobalEv.data);
+    });
+
+    feedService.getRecommendedSongs(10).then(recommendedSongs => {
+      setSongs(recommendedSongs.data || []);
+    });
+
+    feedService.listPosts().then(socialPosts => {
+      setPosts(socialPosts.data || []);
+      // Removemos o loading global somente após o carregamento principal do feed (posts)
       setLoading(false);
       setRefreshing(false);
-    }
+    });
   }, [user]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (user) {
+      setLoading(true);
+      loadData();
+    }
+  }, [loadData, user]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -145,13 +144,17 @@ export default function FeedScreen() {
     loadData();
   };
 
-  if (loading && !refreshing) {
-    return (
-      <View style={[globalStyles.container, globalStyles.center]}>
-        <ActivityIndicator color={theme.colors.primary} />
-      </View>
-    );
-  }
+  // A tela principal renderiza imediatamente, os dados "pipocam" quando prontos.
+  const renderLoadingFeedback = () => {
+    if (loading && !refreshing) {
+      return (
+        <View style={{ marginVertical: 20, alignItems: 'center' }}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
+      );
+    }
+    return null;
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -313,6 +316,8 @@ export default function FeedScreen() {
               </View>
             )}
           </View>
+
+          {renderLoadingFeedback()}
 
           {posts.length > 0 ? posts.map((post) => {
             const authorName = post.profiles?.full_name || 'Usuário';

@@ -18,10 +18,6 @@ export default function RootLayout() {
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
-  if (!fontsLoaded) {
-    return null;
-  }
-
   useEffect(() => {
     if (!navigationState?.key) return;
 
@@ -121,6 +117,10 @@ export default function RootLayout() {
       router.replace('/(tabs)/feed');
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <>

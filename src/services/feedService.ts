@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 export interface Post {
   id: string;
@@ -155,13 +157,11 @@ export const feedService = {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
       const filePath = `${fileName}`;
 
-      // No React Native, buscamos o blob da URI local
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
 
       const { data, error } = await supabase.storage
         .from('mural')
-        .upload(filePath, blob, {
+        .upload(filePath, decode(base64), {
           contentType: 'image/jpeg',
           cacheControl: '3600',
           upsert: false
