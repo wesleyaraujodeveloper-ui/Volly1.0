@@ -173,5 +173,30 @@ export const availabilityService = {
       .select();
 
     return { data, error };
+  },
+
+  /**
+   * Busca a disponibilidade de TODOS os usuários de um departamento para uma lista de eventos.
+   * Utilizado por Gestores para planejamento.
+   */
+  getEventAvailabilitiesForTeam: async (departmentId: string, eventIds: string[]) => {
+    // 1. Busca os usuários do departamento
+    const { data: members, error: membersError } = await supabase
+      .from('user_departments')
+      .select('user_id')
+      .eq('department_id', departmentId);
+
+    if (membersError || !members) return { data: [], error: membersError };
+
+    const userIds = members.map(m => m.user_id);
+
+    // 2. Busca disponibilidades desses usuários para os eventos
+    const { data, error } = await supabase
+      .from('user_event_availabilities')
+      .select('*, profiles:user_id(full_name, avatar_url)')
+      .in('user_id', userIds)
+      .in('event_id', eventIds);
+
+    return { data: data || [], error };
   }
 };

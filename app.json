@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "O Volly precisa de acesso à câmera para você tirar fotos para o mural.",
+        "NSMicrophoneUsageDescription": "O Volly precisa de acesso ao microfone para recursos de áudio.",
+        "NSContactsUsageDescription": "O Volly precisa de acesso aos contatos para facilitar o convite de voluntários.",
+        "NSLocationWhenInUseUsageDescription": "O Volly usa sua localização para sugerir eventos próximos.",
+        "NSPhotoLibraryUsageDescription": "O Volly precisa de acesso às suas fotos para você compartilhar no mural."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,6 +25,18 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "com.wesleydeveloper.volly",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -42,6 +61,7 @@
       "expo-web-browser",
       "expo-font",
       "expo-image",
+      "expo-notifications",
       [
         "expo-image-picker",
         {

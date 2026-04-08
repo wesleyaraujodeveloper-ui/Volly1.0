@@ -7,12 +7,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { feedService } from '../../src/services/feedService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useRouter } from 'expo-router';
+import { chatService } from '../../src/services/chatService';
 
 export default function FeedScreen() {
   const { user } = useAppStore();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [nextEvent, setNextEvent] = useState<any>(null);
+  const [nextGlobalEvent, setNextGlobalEvent] = useState<any>(null);
+  const [isChatActive, setIsChatActive] = useState(false);
   const [songs, setSongs] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
@@ -23,17 +28,30 @@ export default function FeedScreen() {
     if (!user) return;
     setLoading(true);
     try {
-      const [nextEv, recommendedSongs, socialPosts] = await Promise.all([
+      const [nextEv, nextGlobalEv, recommendedSongs, socialPosts] = await Promise.all([
         feedService.getNextUserEvent(user.id),
+        feedService.getNextGlobalEvent(),
         feedService.getRecommendedSongs(10),
         feedService.listPosts()
       ]);
 
       setNextEvent(nextEv.data);
+      setNextGlobalEvent(nextGlobalEv.data);
       setSongs(recommendedSongs.data || []);
       setPosts(socialPosts.data || []);
+
+      const eventData = nextEv.data?.events as any;
+      if (eventData) {
+        const active = chatService.isChatActive(
+          eventData.event_date,
+          eventData.end_date
+        );
+        setIsChatActive(active);
+      } else {
+        setIsChatActive(false);
+      }
     } catch (error) {
-      console.error('Error loading feed:', error);
+      console.error('Error loading feed data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -98,13 +116,9 @@ export default function FeedScreen() {
     
     try {
       let imageUrl = null;
-
-      // Se houver uma imagem selecionada, faz o upload primeiro
       if (selectedImage) {
         const uploadRes = await feedService.uploadPostImage(selectedImage);
-        if (uploadRes.error) {
-          throw new Error('Falha ao fazer upload da imagem.');
-        }
+        if (uploadRes.error) throw new Error('Falha ao fazer upload da imagem.');
         imageUrl = uploadRes.publicUrl;
       }
 
@@ -125,11 +139,10 @@ export default function FeedScreen() {
     }
   };
 
-
   const handleLike = async (postId: string) => {
     if (!user) return;
     await feedService.toggleLike(postId, user.id);
-    loadData(); // Recarrega para atualizar contador
+    loadData();
   };
 
   if (loading && !refreshing) {
@@ -160,7 +173,6 @@ export default function FeedScreen() {
 
   const renderNextMission = () => {
     if (!nextEvent) return null;
-
     const event = nextEvent.events;
     const role = nextEvent.roles;
 
@@ -217,6 +229,43 @@ export default function FeedScreen() {
     </View>
   );
 
+  const renderNextGlobalEvent = () => {
+    if (!nextGlobalEvent) return null;
+    const eventDate = new Date(nextGlobalEvent.event_date);
+    
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Nosso próximo compromisso!</Text>
+        <View style={styles.missionCard}>
+          <View style={styles.missionHeader}>
+            <View style={[styles.missionTag, { backgroundColor: theme.colors.surfaceHighlight }]}>
+              <Text style={[styles.missionTagText, { color: theme.colors.primary }]}>GERAL</Text>
+            </View>
+            <Text style={styles.missionTime}>{format(eventDate, 'HH:mm')}</Text>
+          </View>
+          
+          <Text style={styles.missionTitle}>{nextGlobalEvent.title}</Text>
+          <Text style={styles.missionRole}>Data: <Text style={{ color: theme.colors.textSecondary }}>{format(eventDate, "dd 'de' MMMM", { locale: ptBR })}</Text></Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderChatFAB = () => {
+    if (!nextEvent?.events) return null;
+    const eventId = (nextEvent.events as any).id;
+
+    return (
+      <TouchableOpacity 
+        style={styles.chatFAB}
+        onPress={() => router.push(`/events/${eventId}?tab=CHAT`)}
+      >
+        <Ionicons name="chatbubbles-outline" size={26} color="#121212" />
+        <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={globalStyles.container}>
       <ScrollView 
@@ -226,9 +275,10 @@ export default function FeedScreen() {
         {renderHeader()}
         {renderNextMission()}
         {renderRecommendedSongs()}
+        {renderNextGlobalEvent()}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mural da Comunidade</Text>
+          <Text style={styles.sectionTitle}>News</Text>
           
           <View style={styles.newPostContainer}>
             <View style={styles.newPostCard}>
@@ -264,46 +314,52 @@ export default function FeedScreen() {
             )}
           </View>
 
+          {posts.length > 0 ? posts.map((post) => {
+            const authorName = post.profiles?.full_name || 'Usuário';
+            const authorAvatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}`;
+            let displayDate = 'Recentemente';
+            
+            try {
+              if (post.created_at) displayDate = format(new Date(post.created_at), "dd/MM 'às' HH:mm");
+            } catch (e) {}
 
-          {posts.map((post) => (
-            <View key={post.id} style={styles.postCard}>
-              <View style={styles.postHeader}>
-                <Image 
-                  source={{ uri: post.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + post.profiles?.full_name }} 
-                  style={styles.postAvatar} 
-                />
-                <View style={styles.postAuthorInfo}>
-                  <Text style={styles.postAuthor}>{post.profiles?.full_name}</Text>
-                  <Text style={styles.postTime}>{format(new Date(post.created_at), "dd/MM 'às' HH:mm")}</Text>
+            return (
+              <View key={post.id} style={styles.postCard}>
+                <View style={styles.postHeader}>
+                  <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
+                  <View style={styles.postAuthorInfo}>
+                    <Text style={styles.postAuthor}>{authorName}</Text>
+                    <Text style={styles.postTime}>{displayDate}</Text>
+                  </View>
+                </View>
+                <Text style={styles.postContent}>{post.content}</Text>
+                {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
+                <View style={styles.postFooter}>
+                  <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
+                    <Ionicons 
+                      name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
+                    />
+                    <Text style={styles.interactionText}>{post.likesCount}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.interactionBtn} activeOpacity={0.7}>
+                    <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
+                    <Text style={styles.interactionText}>{post.commentsCount}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-              
-              <Text style={styles.postContent}>{post.content}</Text>
-              
-              {post.image_url && (
-                <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />
-              )}
-
-              <View style={styles.postFooter}>
-                <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
-                  <Ionicons 
-                    name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
-                    size={20} 
-                    color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
-                  />
-                  <Text style={styles.interactionText}>{post.likesCount}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.interactionBtn}>
-                  <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
-                  <Text style={styles.interactionText}>{post.commentsCount}</Text>
-                </TouchableOpacity>
-              </View>
+            );
+          }) : (
+            <View style={styles.emptyFeedCard}>
+              <Ionicons name="newspaper-outline" size={32} color={theme.colors.textSecondary} />
+              <Text style={styles.emptyFeedText}>Nada por aqui ainda. Seja o primeiro a postar!</Text>
             </View>
-          ))}
+          )}
         </View>
         <View style={{ height: 40 }} />
       </ScrollView>
+      {renderChatFAB()}
     </View>
   );
 }
@@ -362,7 +418,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderLeftWidth: 5,
     borderLeftColor: theme.colors.primary,
-    // Sombra
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -498,6 +553,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: 12,
   },
+  emptyFeedCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+  },
+  emptyFeedText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: 'center',
+  },
   postButton: {
     backgroundColor: theme.colors.primary,
     width: 36,
@@ -574,5 +645,33 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 12,
     fontStyle: 'italic',
-  }
+  },
+  chatFAB: {
+    position: 'absolute',
+    bottom: 25,
+    right: 25,
+    backgroundColor: theme.colors.primary,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    zIndex: 999,
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
 });

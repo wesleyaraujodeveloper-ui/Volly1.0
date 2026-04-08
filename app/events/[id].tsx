@@ -15,11 +15,17 @@ import { useRef } from 'react';
 type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 
 export default function EventDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, tab } = useLocalSearchParams<{ id: string, tab?: string }>();
   const router = useRouter();
   const { user, providerToken } = useAppStore();
-  const [activeTab, setActiveTab] = useState<Tab>('INFO');
+  const [activeTab, setActiveTab] = useState<Tab>((tab as Tab) || 'INFO');
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (tab === 'CHAT' || tab === 'ESCALAS' || tab === 'INFO') {
+      setActiveTab(tab as Tab);
+    }
+  }, [tab]);
   
   const [event, setEvent] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
@@ -238,37 +244,44 @@ export default function EventDetailScreen() {
                 {songs && songs.length > 0 ? (
                   songs.map((song, index) => (
                     <View key={index} style={styles.songCard}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.songName} numberOfLines={1}>
-                          {song.name}
-                        </Text>
-                      </View>
-                      <View style={styles.songActions}>
-                        {song.youtube ? (
-                          <TouchableOpacity 
-                            onPress={() => Linking.openURL(song.youtube!)} 
-                            style={styles.actionButtonCircle}
-                          >
-                            <Ionicons name="logo-youtube" size={18} color="#FF0000" />
-                          </TouchableOpacity>
-                        ) : null}
-                        {song.spotify ? (
-                          <TouchableOpacity 
-                            onPress={() => Linking.openURL(song.spotify!)} 
-                            style={styles.actionButtonCircle}
-                          >
-                            <Ionicons name="musical-notes" size={18} color="#1DB954" />
-                          </TouchableOpacity>
-                        ) : null}
+                      <View style={styles.songHeader}>
+                        <View style={styles.songInfoArea}>
+                          <Text style={styles.songName} numberOfLines={2}>
+                            {song.name}
+                          </Text>
+                        </View>
                         {canEditPlaylist ? (
                           <TouchableOpacity 
                             onPress={() => handleRemoveSongFromList(index)} 
-                            style={styles.actionButtonCircle}
+                            style={styles.deleteSongBtn}
                           >
                             <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
                           </TouchableOpacity>
                         ) : null}
                       </View>
+
+                      {!!(song.youtube || song.spotify) && (
+                        <View style={styles.linkButtonsArea}>
+                          {!!song.youtube && (
+                            <TouchableOpacity 
+                              onPress={() => Linking.openURL(song.youtube!)} 
+                              style={[styles.linkButton, styles.youtubeButton]}
+                            >
+                              <Ionicons name="logo-youtube" size={16} color="#ffffff" />
+                              <Text style={styles.linkButtonText}>Assistir no YouTube</Text>
+                            </TouchableOpacity>
+                          )}
+                          {!!song.spotify && (
+                            <TouchableOpacity 
+                              onPress={() => Linking.openURL(song.spotify!)} 
+                              style={[styles.linkButton, styles.spotifyButton]}
+                            >
+                              <Ionicons name="musical-notes" size={16} color="#ffffff" />
+                              <Text style={styles.linkButtonText}>Ouvir no Spotify</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
                     </View>
                   ))
                 ) : (
@@ -524,29 +537,53 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   songCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.background,
+  },
+  songInfoArea: {
+    marginBottom: 8,
   },
   songName: {
     color: theme.colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
-  songActions: {
+  songHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  actionButtonCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
+  deleteSongBtn: {
+    padding: 8,
+  },
+  linkButtonsArea: {
+    marginTop: 4,
+  },
+  linkButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  youtubeButton: {
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 0, 0, 0.3)',
+  },
+  spotifyButton: {
+    backgroundColor: 'rgba(29, 185, 84, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(29, 185, 84, 0.3)',
+  },
+  linkButtonText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   addSongForm: {
     marginTop: 20,

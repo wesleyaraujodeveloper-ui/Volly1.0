@@ -55,6 +55,28 @@ export const feedService = {
   },
 
   /**
+   * Busca o próximo evento geral (para todos os usuários).
+   */
+  getNextGlobalEvent: async () => {
+    const { data, error } = await supabase
+      .from('events')
+      .select(`
+        *,
+        event_departments (
+          departments (
+            name
+          )
+        )
+      `)
+      .gte('event_date', new Date().toISOString())
+      .order('event_date', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    return { data, error };
+  },
+
+  /**
    * Busca sugestões de músicas baseadas nas playlists recentes.
    */
   getRecommendedSongs: async (limit: number = 5) => {
@@ -91,14 +113,18 @@ export const feedService = {
       .from('posts')
       .select(`
         *,
-        profiles (full_name, avatar_url),
+        profiles:user_id (full_name, avatar_url),
         post_likes (user_id),
         post_comments (id)
       `)
       .order('created_at', { ascending: false })
       .limit(20);
 
-    if (error) return { error };
+    if (error) {
+      return { data: [], error };
+    }
+
+    if (!data) return { data: [], error: null };
 
     // Mapeia para incluir contadores
     const formattedPosts = data.map(post => ({

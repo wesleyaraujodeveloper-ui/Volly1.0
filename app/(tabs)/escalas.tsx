@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,7 @@ export default function EscalasTabsScreen() {
   // Estados para Disponibilidade
   const [monthEvents, setMonthEvents] = useState<Event[]>([]);
   const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
+  const [teamAvailabilities, setTeamAvailabilities] = useState<any[]>([]);
   const [userAbsences, setUserAbsences] = useState<Absence[]>([]);
 
   // Estados para Escalas (Aba 2)
@@ -100,15 +101,25 @@ export default function EscalasTabsScreen() {
       setUpcomingEvents(eventList);
       setMonthEvents(eventList); // Sincroniza a aba de disponibilidade
 
-      // 2. Se houver eventos, busca as disponibilidades já marcadas
+      // 2. Se houver eventos, busca as disponibilidades
       if (eventList.length > 0) {
-        const { data: avail } = await availabilityService.getEventAvailability(eventList.map(e => e.id!));
+        const eventIds = eventList.map(e => e.id!);
+        
+        // Disponibilidade Própria
+        const { data: avail } = await availabilityService.getEventAvailability(eventIds);
         setEventAvailabilities(avail || []);
+
+        // Se for Gestor, busca da Equipe inteira
+        if (isAdminOrLeader) {
+          const { data: tAvail } = await availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds);
+          setTeamAvailabilities(tAvail || []);
+        }
         
         // Seleciona o primeiro evento por padrão para a aba de Escalas
         setSelectedEventId(eventList[0].id!);
       } else {
         setEventAvailabilities([]);
+        setTeamAvailabilities([]);
         setSelectedEventId(null);
       }
     } catch (error) {
@@ -317,16 +328,48 @@ export default function EscalasTabsScreen() {
             const eventDate = parseISO(event.event_date);
             
             return (
-              <View key={event.id} style={[styles.dayCard, !isEnabled && { opacity: 0.5 }]}>
-                <TouchableOpacity style={styles.dayHeader} onPress={() => toggleEventAvailability(event.id!)}>
+              <View key={event.id} style={styles.eventAvailCard}>
+                <View style={styles.dayHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.dayName}>{event.title}</Text>
                     <Text style={styles.eventDateLabel}>{format(eventDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
                   </View>
-                  <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
-                    {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
+                  {!isAdminOrLeader && (
+                    <TouchableOpacity onPress={() => toggleEventAvailability(event.id!)}>
+                      <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
+                        {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {isAdminOrLeader && (
+                  <View style={styles.teamAvailList}>
+                    <Text style={styles.teamAvailTitle}>Disponibilidade da Equipe:</Text>
+                    {teamAvailabilities.filter(ta => ta.event_id === event.id).length > 0 ? (
+                      teamAvailabilities
+                        .filter(ta => ta.event_id === event.id)
+                        .map((ta, idx) => (
+                          <View key={idx} style={styles.memberStatusRow}>
+                            <View style={styles.memberInfo}>
+                              <Image 
+                                source={{ uri: ta.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ta.profiles?.full_name}` }} 
+                                style={styles.memberAvatar} 
+                              />
+                              <Text style={styles.memberName}>{ta.profiles?.full_name}</Text>
+                            </View>
+                            <View style={[styles.statusBadge, { backgroundColor: ta.is_available ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
+                              <Text style={[styles.statusBadgeText, { color: ta.is_available ? theme.colors.success : theme.colors.error }]}>
+                                {ta.is_available ? 'Disponível' : 'Indisponível'}
+                              </Text>
+                            </View>
+                          </View>
+                        ))
+                    ) : (
+                      <Text style={styles.emptyTeamText}>Nenhum voluntário marcou disponibilidade ainda.</Text>
+                    )}
                   </View>
-                </TouchableOpacity>
+                )}
               </View>
             );
           })
@@ -396,15 +439,19 @@ export default function EscalasTabsScreen() {
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       {isAdminOrLeader && (
         <View style={styles.adminActions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleCompleteScale} disabled={saving}>
-            <Text style={styles.buttonText}>Concluir escala e Notificar</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.primaryButton, { backgroundColor: '#333', marginTop: 10 }]} 
+            style={[styles.primaryButton, { backgroundColor: '#333' }]} 
             onPress={handleAutoGenerateScale}
             disabled={saving}
           >
             <Text style={[styles.buttonText, { color: theme.colors.primary }]}>Gerar escalas automáticamente</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.primaryButton, { marginTop: 10 }]} 
+            onPress={handleCompleteScale} 
+            disabled={saving}
+          >
+            <Text style={styles.buttonText}>Concluir escala e Notificar</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -977,5 +1024,62 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#000',
     fontWeight: 'bold',
+  },
+  eventAvailCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  teamAvailList: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
+  },
+  teamAvailTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: theme.colors.textSecondary,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  memberStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 10,
+  },
+  memberName: {
+    color: theme.colors.text,
+    fontSize: 13,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  emptyTeamText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 5,
   },
 });
