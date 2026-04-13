@@ -212,5 +212,27 @@ export const feedService = {
         .from('post_likes')
         .insert([{ post_id: postId, user_id: userId }]);
     }
+  },
+
+  /**
+   * Busca os comentários de um post.
+   */
+  getComments: async (postId: string) => {
+    return await supabase
+      .from('post_comments')
+      .select('*, profiles:user_id(full_name, avatar_url)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+  },
+
+  /**
+   * Adiciona um comentário a um post.
+   */
+  addComment: async (postId: string, userId: string, content: string) => {
+    return await supabase
+      .from('post_comments')
+      .insert([{ post_id: postId, user_id: userId, content }])
+      .select()
+      .single();
   }
 };

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform, Modal, KeyboardAvoidingView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { globalStyles, theme } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,11 @@ export default function FeedScreen() {
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<{uri: string, base64: string} | null>(null);
   const [isPosting, setIsPosting] = useState(false);
-
+  const [activeCommentPost, setActiveCommentPost] = useState<any>(null);
+  const [postComments, setPostComments] = useState<any[]>([]);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [isCommenting, setIsCommenting] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
   const loadData = useCallback(() => {
     if (!user) return;
     
@@ -179,6 +183,37 @@ export default function FeedScreen() {
     await feedService.toggleLike(postId, user.id);
     loadData();
   };
+
+  const openComments = async (post: any) => {
+    setActiveCommentPost(post);
+    setLoadingComments(true);
+    const { data } = await feedService.getComments(post.id);
+    setPostComments(data || []);
+    setLoadingComments(false);
+  };
+
+  const closeComments = () => {
+    setActiveCommentPost(null);
+    setPostComments([]);
+    setNewCommentText('');
+  };
+
+  const submitComment = async () => {
+    if (!newCommentText.trim() || !user || !activeCommentPost) return;
+    setIsCommenting(true);
+    const { data, error } = await feedService.addComment(activeCommentPost.id, user.id, newCommentText.trim());
+    if (!error && data) {
+      // Refresh comments and clear input
+      const res = await feedService.getComments(activeCommentPost.id);
+      setPostComments(res.data || []);
+      setNewCommentText('');
+      loadData(); // To update the comment count on the feed background
+    } else {
+      Alert.alert('Erro', 'Falha ao enviar comentário.');
+    }
+    setIsCommenting(false);
+  };
+
 
   // A tela principal renderiza imediatamente, os dados "pipocam" quando prontos.
   const renderLoadingFeedback = () => {
@@ -384,7 +419,7 @@ export default function FeedScreen() {
                     />
                     <Text style={styles.interactionText}>{post.likesCount}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.interactionBtn} activeOpacity={0.7}>
+                  <TouchableOpacity style={styles.interactionBtn} activeOpacity={0.7} onPress={() => openComments(post)}>
                     <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
                     <Text style={styles.interactionText}>{post.commentsCount}</Text>
                   </TouchableOpacity>
@@ -401,6 +436,65 @@ export default function FeedScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
       {renderChatFAB()}
+
+      {/* Comentários Modal */}
+      <Modal visible={!!activeCommentPost} animationType="slide" transparent={true}>
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderGrabber} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 10 }}>
+                <Text style={styles.modalTitle}>Comentários</Text>
+                <TouchableOpacity onPress={closeComments} style={{ padding: 5 }}>
+                  <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {loadingComments ? (
+              <ActivityIndicator style={{ marginTop: 40 }} color={theme.colors.primary} />
+            ) : (
+              <FlatList
+                data={postComments}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ padding: 20 }}
+                ListEmptyComponent={<Text style={styles.emptyCommentsText}>Seja o primeiro a comentar!</Text>}
+                renderItem={({ item }) => (
+                  <View style={styles.commentItem}>
+                    <Image source={{ uri: item.profiles?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.commentAvatar} />
+                    <View style={styles.commentBubble}>
+                      <Text style={styles.commentAuthor}>{item.profiles?.full_name || 'Usuário'}</Text>
+                      <Text style={styles.commentText}>{item.content}</Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Escreva um comentário..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={newCommentText}
+                onChangeText={setNewCommentText}
+                multiline
+              />
+              <TouchableOpacity style={styles.commentSendBtn} onPress={submitComment} disabled={isCommenting}>
+                {isCommenting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="send" size={18} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 }
@@ -714,5 +808,97 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
     borderWidth: 2,
     borderColor: theme.colors.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    height: '75%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 0,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalHeaderGrabber: {
+    width: 40,
+    height: 5,
+    backgroundColor: theme.colors.border,
+    borderRadius: 3,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  emptyCommentsText: {
+    textAlign: 'center',
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: 20,
+  },
+  commentItem: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  commentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+    backgroundColor: theme.colors.border,
+  },
+  commentBubble: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    padding: 12,
+    borderRadius: 16,
+    borderTopLeftRadius: 4,
+  },
+  commentAuthor: {
+    fontWeight: 'bold',
+    color: theme.colors.text,
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  commentText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    alignItems: 'flex-end',
+    backgroundColor: theme.colors.background,
+  },
+  commentInput: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingTop: 12,
+    paddingBottom: 12,
+    minHeight: 40,
+    maxHeight: 100,
+    color: theme.colors.text,
+    marginRight: 10,
+  },
+  commentSendBtn: {
+    backgroundColor: theme.colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
