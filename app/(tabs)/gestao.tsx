@@ -36,16 +36,6 @@ export default function GestaoMembrosScreen() {
   const [managingRoleProfile, setManagingRoleProfile] = useState<Profile | null>(null);
   const [userAssignedRoles, setUserAssignedRoles] = useState<string[]>([]);
 
-  if (user?.role === 'VOLUNTÁRIO') {
-    return (
-      <View style={[globalStyles.container, globalStyles.center]}>
-        <Ionicons name="lock-closed" size={64} color={theme.colors.primary} />
-        <Text style={[globalStyles.textTitle, { marginTop: 20 }]}>Acesso Restrito</Text>
-        <Text style={globalStyles.textBody}>Apenas Líderes e Admins podem acessar esta área.</Text>
-      </View>
-    );
-  }
-
   const loadVolunteers = async () => {
     setRefreshing(true);
     const { data, error } = await adminService.listVolunteers();
@@ -74,10 +64,12 @@ export default function GestaoMembrosScreen() {
   };
 
   useEffect(() => {
-    loadVolunteers();
-    loadDepartments();
-    loadRoles();
-    if (user?.id) {
+    if (user?.role !== 'VOLUNTÁRIO') {
+      loadVolunteers();
+      loadDepartments();
+      loadRoles();
+    }
+    if (user?.id && user?.role !== 'VOLUNTÁRIO') {
        adminService.getLeaderDepartments(user.id).then(({ data }) => {
          if (data) {
            const ids = data.map(d => d.id);
@@ -86,7 +78,17 @@ export default function GestaoMembrosScreen() {
          }
        });
     }
-  }, []);
+  }, [user?.id, user?.role]);
+
+  if (user?.role === 'VOLUNTÁRIO') {
+    return (
+      <View style={[globalStyles.container, globalStyles.center]}>
+        <Ionicons name="lock-closed" size={64} color={theme.colors.primary} />
+        <Text style={[globalStyles.textTitle, { marginTop: 20 }]}>Acesso Restrito</Text>
+        <Text style={globalStyles.textBody}>Apenas Líderes e Admins podem acessar esta área.</Text>
+      </View>
+    );
+  }
 
   const handleAddVolunteer = async () => {
     if (user?.role !== 'LÍDER' && user?.role !== 'ADMIN') {
