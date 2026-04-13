@@ -553,7 +553,7 @@ export default function EscalasTabsScreen() {
                       {format(evDate, 'dd', { locale: ptBR })}
                     </Text>
                     <Text style={styles.dayHeaderText}>
-                      {format(evDate, 'eee', { locale: ptBR })}
+                      {format(evDate, 'eee', { locale: ptBR }).replace('.', '').substring(0, 3)}
                     </Text>
                   </View>
                 </View>
@@ -564,7 +564,7 @@ export default function EscalasTabsScreen() {
           {roles.map((role) => (
             <View key={role.id} style={styles.tableRow}>
               <View style={styles.roleCell}>
-                <Text style={styles.roleText}>{role.name}</Text>
+                <Text style={styles.roleText} numberOfLines={3}>{role.name}</Text>
               </View>
               
               {monthlyEvents.map(ev => {
@@ -957,9 +957,11 @@ const styles = StyleSheet.create({
   roleCell: {
     width: 100,
     justifyContent: 'center',
+    paddingRight: 5,
   },
   roleText: {
-    fontSize: 11,
+    fontSize: 10,
+    lineHeight: 14,
     fontWeight: 'bold',
     color: theme.colors.text,
   },
