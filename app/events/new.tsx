@@ -76,6 +76,25 @@ export default function EventsScreen() {
     setSelectedDates(newSelectedDates);
   };
 
+  const handleTimeMask = (text: string) => {
+    let cleaned = ('' + text).replace(/\D/g, '');
+    let match = cleaned.match(/^(\d{0,2})(\d{0,2})$/);
+    if (!match) return cleaned.substring(0, 4);
+    
+    let formatted = match[1];
+    if (formatted.length === 2 && parseInt(formatted, 10) > 23) {
+      formatted = '23';
+    }
+
+    if (match[2]) {
+      let mins = match[2];
+      if (mins.length === 2 && parseInt(mins, 10) > 59) mins = '59';
+      formatted += ':' + mins;
+    }
+    
+    return formatted;
+  };
+
   const handleCreateEvents = async () => {
     const dateKeys = Object.keys(selectedDates);
     if (!title || dateKeys.length === 0 || selectedDeptIds.length === 0) {
@@ -242,11 +261,25 @@ export default function EventsScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={styles.label}>Início (HH:mm)</Text>
-                <TextInput style={styles.input} value={startTime} onChangeText={setStartTime} placeholder="19:00" />
+                <TextInput 
+                  style={styles.input} 
+                  value={startTime} 
+                  onChangeText={(t) => setStartTime(handleTimeMask(t))} 
+                  placeholder="19:00" 
+                  keyboardType="numeric"
+                  maxLength={5}
+                />
               </View>
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.label}>Fim (HH:mm)</Text>
-                <TextInput style={styles.input} value={endTime} onChangeText={setEndTime} placeholder="21:00" />
+                <TextInput 
+                  style={styles.input} 
+                  value={endTime} 
+                  onChangeText={(t) => setEndTime(handleTimeMask(t))} 
+                  placeholder="21:00" 
+                  keyboardType="numeric"
+                  maxLength={5}
+                />
               </View>
             </View>
 
