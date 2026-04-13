@@ -452,6 +452,22 @@ export default function FeedScreen() {
                   <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
+              {activeCommentPost && (
+                <View style={{ width: '100%', marginTop: 15, paddingBottom: 5 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Image 
+                      source={{ uri: activeCommentPost.profiles?.avatar_url || 'https://via.placeholder.com/40' }} 
+                      style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8, backgroundColor: theme.colors.border }} 
+                    />
+                    <Text style={{ fontWeight: 'bold', color: theme.colors.text, fontSize: 13 }}>
+                      {activeCommentPost.profiles?.full_name || 'Usuário'}
+                    </Text>
+                  </View>
+                  <Text style={{ color: theme.colors.text, fontSize: 14, lineHeight: 20 }} numberOfLines={4}>
+                    {activeCommentPost.content}
+                  </Text>
+                </View>
+              )}
             </View>
             
             {loadingComments ? (
