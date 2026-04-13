@@ -149,12 +149,18 @@ export const feedService = {
   },
 
   /**
-   * Inscreve-se para atualizações em tempo real nas postagens.
+   * Inscreve-se para atualizações em tempo real no feed (posts, curtidas e comentários).
    */
-  subscribeToPosts: (onUpdate: () => void) => {
+  subscribeToFeed: (onUpdate: () => void) => {
     return supabase
-      .channel('public:posts')
+      .channel('public:feed_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
+        onUpdate();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, payload => {
+        onUpdate();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, payload => {
         onUpdate();
       })
       .subscribe();

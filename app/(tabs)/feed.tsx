@@ -63,8 +63,8 @@ export default function FeedScreen() {
       setLoading(true);
       loadData();
 
-      // Configura o ouvinte para atualizar posts em tempo real
-      const subscription = feedService.subscribeToPosts(() => {
+      // Configura o ouvinte para atualizar posts, curtidas e comentários em tempo real
+      const subscription = feedService.subscribeToFeed(() => {
         // Atualiza a lista de forma silenciosa para não travar a tela
         feedService.listPosts().then(socialPosts => {
           setPosts(socialPosts.data || []);
@@ -76,6 +76,17 @@ export default function FeedScreen() {
       };
     }
   }, [loadData, user]);
+
+  useEffect(() => {
+    // Sincroniza os comentários do modal com o tempo real disparado nas atualizações do feed
+    if (activeCommentPost) {
+      feedService.getComments(activeCommentPost.id).then(res => {
+        setPostComments(res.data || []);
+      });
+    }
+  }, [posts, activeCommentPost]);
+
+
 
   const onRefresh = () => {
     setRefreshing(true);
