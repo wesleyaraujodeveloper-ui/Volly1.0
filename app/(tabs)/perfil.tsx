@@ -40,48 +40,69 @@ export default function PerfilScreen() {
   };
 
   const handleLogout = async () => {
+    const executeLogout = async () => {
+      try {
+        setLoading(true);
+        await supabase.auth.signOut();
+      } catch (error) {
+        console.error('Logout error:', error);
+      } finally {
+        clearSession();
+        setLoading(false);
+        router.replace('/(auth)/login');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Deseja realmente sair da sua conta?')) {
+        executeLogout();
+      }
+      return;
+    }
+
     Alert.alert(
       'Sair',
       'Deseja realmente sair da sua conta?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sair', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await supabase.auth.signOut();
-            } catch (error) {
-              console.error('Logout error:', error);
-            } finally {
-              clearSession();
-              setLoading(false);
-              router.replace('/(auth)/login');
-            }
-          }
-        }
+        { text: 'Sair', style: 'destructive', onPress: executeLogout }
       ]
     );
   };
 
-
-
   const handleDeleteAccount = () => {
+    const notifyAdmin = () => {
+      if (Platform.OS === 'web') {
+        window.alert('Funcionalidade em desenvolvimento. Contate o administrador.');
+        return;
+      }
+      Alert.alert('Aviso', 'Funcionalidade em desenvolvimento. Contate o administrador.');
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Esta ação é permanente e todos os seus dados serão perdidos. Deseja continuar?')) {
+        notifyAdmin();
+      }
+      return;
+    }
+
     Alert.alert(
       'Excluir Conta',
       'Esta ação é permanente e todos os seus dados serão perdidos. Deseja continuar?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir Permanentemente', 
-          style: 'destructive',
-          onPress: async () => {
-            Alert.alert('Aviso', 'Funcionalidade em desenvolvimento. Contate o administrador.');
-          }
-        }
+        { text: 'Excluir Permanentemente', style: 'destructive', onPress: notifyAdmin }
       ]
     );
+  };
+
+  const alertSoon = (title: string) => {
+    const msg = 'Esta configuração será liberada em breve na próxima atualização!';
+    if (Platform.OS === 'web') {
+      window.alert(title + ': ' + msg);
+      return;
+    }
+    Alert.alert(title, msg);
   };
 
   return (
@@ -144,13 +165,13 @@ export default function PerfilScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configurações</Text>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => alertSoon('Notificações')}>
           <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
           <Text style={styles.menuItemText}>Notificações</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => alertSoon('Privacidade')}>
           <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.text} />
           <Text style={styles.menuItemText}>Privacidade</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
