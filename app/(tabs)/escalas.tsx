@@ -231,6 +231,16 @@ export default function EscalasTabsScreen() {
       Alert.alert('Erro', 'Erro ao adicionar ausência.');
     }
   };
+
+  const handleDateMask = (text: string) => {
+    let cleaned = ('' + text).replace(/\D/g, '');
+    let match = cleaned.match(/^(\d{0,4})(\d{0,2})(\d{0,2})$/);
+    if (!match) return cleaned.substring(0, 8);
+    let formatted = match[1];
+    if (match[2]) formatted += '-' + match[2];
+    if (match[3]) formatted += '-' + match[3];
+    return formatted;
+  };
   
   const handleAutoGenerateScale = async () => {
     if (!selectedEventId || !selectedDeptId) return;
@@ -412,13 +422,19 @@ export default function EscalasTabsScreen() {
                 placeholder="Início (AAAA-MM-DD)" 
                 placeholderTextColor="#666"
                 style={styles.modalInput}
-                onChangeText={(t) => setNewAbsence({...newAbsence, start_date: t})}
+                keyboardType="numeric"
+                maxLength={10}
+                value={newAbsence.start_date}
+                onChangeText={(t) => setNewAbsence({...newAbsence, start_date: handleDateMask(t)})}
               />
               <TextInput 
                 placeholder="Fim (AAAA-MM-DD)" 
                 placeholderTextColor="#666"
                 style={styles.modalInput}
-                onChangeText={(t) => setNewAbsence({...newAbsence, end_date: t})}
+                keyboardType="numeric"
+                maxLength={10}
+                value={newAbsence.end_date}
+                onChangeText={(t) => setNewAbsence({...newAbsence, end_date: handleDateMask(t)})}
               />
               <View style={styles.modalActions}>
                 <TouchableOpacity onPress={() => setShowAbsenceModal(false)} style={[styles.modalButton, { backgroundColor: '#444' }]}>
