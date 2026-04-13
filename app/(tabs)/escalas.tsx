@@ -213,19 +213,29 @@ export default function EscalasTabsScreen() {
     }
   };
 
+  const parseBrazilianDate = (ptStr: string) => {
+    const parts = ptStr.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return ptStr;
+  };
+
   const handleAddAbsence = async () => {
-    if (!newAbsence.start_date || !newAbsence.end_date) {
-      Alert.alert('Erro', 'Por favor, preencha as datas.');
+    const startDb = parseBrazilianDate(newAbsence.start_date);
+    const endDb = parseBrazilianDate(newAbsence.end_date);
+
+    if (!startDb || !endDb || startDb.length < 10) {
+      Alert.alert('Erro', 'Por favor, preencha as datas completamente (DD/MM/AAAA).');
       return;
     }
     try {
       const { error } = await availabilityService.addAbsence(
-        newAbsence.start_date, 
-        newAbsence.end_date, 
+        startDb, 
+        endDb, 
         newAbsence.description
       );
       if (error) throw error;
       setShowAbsenceModal(false);
+      setNewAbsence({ start_date: '', end_date: '', description: '' });
       loadInitialData();
     } catch (error) {
       Alert.alert('Erro', 'Erro ao adicionar ausência.');
@@ -234,11 +244,11 @@ export default function EscalasTabsScreen() {
 
   const handleDateMask = (text: string) => {
     let cleaned = ('' + text).replace(/\D/g, '');
-    let match = cleaned.match(/^(\d{0,4})(\d{0,2})(\d{0,2})$/);
+    let match = cleaned.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
     if (!match) return cleaned.substring(0, 8);
     let formatted = match[1];
-    if (match[2]) formatted += '-' + match[2];
-    if (match[3]) formatted += '-' + match[3];
+    if (match[2]) formatted += '/' + match[2];
+    if (match[3]) formatted += '/' + match[3];
     return formatted;
   };
   
@@ -419,7 +429,7 @@ export default function EscalasTabsScreen() {
                 onChangeText={(t) => setNewAbsence({...newAbsence, description: t})}
               />
               <TextInput 
-                placeholder="Início (AAAA-MM-DD)" 
+                placeholder="Início (DD/MM/AAAA)" 
                 placeholderTextColor="#666"
                 style={styles.modalInput}
                 keyboardType="numeric"
@@ -428,7 +438,7 @@ export default function EscalasTabsScreen() {
                 onChangeText={(t) => setNewAbsence({...newAbsence, start_date: handleDateMask(t)})}
               />
               <TextInput 
-                placeholder="Fim (AAAA-MM-DD)" 
+                placeholder="Fim (DD/MM/AAAA)" 
                 placeholderTextColor="#666"
                 style={styles.modalInput}
                 keyboardType="numeric"
