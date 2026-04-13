@@ -28,8 +28,19 @@ export default function FeedScreen() {
   const [newCommentText, setNewCommentText] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
+
+  // Estados do Panorama
+  const [feedMode, setFeedMode] = useState<'MURAL' | 'PANORAMA'>('MURAL');
+  const [panoramaData, setPanoramaData] = useState<any[]>([]);
+  const [loadingPanorama, setLoadingPanorama] = useState(false);
+
   const loadData = useCallback(() => {
     if (!user) return;
+    
+    // Inicia o carregamento das seções de forma não bloqueante
+    feedService.getGlobalSchedulePanorama().then(res => {
+      setPanoramaData(res.data || []);
+    });
     
     // Inicia o carregamento das seções de forma não bloqueante
     feedService.getNextUserEvent(user.id).then(nextEv => {
@@ -336,6 +347,58 @@ export default function FeedScreen() {
     );
   };
 
+  const renderPanorama = () => {
+    if (loadingPanorama) return <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />;
+    if (panoramaData.length === 0) return <Text style={[styles.emptyText, { marginTop: 40 }]}>Nenhuma escala gerada no momento.</Text>;
+
+    return (
+      <View style={{ marginTop: 10, paddingBottom: 40 }}>
+        {panoramaData.map((ev: any) => {
+          const groupedDepts: Record<string, { deptName: string, schedules: any[] }> = {};
+          
+          if (ev.schedules) {
+            ev.schedules.forEach((sch: any) => {
+              const deptId = sch.roles?.departments?.id || 'unknown';
+              const deptName = sch.roles?.departments?.name || 'Geral';
+              if (!groupedDepts[deptId]) groupedDepts[deptId] = { deptName, schedules: [] };
+              groupedDepts[deptId].schedules.push(sch);
+            });
+          }
+
+          return (
+            <View key={ev.id} style={styles.panoramaEventCard}>
+               <Text style={styles.panoramaEventTitle}>{ev.title}</Text>
+               <Text style={styles.panoramaEventDate}>{format(new Date(ev.event_date), "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
+               
+               {Object.values(groupedDepts).length === 0 ? (
+                 <Text style={[styles.emptyText, { marginTop: 10, fontSize: 12 }]}>Ninguém escalado ainda.</Text>
+               ) : (
+                 Object.values(groupedDepts).map((group, idx) => (
+                   <View key={idx} style={styles.panoramaDeptBlock}>
+                     <View style={styles.panoramaDeptHeader}>
+                       <View style={styles.panoramaDeptMarker} />
+                       <Text style={styles.panoramaDeptName}>{group.deptName}</Text>
+                     </View>
+                     {group.schedules.map((sch: any) => (
+                       <View key={sch.id} style={styles.panoramaSchItem}>
+                         <Image source={{ uri: sch.profiles?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.panoramaAvatar} />
+                         <View style={{ flex: 1 }}>
+                           <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
+                           <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
+                         </View>
+                       </View>
+                     ))}
+                   </View>
+                 ))
+               )}
+               <View style={styles.panoramaDivider} />
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   const renderChatFAB = () => {
     if (!nextEvent?.events) return null;
     const eventId = (nextEvent.events as any).id;
@@ -358,8 +421,30 @@ export default function FeedScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
       >
         {renderHeader()}
-        {renderNextMission()}
-        {renderRecommendedSongs()}
+
+        <View style={styles.modeTabs}>
+          <TouchableOpacity 
+            style={[styles.modeTab, feedMode === 'MURAL' && styles.activeModeTab]}
+            onPress={() => setFeedMode('MURAL')}
+          >
+            <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#121212' : theme.colors.textSecondary} />
+            <Text style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}>Mural Social</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
+            onPress={() => setFeedMode('PANORAMA')}
+          >
+            <Ionicons name="grid" size={16} color={feedMode === 'PANORAMA' ? '#121212' : theme.colors.textSecondary} />
+            <Text style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}>Escala Global</Text>
+          </TouchableOpacity>
+        </View>
+
+        {feedMode === 'PANORAMA' ? (
+          renderPanorama()
+        ) : (
+          <>
+            {renderNextMission()}
+            {renderRecommendedSongs()}
         {renderNextGlobalEvent()}
 
         <View style={styles.section}>
@@ -444,6 +529,8 @@ export default function FeedScreen() {
             </View>
           )}
         </View>
+          </>
+        )}
         <View style={{ height: 40 }} />
       </ScrollView>
       {renderChatFAB()}
@@ -534,6 +621,23 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginBottom: 10,
   },
+  modeTabs: { flexDirection: 'row', backgroundColor: theme.colors.surface, padding: 4, borderRadius: 12, marginBottom: 20 },
+  modeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10 },
+  activeModeTab: { backgroundColor: theme.colors.primary },
+  modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
+  activeModeTabText: { color: '#121212' },
+  panoramaEventCard: { marginBottom: 24 },
+  panoramaEventTitle: { color: theme.colors.text, fontSize: 18, fontWeight: 'bold' },
+  panoramaEventDate: { color: theme.colors.textSecondary, fontSize: 13, marginBottom: 16 },
+  panoramaDeptBlock: { marginBottom: 16, backgroundColor: theme.colors.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: theme.colors.border },
+  panoramaDeptHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  panoramaDeptMarker: { width: 4, height: 16, borderRadius: 2, backgroundColor: theme.colors.primary, marginRight: 8 },
+  panoramaDeptName: { color: theme.colors.primary, fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase' },
+  panoramaSchItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  panoramaAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.background, marginRight: 12 },
+  panoramaSchName: { color: theme.colors.text, fontSize: 14, fontWeight: 'bold' },
+  panoramaSchRole: { color: theme.colors.textSecondary, fontSize: 12 },
+  panoramaDivider: { height: 1, backgroundColor: theme.colors.border, marginTop: 8 },
   dateText: {
     color: theme.colors.textSecondary,
     fontSize: 12,

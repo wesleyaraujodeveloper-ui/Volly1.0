@@ -56,6 +56,36 @@ export const feedService = {
   },
 
   /**
+   * Busca o panorama geral da escala agrupado por evento, função e equipes.
+   */
+  getGlobalSchedulePanorama: async () => {
+    // Retorna todos os eventos a partir de hoje num raio razoável, com a estrutura completa
+    const { data, error } = await supabase
+      .from('events')
+      .select(`
+        id,
+        title,
+        event_date,
+        schedules (
+          id,
+          status,
+          user_id,
+          profiles (full_name, avatar_url),
+          roles (
+            id,
+            name,
+            departments (id, name)
+          )
+        )
+      `)
+      .gte('event_date', new Date().toISOString().split('T')[0] + 'T00:00:00') // Do começo do dia de hoje em diante
+      .order('event_date', { ascending: true })
+      .limit(10); // Limita para os próximos 10 eventos
+
+    return { data, error };
+  },
+
+  /**
    * Busca o próximo evento geral (para todos os usuários).
    */
   getNextGlobalEvent: async () => {
