@@ -354,13 +354,11 @@ export default function EscalasTabsScreen() {
                     <Text style={styles.dayName}>{event.title}</Text>
                     <Text style={styles.eventDateLabel}>{format(eventDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
                   </View>
-                  {!isAdminOrLeader && (
-                    <TouchableOpacity onPress={() => toggleEventAvailability(event.id!)}>
-                      <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
-                        {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
-                      </View>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity onPress={() => toggleEventAvailability(event.id!)}>
+                    <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
+                      {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
+                    </View>
+                  </TouchableOpacity>
                 </View>
 
                 {isAdminOrLeader && (
