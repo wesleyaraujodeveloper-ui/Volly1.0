@@ -544,13 +544,21 @@ export default function EscalasTabsScreen() {
         <View>
           <View style={styles.tableHeader}>
             <Text style={[styles.columnHeader, { width: 100 }]}>Funções</Text>
-            {monthlyEvents.map(ev => (
-              <View key={ev.id} style={styles.dayColumn}>
-                <Text style={styles.dayHeaderText}>
-                  {format(parseISO(ev.event_date), 'eee, dd', { locale: ptBR })}
-                </Text>
-              </View>
-            ))}
+            {monthlyEvents.map(ev => {
+              const evDate = parseISO(ev.event_date);
+              return (
+                <View key={ev.id} style={styles.dayColumn}>
+                  <View style={styles.dayBlockWrapper}>
+                    <Text style={styles.dayHeaderNumber}>
+                      {format(evDate, 'dd', { locale: ptBR })}
+                    </Text>
+                    <Text style={styles.dayHeaderText}>
+                      {format(evDate, 'eee', { locale: ptBR })}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
 
           {roles.map((role) => (
@@ -921,13 +929,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayColumn: {
-    flex: 1,
+    width: 60,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayBlockWrapper: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 167, 38, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '30',
+  },
+  dayHeaderNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
   },
   dayHeaderText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: 'normal',
+    textTransform: 'uppercase',
     color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   roleCell: {
     width: 100,
@@ -939,7 +964,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   nameCellDetailed: {
-    flex: 1,
+    width: 60,
     alignItems: 'center',
     paddingVertical: 5,
   },
