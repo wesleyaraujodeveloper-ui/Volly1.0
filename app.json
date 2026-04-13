@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "volly-app",
+    "name": "Volly",
     "slug": "volly-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -40,7 +40,11 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/icons/volly-logo.png"
+      "favicon": "./assets/images/icons/volly-logo.png",
+      "name": "Volly App",
+      "shortName": "Volly",
+      "themeColor": "#121212",
+      "backgroundColor": "#121212"
     },
     "plugins": [
       "expo-router",
