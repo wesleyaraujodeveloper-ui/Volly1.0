@@ -96,7 +96,7 @@ export default function LoginScreen() {
       <View style={styles.logoContainer}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image 
-            source={require('../../assets/images/icons/Volly.png')} 
+            source={require('../../assets/images/icons/volly-logo.png')} 
             style={styles.logoImage}
             resizeMode="contain"
           />
