@@ -72,21 +72,21 @@ serve(async (req) => {
     console.log('Resend API Response:', data)
 
     if (!res.ok) {
-      return new Response(JSON.stringify({ error: data.message || 'Erro no Resend' }), {
+      return new Response(JSON.stringify({ success: false, error: data.message || 'Erro no Resend', details: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: res.status,
+        status: 200,
       })
     }
 
-    return new Response(JSON.stringify(data), {
+    return new Response(JSON.stringify({ success: true, data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
     console.error('Edge Function Error:', error.message)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: error.status || 500,
+      status: 200,
     })
   }
 })

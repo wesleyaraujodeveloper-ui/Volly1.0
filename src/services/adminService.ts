@@ -50,7 +50,9 @@ export const adminService = {
           }
         }).then(res => {
           if (res.error) {
-            console.error('Erro retornado pela Edge Function:', res.error);
+            console.error('Falha de Rede com a Edge Function:', res.error);
+          } else if (res.data && res.data.success === false) {
+            console.error('Resend processou, mas negou o envio. Erro da API:', res.data.error, res.data.details);
           } else {
             console.log('E-mail enviado com sucesso! Resposta do Resend:', res.data);
           }
