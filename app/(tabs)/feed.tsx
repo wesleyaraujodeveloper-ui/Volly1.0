@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { globalStyles, theme } from '../../src/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,41 +67,56 @@ export default function FeedScreen() {
   };
 
   const handleImagePick = async () => {
+    if (Platform.OS === 'web') {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled) setSelectedImage(result.assets[0].uri);
+      return;
+    }
+
     Alert.alert(
       'Selecionar Foto',
       'Escolha de onde você deseja selecionar a imagem para o mural:',
       [
         {
           text: 'Câmera',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Permissão Negada', 'Precisamos de acesso à câmera para tirar fotos.');
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.8,
-            });
-            if (!result.canceled) setSelectedImage(result.assets[0].uri);
+          onPress: () => {
+            setTimeout(async () => {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permissão Negada', 'Precisamos de acesso à câmera para tirar fotos.');
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+              if (!result.canceled) setSelectedImage(result.assets[0].uri);
+            }, 300);
           }
         },
         {
           text: 'Galeria',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Permissão Negada', 'Precisamos de acesso à galeria para selecionar fotos.');
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.8,
-            });
-            if (!result.canceled) setSelectedImage(result.assets[0].uri);
+          onPress: () => {
+            setTimeout(async () => {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== 'granted') {
+                Alert.alert('Permissão Negada', 'Precisamos de acesso à galeria para selecionar fotos.');
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.8,
+              });
+              if (!result.canceled) setSelectedImage(result.assets[0].uri);
+            }, 300);
           }
         },
         { text: 'Cancelar', style: 'cancel' }
