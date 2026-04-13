@@ -71,7 +71,7 @@ export default function FeedScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
+        aspect: [3, 4],
         quality: 0.8,
       });
       if (!result.canceled) setSelectedImage(result.assets[0].uri);
@@ -93,7 +93,7 @@ export default function FeedScreen() {
               }
               const result = await ImagePicker.launchCameraAsync({
                 allowsEditing: true,
-                aspect: [4, 3],
+                aspect: [3, 4],
                 quality: 0.8,
               });
               if (!result.canceled) setSelectedImage(result.assets[0].uri);
@@ -112,7 +112,7 @@ export default function FeedScreen() {
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
-                aspect: [4, 3],
+                aspect: [3, 4],
                 quality: 0.8,
               });
               if (!result.canceled) setSelectedImage(result.assets[0].uri);
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     position: 'relative',
     width: '100%',
-    height: 150,
+    aspectRatio: 3 / 4,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: '100%',
-    height: 200,
+    aspectRatio: 3 / 4,
     borderRadius: 12,
     marginBottom: 12,
     backgroundColor: theme.colors.border,
