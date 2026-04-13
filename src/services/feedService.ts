@@ -1,7 +1,5 @@
 import { supabase } from './supabase';
-import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { Platform } from 'react-native';
 
 export interface Post {
   id: string;
@@ -151,26 +149,28 @@ export const feedService = {
   },
 
   /**
+   * Inscreve-se para atualizações em tempo real nas postagens.
+   */
+  subscribeToPosts: (onUpdate: () => void) => {
+    return supabase
+      .channel('public:posts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, payload => {
+        onUpdate();
+      })
+      .subscribe();
+  },
+
+  /**
    * Faz o upload de uma imagem do dispositivo para o bucket 'mural'.
    */
-  uploadPostImage: async (uri: string) => {
+  uploadPostImage: async (base64Data: string) => {
     try {
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
       const filePath = `${fileName}`;
 
-      let uploadData: any;
-
-      if (Platform.OS === 'web') {
-        const response = await fetch(uri);
-        uploadData = await response.blob();
-      } else {
-        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-        uploadData = decode(base64);
-      }
-
       const { data, error } = await supabase.storage
         .from('mural')
-        .upload(filePath, uploadData, {
+        .upload(filePath, decode(base64Data), {
           contentType: 'image/jpeg',
           cacheControl: '3600',
           upsert: false

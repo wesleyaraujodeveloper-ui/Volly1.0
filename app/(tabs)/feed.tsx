@@ -21,7 +21,7 @@ export default function FeedScreen() {
   const [songs, setSongs] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{uri: string, base64: string} | null>(null);
   const [isPosting, setIsPosting] = useState(false);
 
   const loadData = useCallback(() => {
@@ -58,6 +58,18 @@ export default function FeedScreen() {
     if (user) {
       setLoading(true);
       loadData();
+
+      // Configura o ouvinte para atualizar posts em tempo real
+      const subscription = feedService.subscribeToPosts(() => {
+        // Atualiza a lista de forma silenciosa para não travar a tela
+        feedService.listPosts().then(socialPosts => {
+          setPosts(socialPosts.data || []);
+        });
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
   }, [loadData, user]);
 
@@ -73,8 +85,11 @@ export default function FeedScreen() {
         allowsEditing: true,
         aspect: [3, 4],
         quality: 0.8,
+        base64: true,
       });
-      if (!result.canceled) setSelectedImage(result.assets[0].uri);
+      if (!result.canceled && result.assets[0].base64) {
+        setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+      }
       return;
     }
 
@@ -95,8 +110,11 @@ export default function FeedScreen() {
                 allowsEditing: true,
                 aspect: [3, 4],
                 quality: 0.8,
+                base64: true,
               });
-              if (!result.canceled) setSelectedImage(result.assets[0].uri);
+              if (!result.canceled && result.assets[0].base64) {
+                setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+              }
             }, 300);
           }
         },
@@ -114,8 +132,11 @@ export default function FeedScreen() {
                 allowsEditing: true,
                 aspect: [3, 4],
                 quality: 0.8,
+                base64: true,
               });
-              if (!result.canceled) setSelectedImage(result.assets[0].uri);
+              if (!result.canceled && result.assets[0].base64) {
+                setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+              }
             }, 300);
           }
         },
@@ -130,8 +151,8 @@ export default function FeedScreen() {
     
     try {
       let imageUrl = null;
-      if (selectedImage) {
-        const uploadRes = await feedService.uploadPostImage(selectedImage);
+      if (selectedImage && selectedImage.base64) {
+        const uploadRes = await feedService.uploadPostImage(selectedImage.base64);
         if (uploadRes.error) throw new Error('Falha ao fazer upload da imagem.');
         imageUrl = uploadRes.publicUrl;
       }
@@ -322,9 +343,9 @@ export default function FeedScreen() {
               </View>
             </View>
 
-            {selectedImage && (
+            {selectedImage && selectedImage.uri && (
               <View style={styles.previewContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+                <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} />
                 <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
                   <Ionicons name="close-circle" size={24} color={theme.colors.error} />
                 </TouchableOpacity>
