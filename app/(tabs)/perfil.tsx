@@ -153,6 +153,12 @@ export default function PerfilScreen() {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
+          <Ionicons name="document-text-outline" size={24} color={theme.colors.text} />
+          <Text style={styles.menuItemText}>Termos de Uso</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#F44336" />
           <Text style={[styles.menuItemText, { color: '#F44336' }]}>Sair da Conta</Text>
