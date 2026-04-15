@@ -235,6 +235,32 @@ export default function FeedScreen() {
     }
     setIsCommenting(false);
   };
+  
+  const handleDeletePost = (postId: string) => {
+    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER') return;
+
+    Alert.alert(
+      'Excluir Postagem',
+      'Tem certeza que deseja remover esta postagem do mural? Esta ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              const { error } = await feedService.deletePost(postId);
+              if (error) throw error;
+              loadData();
+            } catch (error: any) {
+              Alert.alert('Erro', 'Não foi possível excluir a postagem.');
+              console.error('Delete post error:', error);
+            }
+          } 
+        }
+      ]
+    );
+  };
 
 
   // A tela principal renderiza imediatamente, os dados "pipocam" quando prontos.
@@ -499,10 +525,18 @@ export default function FeedScreen() {
               <View key={post.id} style={styles.postCard}>
                 <View style={styles.postHeader}>
                   <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-                  <View style={styles.postAuthorInfo}>
+                   <View style={styles.postAuthorInfo}>
                     <Text style={styles.postAuthor}>{authorName}</Text>
                     <Text style={styles.postTime}>{displayDate}</Text>
                   </View>
+                  {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || post.user_id === user?.id) && (
+                    <TouchableOpacity 
+                      style={styles.moreOptionsBtn} 
+                      onPress={() => handleDeletePost(post.id)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <Text style={styles.postContent}>{post.content}</Text>
                 {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
@@ -798,6 +832,10 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 8,
     marginRight: 4,
+  },
+  moreOptionsBtn: {
+    padding: 8,
+    marginLeft: 'auto',
   },
   previewContainer: {
     marginTop: 10,

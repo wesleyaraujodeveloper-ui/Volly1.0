@@ -270,5 +270,15 @@ export const feedService = {
       .insert([{ post_id: postId, user_id: userId, content }])
       .select()
       .single();
+  },
+
+  /**
+   * Exclui uma postagem.
+   */
+  deletePost: async (postId: string) => {
+    return await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
   }
 };
