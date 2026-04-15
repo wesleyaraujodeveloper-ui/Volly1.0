@@ -25,11 +25,9 @@ export default function LoginScreen() {
       setIsAuthenticating(true);
       console.log('--- INICIANDO OAUTH ---');
       
-      // Gera a URI de redirecionamento correta para o ambiente (Expo Go ou App nativo)
-      const redirectTo = AuthSession.makeRedirectUri({
-        scheme: 'vollyapp',
-        path: 'auth-callback',
-      });
+      // No modo de desenvolvimento (Expo Go), o makeRedirectUri sem parâmetros 
+      // costuma funcionar melhor para evitar erros de esquema.
+      const redirectTo = AuthSession.makeRedirectUri();
 
       console.log('Iniciando login Google com redirectTo:', redirectTo);
 

@@ -12,7 +12,8 @@ export default function RootLayout() {
     'CreamCake': require('../assets/fonts/Cream Cake.otf'),
   });
 
-  useNotifications();
+  // useNotifications(); // Desativado temporariamente para evitar crash no Expo Go SDK 53
+  
   const { user, setUser, isLoadingData, setIsLoadingData, setProviderToken } = useAppStore();
   const segments = useSegments();
   const router = useRouter();
@@ -21,47 +22,25 @@ export default function RootLayout() {
   useEffect(() => {
     if (!navigationState?.key) return;
 
-    // Função para Processar a Sessão
     const handleSession = async (session: any) => {
       console.log('DEBUG: handleSession iniciado. Session:', !!session);
       try {
         if (session?.user) {
-          console.log('DEBUG: Usuário autenticado:', session.user.email);
-          
-          if (session.provider_token) {
-            setProviderToken(session.provider_token);
-          }
-          
-          // Busca o perfil pelo ID (já deve ter sido criado pelo Trigger no BD)
+          // Busca o perfil
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-          if (error) {
-            console.log('DEBUG: Erro ao buscar perfil:', error.message);
+          if (error && error.message.includes('Refresh Token Not Found')) {
+            console.log('Sessão expirada, deslogando...');
+            await supabase.auth.signOut();
+            setUser(null);
+            return;
           }
 
           if (profile) {
-            console.log('DEBUG: Perfil encontrado:', profile.email, 'Role:', profile.access_level);
-            
-            // Auto Update do Avatar (Google Picture)
-            const googlePhotoUrl = session.user.user_metadata?.picture || session.user.user_metadata?.avatar_url;
-            if (googlePhotoUrl && profile.avatar_url !== googlePhotoUrl) {
-              console.log('DEBUG: Sincronizando avatar_url com foto do Google: ', googlePhotoUrl);
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ avatar_url: googlePhotoUrl })
-                .eq('id', session.user.id);
-                
-              if (!updateError) {
-                profile.avatar_url = googlePhotoUrl;
-              } else {
-                console.log('DEBUG: Erro ao sincronizar avatar:', updateError);
-              }
-            }
-
             setUser({
               id: profile.id,
               name: profile.full_name || '',
@@ -69,46 +48,36 @@ export default function RootLayout() {
               role: (profile.access_level as any) || 'VOLUNTÁRIO',
               avatar_url: profile.avatar_url
             });
-          } else {
-            console.log('DEBUG: Perfil não encontrado no banco para o ID:', session.user.id);
-            // Se o usuário logou mas não tem perfil (o gatilho barrou pois não tinha convite)
-            await supabase.auth.signOut();
-            setUser(null);
-            Alert.alert('Acesso Negado', 'Seu e-mail não foi convidado para acessar este aplicativo.');
           }
         } else {
-          console.log('DEBUG: Nenhuma sessão ativa.');
           setUser(null);
-          setProviderToken(null);
         }
       } catch (err) {
-        console.error('DEBUG: Crash no handleSession:', err);
+        console.error('DEBUG: Erro no handleSession:', err);
         setUser(null);
       } finally {
-        console.log('DEBUG: setIsLoadingData(false)');
         setIsLoadingData(false);
       }
     };
 
-    // 1. Busca a sessão atual imediatamente (Initial Load)
-    console.log('DEBUG: Executando getSession inicial...');
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.log('Erro ao recuperar sessão:', error.message);
+        setIsLoadingData(false);
+        return;
+      }
       handleSession(session);
     });
 
-    // 2. Escuta mudanças na autenticação (Login/Logout/OAuth)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-       console.log('DEBUG: onAuthStateChange Event:', event);
        handleSession(session);
     });
 
     return () => subscription.unsubscribe();
-  }, [navigationState?.key, setUser, setIsLoadingData]);
+  }, [navigationState?.key]);
 
-  // Efeito de Redirecionamento baseado no estado do User
   useEffect(() => {
     if (isLoadingData || !navigationState?.key) return;
-
     const inAuthGroup = segments[0] === '(auth)';
     
     if (!user && !inAuthGroup) {
@@ -118,20 +87,12 @@ export default function RootLayout() {
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <>
       <StatusBar style="light" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#121212' },
-          animation: 'slide_from_right'
-        }}
-      >
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#121212' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
