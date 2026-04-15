@@ -428,14 +428,14 @@ export default function FeedScreen() {
             onPress={() => setFeedMode('MURAL')}
           >
             <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#121212' : theme.colors.textSecondary} />
-            <Text style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}>Mural Social</Text>
+            <Text style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}>Volly Connect</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
             onPress={() => setFeedMode('PANORAMA')}
           >
             <Ionicons name="grid" size={16} color={feedMode === 'PANORAMA' ? '#121212' : theme.colors.textSecondary} />
-            <Text style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}>Escala Global</Text>
+            <Text style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}>Escala</Text>
           </TouchableOpacity>
         </View>
 
