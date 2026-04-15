@@ -36,12 +36,12 @@ export default function GestaoMembrosScreen() {
   const [managingRoleProfile, setManagingRoleProfile] = useState<Profile | null>(null);
   const [userAssignedRoles, setUserAssignedRoles] = useState<string[]>([]);
 
-  const loadVolunteers = async () => {
-    setRefreshing(true);
+  const loadVolunteers = async (silent: boolean = false) => {
+    if (!silent) setRefreshing(true);
     const { data, error } = await adminService.listVolunteers();
-    if (error) Alert.alert('Erro Membros', error.message);
+    if (error && !silent) Alert.alert('Erro Membros', error.message);
     else if (data) setVolunteers(data);
-    setRefreshing(false);
+    if (!silent) setRefreshing(false);
   };
 
   const loadDepartments = async () => {
@@ -64,11 +64,19 @@ export default function GestaoMembrosScreen() {
   };
 
   useEffect(() => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
     if (user?.role !== 'VOLUNTÁRIO') {
       loadVolunteers();
       loadDepartments();
       loadRoles();
+
+      // Assina a tabela de perfis para atualizar quando alguém logar pela 1ª vez
+      subscription = adminService.subscribeToVolunteers(() => {
+        loadVolunteers(true); // Atualização silenciosa
+      });
     }
+    
     if (user?.id && user?.role !== 'VOLUNTÁRIO') {
        adminService.getLeaderDepartments(user.id).then(({ data }) => {
          if (data) {
@@ -78,6 +86,10 @@ export default function GestaoMembrosScreen() {
          }
        });
     }
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, [user?.id, user?.role]);
 
   if (user?.role === 'VOLUNTÁRIO') {

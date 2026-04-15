@@ -241,5 +241,27 @@ export const adminService = {
       p_desc: description
     });
     return { data, error };
+  },
+
+  /**
+   * Assina o canal de tempo real para escutar novos acessos e novos perfis criados.
+   */
+  subscribeToVolunteers: (callback: () => void) => {
+    const subscription = supabase
+      .channel('volunteers-changes')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' }, 
+        () => {
+          callback();
+        }
+      )
+      .subscribe();
+      
+    return {
+      unsubscribe: () => {
+        supabase.removeChannel(subscription);
+      }
+    };
   }
 };
