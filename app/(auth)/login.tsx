@@ -36,6 +36,7 @@ export default function LoginScreen() {
         provider: 'google',
         options: {
           redirectTo,
+          skipBrowserRedirect: true,
           scopes: 'https://www.googleapis.com/auth/calendar.events',
           queryParams: {
             prompt: 'consent',

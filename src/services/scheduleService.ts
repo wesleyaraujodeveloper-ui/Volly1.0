@@ -134,16 +134,16 @@ export const scheduleService = {
     const { data: existing } = await scheduleService.listSchedulesByEvent(eventId);
     const existingRoleIds = existing?.map(s => s.role_id) || [];
 
-    // 3. Pegar voluntários disponíveis para este evento
+    // 3. Pegar TODAS as respostas de disponibilidade para este evento
     const { data: availables, error: availErr } = await supabase
       .from('user_event_availabilities')
-      .select('user_id')
-      .eq('event_id', eventId)
-      .eq('is_available', true);
+      .select('user_id, is_available')
+      .eq('event_id', eventId);
     
     if (availErr) return { error: `Erro ao buscar disponibilidades: ${availErr.message}` };
-    if (!availables || availables.length === 0) return { error: 'Nenhum voluntário marcou disponibilidade para este evento.' };
-    const availableUserIds = availables.map(a => a.user_id);
+    
+    const explicitlyAvailableIds = availables?.filter(a => a.is_available === true).map(a => a.user_id) || [];
+    const explicitlyUnavailableIds = availables?.filter(a => a.is_available === false).map(a => a.user_id) || [];
 
     // 4. Pegar dados do evento para o balanceamento
     const { data: event, error: evErr } = await supabase.from('events').select('event_date').eq('id', eventId).single();
@@ -154,7 +154,6 @@ export const scheduleService = {
     if (balErr || !balancing) return { error: 'Erro ao calcular balanceamento da equipe.' };
 
     const results = [];
-    const usedInThisEvent = [...existingRoleIds.map(rid => existing?.find(s => s.role_id === rid)?.user_id).filter(Boolean)];
     
     // Lista de IDs de usuários já escalados neste evento (para não repetir a mesma pessoa em 2 funções)
     const assignedUserIds = new Set(existing?.map(s => s.user_id) || []);
@@ -162,10 +161,19 @@ export const scheduleService = {
     for (const role of roles) {
       if (existingRoleIds.includes(role.id)) continue; 
 
-      // Encontrar voluntário disponível que ainda NÃO esteja escalado neste evento
-      const candidate = balancing.find(b => 
-        availableUserIds.includes(b.id) && !assignedUserIds.has(b.id)
+      // Candidatos que confirmaram expressamente (Prioridade 1)
+      let candidate = balancing.find(b => 
+        explicitlyAvailableIds.includes(b.id) && !assignedUserIds.has(b.id)
       );
+
+      // Se não tem ninguém prioritário, buscar omissos (Prioridade 2 = Fallback)
+      if (!candidate) {
+        candidate = balancing.find(b => 
+          !explicitlyAvailableIds.includes(b.id) && 
+          !explicitlyUnavailableIds.includes(b.id) && 
+          !assignedUserIds.has(b.id)
+        );
+      }
 
       if (candidate) {
         const { data, error: assignErr } = await scheduleService.assignVolunteer({
@@ -187,7 +195,7 @@ export const scheduleService = {
     }
 
     if (results.length === 0) {
-      return { error: 'As funções já estão preenchidas ou não há voluntários disponíveis para as funções restantes.' };
+      return { error: 'As funções já estão preenchidas ou não há mais voluntários escaláveis (todos ocupados ou indisponíveis).' };
     }
 
     return { data: results };

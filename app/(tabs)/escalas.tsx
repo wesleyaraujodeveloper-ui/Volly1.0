@@ -182,18 +182,18 @@ export default function EscalasTabsScreen() {
     setSelectedMonth(newMonth);
   };
 
-  const toggleEventAvailability = (eventId: string) => {
+  const setAvailabilityStatus = (eventId: string, status: boolean) => {
     const existing = eventAvailabilities.find(a => a.event_id === eventId);
     if (existing) {
       setEventAvailabilities(prev => prev.map(a => 
-        a.event_id === eventId ? { ...a, is_available: !a.is_available } : a
+        a.event_id === eventId ? { ...a, is_available: status } : a
       ));
     } else {
       setEventAvailabilities(prev => [...prev, { 
         user_id: user?.id!, 
         event_id: eventId, 
         periods: [], 
-        is_available: true 
+        is_available: status 
       }]);
     }
   };
@@ -354,11 +354,23 @@ export default function EscalasTabsScreen() {
                     <Text style={styles.dayName}>{event.title}</Text>
                     <Text style={styles.eventDateLabel}>{format(eventDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => toggleEventAvailability(event.id!)}>
-                    <View style={[styles.radioButton, isEnabled && styles.radioButtonSelected]}>
-                      {isEnabled && <Ionicons name="checkmark" size={14} color="#000" />}
-                    </View>
-                  </TouchableOpacity>
+                  <View style={styles.availabilityOptions}>
+                    <TouchableOpacity 
+                      style={[styles.availOptionBtn, avail?.is_available === true && styles.availOptionBtnSelected]} 
+                      onPress={() => setAvailabilityStatus(event.id!, true)}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={18} color={avail?.is_available === true ? '#000' : theme.colors.textSecondary} />
+                      <Text style={[styles.availOptionText, avail?.is_available === true && { color: '#000', fontWeight: 'bold' }]}>Vou</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.availOptionBtn, avail?.is_available === false && styles.availOptionBtnError]} 
+                      onPress={() => setAvailabilityStatus(event.id!, false)}
+                    >
+                      <Ionicons name="close-circle-outline" size={18} color={avail?.is_available === false ? '#fff' : theme.colors.textSecondary} />
+                      <Text style={[styles.availOptionText, avail?.is_available === false && { color: '#fff', fontWeight: 'bold' }]}>Não vou</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {isAdminOrLeader && (
@@ -727,18 +739,31 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
     color: theme.colors.text,
   },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
+  availabilityOptions: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  radioButtonSelected: {
+  availOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 6,
+  },
+  availOptionBtnSelected: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+  },
+  availOptionBtnError: {
+    backgroundColor: theme.colors.error,
+    borderColor: theme.colors.error,
+  },
+  availOptionText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
   },
   absenceHeader: {
     flexDirection: 'row',
