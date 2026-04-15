@@ -8,6 +8,8 @@ import { ptBR } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../../src/store/useAppStore';
+import { STRINGS } from '../../src/constants/strings';
+import { EmptyState } from '../../src/components/EmptyState';
 
 type ViewMode = 'LISTA' | 'CALENDARIO';
 type ListTab = 'PROXIMOS' | 'HISTORICO';
@@ -118,10 +120,11 @@ export default function EventosScreen() {
               renderItem={renderEventItem}
               contentContainerStyle={{ paddingBottom: 80 }}
               ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Ionicons name="calendar-outline" size={64} color={theme.colors.border} />
-                  <Text style={styles.emptyText}>Nenhum evento encontrado.</Text>
-                </View>
+                <EmptyState 
+                  title="Nenhum evento encontrado"
+                  description="Tente ajustar sua busca ou mudar o filtro de data."
+                  image={require('../../assets/images/illustrations/empty_state.png')}
+                />
               }
             />
           )}

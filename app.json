@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Volly",
+    "name": "Volly Connect",
     "slug": "vollyconnect",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,7 +41,7 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/icons/icone-volly-logo.png",
-      "name": "Volly App",
+      "name": "Volly Connect",
       "shortName": "Volly",
       "themeColor": "#121212",
       "backgroundColor": "#121212"

@@ -26,8 +26,8 @@ export default function TabsLayout() {
         headerRight: () => (
           <View style={{ marginRight: 15, flexDirection: 'row', alignItems: 'center' }}>
             <Image 
-              source={require('../../assets/images/icons/volly-logo.png')} 
-              style={{ width: 32, height: 32 }}
+              source={require('../../Icones/Volly_1.png')} 
+              style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
             <Text style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 30, marginLeft: 6 }}>

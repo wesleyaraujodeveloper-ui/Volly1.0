@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
 import { Ionicons } from '@expo/vector-icons';
+import { STRINGS } from '../../src/constants/strings';
+import { EmptyState } from '../../src/components/EmptyState';
+import { CustomModal } from '../../src/components/CustomModal';
 
 export default function GestaoMembrosScreen() {
   const { user } = useAppStore();
@@ -14,6 +17,14 @@ export default function GestaoMembrosScreen() {
   const [volunteers, setVolunteers] = useState<Profile[]>([]);
   
   const [activeTab, setActiveTab] = useState<'MEMBROS' | 'EQUIPES' | 'FUNÇÕES'>('MEMBROS');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState<{ title: string; message: string; onConfirm: () => void; type: 'danger' | 'info' | 'success' }>({
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
+
   const [departments, setDepartments] = useState<any[]>([]);
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptDesc, setNewDeptDesc] = useState('');
@@ -137,6 +148,25 @@ export default function GestaoMembrosScreen() {
       setNewDeptName(''); setNewDeptDesc(''); setSelectedLeaderId(null);
       loadDepartments();
     }
+  };
+
+  const handleDeleteDepartment = (dept: any) => {
+    setModalData({
+      title: 'Excluir Equipe',
+      message: `Deseja realmente excluir a equipe ${dept.name}? Esta ação é irreversível e removerá todos os vínculos desta equipe.`,
+      type: 'danger',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await adminService.deleteDepartment(dept.id);
+        setLoading(false);
+        if (error) Alert.alert('Erro', error.message);
+        else {
+          loadDepartments();
+          setModalVisible(false);
+        }
+      }
+    });
+    setModalVisible(true);
   };
 
   const handleUpdateLeader = (deptId: string) => setDeptChangingLeader(deptId);
@@ -306,6 +336,13 @@ export default function GestaoMembrosScreen() {
           <FlatList
             data={filteredVolunteers}
             keyExtractor={(item) => item.id || item.email}
+            ListEmptyComponent={
+              <EmptyState 
+                title={STRINGS.gestao.emptyState} 
+                description={STRINGS.gestao.emptyStateSub} 
+                image={require('../../assets/images/illustrations/empty_state.png')} 
+              />
+            }
             ListHeaderComponent={
               <View style={styles.formCard}>
                 <View style={styles.searchArea}>
@@ -594,17 +631,7 @@ export default function GestaoMembrosScreen() {
               <TouchableOpacity onPress={() => setDeptChangingLeader(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
             </View>
             <ScrollView>
-              {volunteers.filter(v => v.role === 'LÍDER').map(l => (
-                <TouchableOpacity key={l.id} style={styles.roleOptionRow} onPress={() => confirmUpdateLeader(l.id!)}>
-                  <Ionicons name="person-circle-outline" size={24} color={theme.colors.primary} />
-                  <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      )}
-
+      {/* MODAL DE EDIÇÃO DE EQUIPE (MANTIDO COMO MODAL DE FORMULÁRIO) */}
       {editingDept && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -612,22 +639,20 @@ export default function GestaoMembrosScreen() {
               <Text style={styles.modalTitle}>Editar Equipe</Text>
               <TouchableOpacity onPress={() => setEditingDept(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
             </View>
-            <View style={{ marginBottom: 20 }}>
-              <Text style={styles.inputLabel}>Nome da Equipe:</Text>
+            <View style={styles.formCard}>
               <TextInput 
                 style={styles.input} 
+                placeholder="Nome da Equipe" 
+                placeholderTextColor={theme.colors.textSecondary} 
                 value={editingDept.name} 
-                onChangeText={(text) => setEditingDept({...editingDept, name: text})}
-                placeholder="Ex: Louvor, Recepção..."
-                placeholderTextColor={theme.colors.textSecondary}
+                onChangeText={(text) => setEditingDept({...editingDept, name: text})} 
               />
-              <Text style={styles.inputLabel}>Descrição (Opcional):</Text>
               <TextInput 
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
+                style={[styles.input, { height: 80 }]} 
+                placeholder="Descrição (opcional)" 
+                placeholderTextColor={theme.colors.textSecondary} 
                 value={editingDept.description} 
-                onChangeText={(text) => setEditingDept({...editingDept, description: text})}
-                placeholder="Sobre o que é esta equipe..."
-                placeholderTextColor={theme.colors.textSecondary}
+                onChangeText={(text) => setEditingDept({...editingDept, description: text})} 
                 multiline
               />
             </View>
@@ -642,41 +667,17 @@ export default function GestaoMembrosScreen() {
         </View>
       )}
 
-      {deptToDelete && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Excluir Equipe</Text>
-              <TouchableOpacity onPress={() => setDeptToDelete(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
-            </View>
-            <View style={{ marginBottom: 30, alignItems: 'center' }}>
-              <Ionicons name="warning-outline" size={64} color={theme.colors.error} style={{ marginBottom: 16 }} />
-              <Text style={[globalStyles.textTitle, { textAlign: 'center', fontSize: 18 }]}>Tem certeza?</Text>
-              <Text style={[globalStyles.textBody, { textAlign: 'center', marginTop: 8 }]}>
-                Deseja realmente excluir a equipe <Text style={{fontWeight: 'bold', color: theme.colors.primary}}>{deptToDelete.name}</Text>?
-              </Text>
-              <Text style={{ color: theme.colors.error, fontSize: 11, marginTop: 12, textAlign: 'center', fontStyle: 'italic' }}>
-                Esta ação é irreversível e removerá todos os vínculos desta equipe.
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity 
-                style={[styles.addButton, { flex: 1, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border }]} 
-                onPress={() => setDeptToDelete(null)}
-              >
-                <Text style={[styles.addButtonText, { color: theme.colors.text }]}>CANCELAR</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.addButton, { flex: 1, backgroundColor: theme.colors.error }, loading && { opacity: 0.7 }]} 
-                onPress={confirmDeleteAction}
-                disabled={loading}
-              >
-                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.addButtonText, { color: '#FFFFFF' }]}>EXCLUIR AGORA</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+      <CustomModal 
+        visible={modalVisible}
+        title={modalData.title}
+        message={modalData.message}
+        type={modalData.type}
+        onConfirm={() => {
+          modalData.onConfirm();
+          setModalVisible(false);
+        }}
+        onCancel={() => setModalVisible(false)}
+      />
     </View>
   );
 }

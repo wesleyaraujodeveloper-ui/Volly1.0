@@ -3,6 +3,9 @@ import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '../../src/store/useAppStore';
+import { STRINGS } from '../../src/constants/strings';
+import { EmptyState } from '../../src/components/EmptyState';
+import { CustomModal } from '../../src/components/CustomModal';
 import { availabilityService, Availability, Absence, UserDepartment } from '../../src/services/availabilityService';
 import { eventService, Event } from '../../src/services/eventService';
 import { scheduleService } from '../../src/services/scheduleService';
@@ -224,9 +227,9 @@ export default function EscalasTabsScreen() {
         availabilityService.updateEventAvailability(a.event_id, a.periods, a.is_available)
       );
       await Promise.all(promises);
-      Alert.alert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!');
+      showAlert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!', 'success');
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+      showAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
     } finally {
       setSaving(false);
     }
@@ -243,7 +246,7 @@ export default function EscalasTabsScreen() {
     const endDb = parseBrazilianDate(newAbsence.end_date);
 
     if (!startDb || !endDb || startDb.length < 10) {
-      Alert.alert('Erro', 'Por favor, preencha as datas completamente (DD/MM/AAAA).');
+      showAlert('Erro', 'Por favor, preencha as datas completamente (DD/MM/AAAA).', 'danger');
       return;
     }
     try {
@@ -257,7 +260,7 @@ export default function EscalasTabsScreen() {
       setNewAbsence({ start_date: '', end_date: '', description: '' });
       loadInitialData();
     } catch (error) {
-      Alert.alert('Erro', 'Erro ao adicionar ausência.');
+      showAlert('Erro', 'Erro ao adicionar ausência.', 'danger');
     }
   };
 
@@ -271,15 +274,23 @@ export default function EscalasTabsScreen() {
     return formatted;
   };
   
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
+
+  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'danger' = 'info') => {
+    setModalData({ title, message, type });
+    setModalVisible(true);
+  };
+
   const handleAutoGenerateScale = async () => {
     if (!selectedEventId || !selectedDeptId) return;
     setSaving(true);
     const { error, data } = await scheduleService.autoGenerateSchedule(selectedEventId, selectedDeptId, providerToken);
     
     if (error) {
-      Alert.alert('Atenção', error);
+      showAlert('Atenção', error, 'info');
     } else {
-      Alert.alert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`);
+      showAlert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`, 'success');
       loadEventSchedules();
     }
     setSaving(false);
@@ -290,9 +301,9 @@ export default function EscalasTabsScreen() {
     setSaving(true);
     const { error } = await scheduleService.completeAndNotify(selectedEventId);
     if (error) {
-      Alert.alert('Erro', 'Erro ao concluir escalas.');
+      showAlert('Erro', 'Erro ao concluir escalas.', 'danger');
     } else {
-      Alert.alert('Sucesso', 'Escalas concluídas e voluntários notificados!');
+      showAlert('Sucesso', 'Escalas concluídas e voluntários notificados!', 'success');
       loadEventSchedules();
     }
     setSaving(false);
@@ -356,10 +367,11 @@ export default function EscalasTabsScreen() {
         <Text style={styles.sectionSubtitle}>Aqui você atualizará os dias de disponibilidade da semana e também períodos de ausência programada.</Text>
         
         {monthEvents.length === 0 ? (
-          <View style={styles.emptyEventsContainer}>
-            <Ionicons name="calendar-outline" size={40} color={theme.colors.surfaceHighlight} />
-            <Text style={styles.emptyText}>Nenhum evento programado para este departamento.</Text>
-          </View>
+          <EmptyState 
+            title="Nenhum evento neste departamento"
+            description="Não há eventos programados para o período selecionado."
+            image={require('../../assets/images/illustrations/empty_state.png')}
+          />
         ) : (
           monthEvents.map((event) => {
             const avail = eventAvailabilities.find(a => a.event_id === event.id);
@@ -561,10 +573,11 @@ export default function EscalasTabsScreen() {
           );
         })
       ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="calendar-outline" size={48} color={theme.colors.surfaceHighlight} />
-          <Text style={styles.emptyText}>Sem eventos para este departamento.</Text>
-        </View>
+        <EmptyState 
+          title="Sem eventos"
+          description="Não há eventos próximos para gerenciar escalas neste grupo."
+          image={require('../../assets/images/illustrations/empty_state.png')}
+        />
       )}
     </ScrollView>
   );
@@ -654,6 +667,16 @@ export default function EscalasTabsScreen() {
       {activeTab === 'DISPONIBILIDADE' && renderDisponibilidade()}
       {activeTab === 'ESCALAS' && renderEscalasTab()}
       {activeTab === 'MENSAL' && renderMensalTab()}
+
+      <CustomModal 
+        visible={modalVisible}
+        title={modalData.title}
+        message={modalData.message}
+        type={modalData.type}
+        onConfirm={() => setModalVisible(false)}
+        onCancel={() => setModalVisible(false)}
+        confirmText="OK"
+      />
     </View>
   );
 }

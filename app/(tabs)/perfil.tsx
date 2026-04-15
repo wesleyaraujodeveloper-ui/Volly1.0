@@ -7,6 +7,9 @@ import { supabase } from '../../src/services/supabase';
 import { availabilityService, UserDepartment } from '../../src/services/availabilityService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { STRINGS } from '../../src/constants/strings';
+import { CustomModal } from '../../src/components/CustomModal';
+import { Platform } from 'react-native';
 
 export default function PerfilScreen() {
   const router = useRouter();
@@ -14,6 +17,13 @@ export default function PerfilScreen() {
   const [loading, setLoading] = useState(false);
   const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
+
+  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'danger' = 'info') => {
+    setModalData({ title, message, type });
+    setModalVisible(true);
+  };
 
   const getTeamIcon = (name: string) => {
     const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -39,46 +49,31 @@ export default function PerfilScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    const executeLogout = async () => {
-      try {
-        setLoading(true);
-        await supabase.auth.signOut();
-      } catch (error) {
-        console.error('Logout error:', error);
-      } finally {
-        clearSession();
-        setLoading(false);
-        router.replace('/(auth)/login');
+  const handleLogout = () => {
+    setModalData({
+      title: 'Sair da Conta',
+      message: 'Deseja realmente sair da sua conta?',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await supabase.auth.signOut();
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          clearSession();
+          setLoading(false);
+          router.replace('/(auth)/login');
+        }
       }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Deseja realmente sair da sua conta?')) {
-        executeLogout();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Sair',
-      'Deseja realmente sair da sua conta?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', style: 'destructive', onPress: executeLogout }
-      ]
-    );
+    });
+    setModalVisible(true);
   };
 
 
 
   const alertSoon = (title: string) => {
-    const msg = 'Esta configuração será liberada em breve na próxima atualização!';
-    if (Platform.OS === 'web') {
-      window.alert(title + ': ' + msg);
-      return;
-    }
-    Alert.alert(title, msg);
+    showAlert(title, 'Esta configuração será liberada em breve na próxima atualização!', 'info');
   };
 
   return (
@@ -166,7 +161,23 @@ export default function PerfilScreen() {
       </View>
 
 
-      <Text style={styles.versionText}>Volly v1.0.0</Text>
+      <Text style={styles.versionText}>{STRINGS.profile.version}</Text>
+
+      <CustomModal 
+        visible={modalVisible}
+        title={modalData.title}
+        message={modalData.message}
+        type={modalData.type}
+        onConfirm={() => {
+          if (modalData.title === 'Sair da Conta') {
+             // onConfirm no modalData já tem a lógica de logout
+             modalData.onConfirm();
+          }
+          setModalVisible(false);
+        }}
+        onCancel={() => setModalVisible(false)}
+        confirmText={modalData.title === 'Sair da Conta' ? 'Sair' : 'OK'}
+      />
     </ScrollView>
   );
 }

@@ -9,6 +9,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
 import { chatService } from '../../src/services/chatService';
+import { STRINGS } from '../../src/constants/strings';
+import { EmptyState } from '../../src/components/EmptyState';
+import { CustomModal } from '../../src/components/CustomModal';
 
 export default function FeedScreen() {
   const { user } = useAppStore();
@@ -28,6 +31,8 @@ export default function FeedScreen() {
   const [newCommentText, setNewCommentText] = useState('');
   const [isCommenting, setIsCommenting] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
 
   // Estados do Panorama
   const [feedMode, setFeedMode] = useState<'MURAL' | 'PANORAMA'>('MURAL');
@@ -237,29 +242,24 @@ export default function FeedScreen() {
   };
   
   const handleDeletePost = (postId: string) => {
-    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER') return;
+    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER' && !posts.find(p => p.id === postId && p.user_id === user?.id)) return;
+    setPostToDelete(postId);
+    setModalVisible(true);
+  };
 
-    Alert.alert(
-      'Excluir Postagem',
-      'Tem certeza que deseja remover esta postagem do mural? Esta ação não pode ser desfeita.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir', 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              const { error } = await feedService.deletePost(postId);
-              if (error) throw error;
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Erro', 'Não foi possível excluir a postagem.');
-              console.error('Delete post error:', error);
-            }
-          } 
-        }
-      ]
-    );
+  const confirmDeletePost = async () => {
+    if (!postToDelete) return;
+    try {
+      const { error } = await feedService.deletePost(postToDelete);
+      if (error) throw error;
+      loadData();
+    } catch (error: any) {
+      Alert.alert(STRINGS.common.error, 'Não foi possível excluir a postagem.');
+      console.error('Delete post error:', error);
+    } finally {
+      setModalVisible(false);
+      setPostToDelete(null);
+    }
   };
 
 
@@ -549,19 +549,63 @@ export default function FeedScreen() {
                     />
                     <Text style={styles.interactionText}>{post.likesCount}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.interactionBtn} activeOpacity={0.7} onPress={() => openComments(post)}>
+                  <TouchableOpacity style={styles.interactionBtn} onPress={() => toggleComments(post.id)}>
                     <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
                     <Text style={styles.interactionText}>{post.commentsCount}</Text>
                   </TouchableOpacity>
                 </View>
+
+                {expandedPostId === post.id && (
+                  <View style={styles.commentsSection}>
+                    {post.post_comments?.map((comment: any) => (
+                      <View key={comment.id} style={styles.commentItem}>
+                        <Image 
+                          source={{ uri: comment.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${comment.profiles?.full_name}` }} 
+                          style={styles.commentAvatar} 
+                        />
+                        <View style={styles.commentContent}>
+                          <Text style={styles.commentAuthor}>{comment.profiles?.full_name}</Text>
+                          <Text style={styles.commentText}>{comment.content}</Text>
+                        </View>
+                      </View>
+                    ))}
+                    <View style={styles.addCommentContainer}>
+                      <TextInput 
+                        style={styles.commentInput}
+                        placeholder="Escreva um comentário..."
+                        placeholderTextColor={theme.colors.textSecondary}
+                        value={newCommentText}
+                        onChangeText={setNewCommentText}
+                      />
+                      <TouchableOpacity 
+                        style={styles.sendCommentBtn}
+                        onPress={() => handleAddComment(post.id)}
+                        disabled={!newCommentText.trim()}
+                      >
+                        <Ionicons name="send" size={16} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             );
           }) : (
-            <View style={styles.emptyFeedCard}>
-              <Ionicons name="newspaper-outline" size={32} color={theme.colors.textSecondary} />
-              <Text style={styles.emptyFeedText}>Nada por aqui ainda. Seja o primeiro a postar!</Text>
-            </View>
+            <EmptyState 
+              title={STRINGS.feed.emptyState}
+              description={STRINGS.feed.emptyStateSub}
+              image={require('../../assets/images/illustrations/empty_state.png')}
+            />
           )}
+
+          <CustomModal 
+            visible={modalVisible}
+            title={STRINGS.feed.deletePostTitle}
+            message={STRINGS.feed.deletePostConfirm}
+            type="danger"
+            confirmText="Excluir"
+            onConfirm={confirmDeletePost}
+            onCancel={() => setModalVisible(false)}
+          />
         </View>
           </>
         )}
