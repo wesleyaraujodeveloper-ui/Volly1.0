@@ -171,7 +171,7 @@ export default function PerfilScreen() {
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => alertSoon('Privacidade')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
           <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.text} />
           <Text style={styles.menuItemText}>Privacidade</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
