@@ -70,31 +70,7 @@ export default function PerfilScreen() {
     );
   };
 
-  const handleDeleteAccount = () => {
-    const notifyAdmin = () => {
-      if (Platform.OS === 'web') {
-        window.alert('Funcionalidade em desenvolvimento. Contate o administrador.');
-        return;
-      }
-      Alert.alert('Aviso', 'Funcionalidade em desenvolvimento. Contate o administrador.');
-    };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('Esta ação é permanente e todos os seus dados serão perdidos. Deseja continuar?')) {
-        notifyAdmin();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Excluir Conta',
-      'Esta ação é permanente e todos os seus dados serão perdidos. Deseja continuar?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir Permanentemente', style: 'destructive', onPress: notifyAdmin }
-      ]
-    );
-  };
 
   const alertSoon = (title: string) => {
     const msg = 'Esta configuração será liberada em breve na próxima atualização!';
@@ -183,9 +159,6 @@ export default function PerfilScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.deleteLink} onPress={handleDeleteAccount}>
-        <Text style={styles.deleteLinkText}>Excluir minha conta permanentemente</Text>
-      </TouchableOpacity>
 
       <Text style={styles.versionText}>Volly v1.0.0</Text>
     </ScrollView>
@@ -325,15 +298,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
     marginLeft: 15,
-  },
-  deleteLink: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  deleteLinkText: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    textDecorationLine: 'underline',
   },
   versionText: {
     textAlign: 'center',
