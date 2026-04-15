@@ -57,6 +57,25 @@ export default function EscalasTabsScreen() {
     }
   }, [selectedDeptId]);
 
+  // Adiciona a assinatura de tempo real para atualizações de disponibilidade
+  useEffect(() => {
+    if (activeTab === 'DISPONIBILIDADE' && selectedDeptId && isAdminOrLeader) {
+      const subscription = availabilityService.subscribeToAvailabilities(() => {
+        // Quando alguém atualizar a disponibilidade, recarregamos sutilmente os dados da equipe
+        if (monthEvents.length > 0) {
+          const eventIds = monthEvents.map(e => e.id!);
+          availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds).then(res => {
+            if (res.data) setTeamAvailabilities(res.data);
+          });
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [activeTab, selectedDeptId, monthEvents, isAdminOrLeader]);
+
   useEffect(() => {
     if (selectedEventId) {
       loadEventSchedules();

@@ -198,5 +198,27 @@ export const availabilityService = {
       .in('event_id', eventIds);
 
     return { data: data || [], error };
+  },
+
+  /**
+   * Assina o canal de tempo real para escutar atualizações de disponibilidade
+   */
+  subscribeToAvailabilities: (callback: () => void) => {
+    const subscription = supabase
+      .channel('availabilities-changes')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'user_event_availabilities' }, 
+        () => {
+          callback();
+        }
+      )
+      .subscribe();
+      
+    return {
+      unsubscribe: () => {
+        supabase.removeChannel(subscription);
+      }
+    };
   }
 };
