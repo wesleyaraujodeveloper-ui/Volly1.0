@@ -15,7 +15,7 @@ import { useRef } from 'react';
 type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 
 export default function EventDetailScreen() {
-  const { id, tab } = useLocalSearchParams<{ id: string, tab?: string }>();
+  const { id, tab, readonly } = useLocalSearchParams<{ id: string, tab?: string, readonly?: string }>();
   const router = useRouter();
   const { user, providerToken } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>((tab as Tab) || 'INFO');
@@ -139,7 +139,9 @@ export default function EventDetailScreen() {
     }
   };
 
-  const canEditPlaylist = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+  const isReadonly = readonly === 'true';
+  const canEditPlaylist = (user?.role === 'ADMIN' || user?.role === 'LÍDER') && !isReadonly;
+  const canEditSchedule = (user?.role === 'ADMIN' || user?.role === 'LÍDER') && !isReadonly;
 
   const handleAddSongToList = () => {
     if (!newSong.name) {
@@ -364,14 +366,20 @@ export default function EventDetailScreen() {
                         {assigned ? (
                           <View style={styles.assignedUserCard}>
                             <Text style={styles.assignedUserName}>{assigned.profiles?.full_name}</Text>
-                            <TouchableOpacity onPress={() => scheduleService.removeSchedule(assigned.id!, providerToken).then(() => loadData())}>
-                              <Ionicons name="close-circle" size={18} color={theme.colors.error} />
-                            </TouchableOpacity>
+                            {canEditSchedule && (
+                              <TouchableOpacity onPress={() => scheduleService.removeSchedule(assigned.id!, providerToken).then(() => loadData())}>
+                                <Ionicons name="close-circle" size={18} color={theme.colors.error} />
+                              </TouchableOpacity>
+                            )}
                           </View>
                         ) : (
-                          <TouchableOpacity style={styles.emptyAssignButton} onPress={() => openSearchVolunteers(role.id)}>
-                            <Text style={styles.emptyAssignText}>+ Escalar Alguém</Text>
-                          </TouchableOpacity>
+                          canEditSchedule ? (
+                            <TouchableOpacity style={styles.emptyAssignButton} onPress={() => openSearchVolunteers(role.id)}>
+                              <Text style={styles.emptyAssignText}>+ Escalar Alguém</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text style={{ color: theme.colors.textSecondary, fontSize: 12, fontStyle: 'italic' }}>Vaga não preenchida</Text>
+                          )
                         )}
                       </View>
                     </View>

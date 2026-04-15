@@ -47,7 +47,7 @@ export default function EventosScreen() {
   const renderEventItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.eventCard} 
-      onPress={() => router.push(`/events/${item.id}` as any)}
+      onPress={() => router.push(`/events/${item.id}?readonly=${listTab === 'HISTORICO'}` as any)}
     >
       <View style={styles.dateBadge}>
         <Text style={styles.dayText}>{format(parseISO(item.event_date), 'dd')}</Text>
