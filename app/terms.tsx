@@ -47,7 +47,7 @@ export default function TermsScreen() {
 
         <Text style={styles.sectionTitle}>4. Conteúdo Gerado pelo Usuário</Text>
         <Text style={styles.paragraph}>
-          Qualquer texto, foto ou vídeo compartilhado no Volly Connect ou no ambiente de Chat é considerado "Conteúdo Gerado pelo Usuário". Nós da equipe do Volly App não nos responsabilizamos pelo teor desse conteúdo, garantindo o direito aos administradores e líderes da sua própria equipe apagarem ou moderarem o conteúdo inapto à plataforma.
+          Qualquer texto, foto ou vídeo compartilhado no Volly Connect ou no ambiente de Chat é considerado &quot;Conteúdo Gerado pelo Usuário&quot;. Nós da equipe do Volly App não nos responsabilizamos pelo teor desse conteúdo..., garantindo o direito aos administradores e líderes da sua própria equipe apagarem ou moderarem o conteúdo inapto à plataforma.
         </Text>
 
         <Text style={styles.sectionTitle}>5. Propriedade Intelectual</Text>
