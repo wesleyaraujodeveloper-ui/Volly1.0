@@ -25,12 +25,13 @@ export default function LoginScreen() {
       setIsAuthenticating(true);
       console.log('--- INICIANDO OAUTH ---');
       
+      // Gera a URI de redirecionamento correta para o ambiente (Expo Go ou App nativo)
       const redirectTo = AuthSession.makeRedirectUri({
         scheme: 'vollyapp',
         path: 'auth-callback',
       });
-      
-      console.log('DEBUG: URL de Redirecionamento gerada:', redirectTo);
+
+      console.log('Iniciando login Google com redirectTo:', redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -61,24 +62,40 @@ export default function LoginScreen() {
            );
 
            if (result.type === 'success' && result.url) {
-             console.log('DEBUG: OAuth Mobile Success! Parsing URL...');
-             
-             const fragment = result.url.split('#')[1];
-             if (fragment) {
-               const params = new URLSearchParams(fragment);
-               const accessToken = params.get('access_token');
-               const refreshToken = params.get('refresh_token');
+            console.log('Login bem sucedido! URL de retorno:', result.url);
+            
+            // Verifica se a URL contém erro (ex: bad_oauth_state)
+            if (result.url.includes('error=')) {
+              const errorMsg = new URLSearchParams(result.url.split('?')[1]).get('error_description');
+              Alert.alert('Erro na Autenticação', errorMsg || 'O estado da sessão expirou. Tente novamente.');
+              return;
+            }
 
-               if (accessToken && refreshToken) {
-                 console.log('DEBUG: Tokens encontrados! Definindo sessão...');
-                 const { error: sessionError } = await supabase.auth.setSession({
-                   access_token: accessToken,
-                   refresh_token: refreshToken,
-                 });
-                 
-                 if (sessionError) throw sessionError;
+            const hash = result.url.split('#')[1];
+            const query = result.url.split('?')[1];
+            const params = new URLSearchParams(hash || query);
+            
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (sessionError) throw sessionError;
+              console.log('Sessão estabelecida com sucesso!');
+            } else {
+               // Dependendo da config, pode vir um código PKCE
+               const code = params.get('code');
+               if (code) {
+                  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                  if (exchangeError) throw exchangeError;
+               } else {
+                  throw new Error('Tokens não encontrados na URL de resposta.');
                }
-             }
+            }
            } else if (result.type !== 'success') {
              setIsAuthenticating(false);
            }
