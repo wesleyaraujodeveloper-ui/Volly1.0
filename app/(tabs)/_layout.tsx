@@ -26,7 +26,7 @@ export default function TabsLayout() {
         headerRight: () => (
           <View style={{ marginRight: 15, flexDirection: 'row', alignItems: 'center' }}>
             <Image 
-              source={require('../../assets/images/icons/icone-volly-logo.png')} 
+              source={require('../../assets/images/icons/volly-logo.png')} 
               style={{ width: 32, height: 32 }}
               resizeMode="contain"
             />
