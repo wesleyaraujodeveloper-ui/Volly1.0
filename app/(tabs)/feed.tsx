@@ -602,44 +602,11 @@ export default function FeedScreen() {
                     />
                     <Text style={styles.interactionText}>{post.likesCount}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.interactionBtn} onPress={() => toggleComments(post.id)}>
+                  <TouchableOpacity style={styles.interactionBtn} onPress={() => openComments(post)}>
                     <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
                     <Text style={styles.interactionText}>{post.commentsCount}</Text>
                   </TouchableOpacity>
                 </View>
-
-                {expandedPostId === post.id && (
-                  <View style={styles.commentsSection}>
-                    {post.post_comments?.map((comment: any) => (
-                      <View key={comment.id} style={styles.commentItem}>
-                        <Image 
-                          source={{ uri: comment.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${comment.profiles?.full_name}` }} 
-                          style={styles.commentAvatar} 
-                        />
-                        <View style={styles.commentContent}>
-                          <Text style={styles.commentAuthor}>{comment.profiles?.full_name}</Text>
-                          <Text style={styles.commentText}>{comment.content}</Text>
-                        </View>
-                      </View>
-                    ))}
-                    <View style={styles.addCommentContainer}>
-                      <TextInput 
-                        style={styles.commentInput}
-                        placeholder="Escreva um comentário..."
-                        placeholderTextColor={theme.colors.textSecondary}
-                        value={newCommentText}
-                        onChangeText={setNewCommentText}
-                      />
-                      <TouchableOpacity 
-                        style={styles.sendCommentBtn}
-                        onPress={() => handleAddComment(post.id)}
-                        disabled={!newCommentText.trim()}
-                      >
-                        <Ionicons name="send" size={16} color={theme.colors.primary} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
               </View>
             );
           }) : (
