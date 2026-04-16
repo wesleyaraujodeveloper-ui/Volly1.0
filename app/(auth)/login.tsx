@@ -25,11 +25,13 @@ export default function LoginScreen() {
       setIsAuthenticating(true);
       console.log('--- INICIANDO OAUTH ---');
       
-      // Ajuste crítico para o Vercel: garantir que o redirecionamento seja um URL web válido.
-      const redirectTo = AuthSession.makeRedirectUri({
-        scheme: 'vollyapp',
-        preferLocalhost: false, // Força o uso do domínio atual (Vercel) em vez de localhost/IP
-      });
+      // Ajuste crítico para o Vercel: garantir que o redirecionamento caia no /auth-callback
+      const redirectTo = Platform.OS === 'web' 
+        ? `${window.location.origin}/auth-callback`
+        : AuthSession.makeRedirectUri({
+            scheme: 'vollyapp',
+            preferLocalhost: false,
+          });
 
       console.log('Iniciando login Google com redirectTo:', redirectTo);
 
