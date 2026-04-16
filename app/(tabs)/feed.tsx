@@ -275,7 +275,7 @@ export default function FeedScreen() {
   };
   
   const handleDeletePost = (postId: string) => {
-    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER' && !posts.find(p => p.id === postId && p.user_id === user?.id)) return;
+    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER' && user?.role !== 'CO-LÍDER' && !posts.find(p => p.id === postId && p.user_id === user?.id)) return;
     setPostToDelete(postId);
     setModalVisible(true);
   };
@@ -582,7 +582,7 @@ export default function FeedScreen() {
                     <Text style={styles.postAuthor}>{authorName}</Text>
                     <Text style={styles.postTime}>{displayDate}</Text>
                   </View>
-                  {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || post.user_id === user?.id) && (
+                  {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
                     <TouchableOpacity 
                       style={styles.moreOptionsBtn} 
                       onPress={() => handleDeletePost(post.id)}

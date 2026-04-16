@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Role = 'ADMIN' | 'LÍDER' | 'VOLUNTÁRIO';
+export type Role = 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
 
 interface User {
   id: string;

@@ -48,7 +48,7 @@ export default function EscalasTabsScreen() {
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [newAbsence, setNewAbsence] = useState({ start_date: '', end_date: '', description: '' });
 
-  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   useEffect(() => {
     loadInitialData();

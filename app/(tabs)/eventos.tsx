@@ -24,7 +24,7 @@ export default function EventosScreen() {
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
-  const isLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER';
+  const isLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   const loadEvents = async () => {
     setLoading(true);

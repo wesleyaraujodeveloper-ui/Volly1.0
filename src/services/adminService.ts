@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 export interface Profile {
   id?: string;
   email: string;
-  role: 'ADMIN' | 'LÍDER' | 'VOLUNTÁRIO';
+  role: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
   name?: string;
   created_at?: string;
   teams?: string[];
@@ -100,7 +100,7 @@ export const adminService = {
   /**
    * Altera o papel de um usuário (via RPC, apenas ADMIN).
    */
-  updateVolunteerRole: async (userId: string, newRole: 'ADMIN' | 'LÍDER' | 'VOLUNTÁRIO') => {
+  updateVolunteerRole: async (userId: string, newRole: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO') => {
     const { data, error } = await supabase.rpc('update_user_role', {
       p_user_id: userId,
       p_new_role: newRole
@@ -111,12 +111,18 @@ export const adminService = {
   /**
    * Cria um departamento novo (via RPC).
    */
-  createDepartment: async (name: string, description: string = '', leaderId?: string) => {
-    const { data, error } = await supabase.rpc('create_department', {
-      p_name: name,
-      p_desc: description,
-      p_leader_id: leaderId
-    });
+  createDepartment: async (name: string, description: string = '', leaderId?: string, coLeaderId?: string) => {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert([
+        { 
+          name, 
+          description, 
+          leader_id: leaderId,
+          co_leader_id: coLeaderId
+        }
+      ])
+      .select();
     return { data, error };
   },
 
@@ -124,10 +130,23 @@ export const adminService = {
    * Altera o líder de um departamento (Apenas ADMIN).
    */
   updateDepartmentLeader: async (deptId: string, leaderId: string) => {
-    const { data, error } = await supabase.rpc('update_department_leader', {
-      p_dept_id: deptId,
-      p_leader_id: leaderId
-    });
+    const { data, error } = await supabase
+      .from('departments')
+      .update({ leader_id: leaderId })
+      .eq('id', deptId)
+      .select();
+    return { data, error };
+  },
+
+  /**
+   * Altera o co-líder de um departamento (Apenas ADMIN).
+   */
+  updateDepartmentCoLeader: async (deptId: string, coLeaderId: string | null) => {
+    const { data, error } = await supabase
+      .from('departments')
+      .update({ co_leader_id: coLeaderId })
+      .eq('id', deptId)
+      .select();
     return { data, error };
   },
 
@@ -137,7 +156,7 @@ export const adminService = {
   listDepartments: async () => {
     const { data, error } = await supabase
       .from('departments')
-      .select('*, leader:profiles!leader_id(full_name)')
+      .select('*, leader:profiles!leader_id(full_name), co_leader:profiles!co_leader_id(full_name)')
       .order('name');
     return { data, error };
   },
@@ -161,7 +180,7 @@ export const adminService = {
     const { data, error } = await supabase
       .from('departments')
       .select('id, name')
-      .eq('leader_id', userId);
+      .or(`leader_id.eq.${userId},co_leader_id.eq.${userId}`);
     return { data, error };
   },
 

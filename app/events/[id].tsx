@@ -140,8 +140,8 @@ export default function EventDetailScreen() {
   };
 
   const isReadonly = readonly === 'true';
-  const canEditPlaylist = (user?.role === 'ADMIN' || user?.role === 'LÍDER') && !isReadonly;
-  const canEditSchedule = (user?.role === 'ADMIN' || user?.role === 'LÍDER') && !isReadonly;
+  const canEditPlaylist = (user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
+  const canEditSchedule = (user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
 
   const handleAddSongToList = () => {
     if (!newSong.name) {

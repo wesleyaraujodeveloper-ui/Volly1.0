@@ -29,6 +29,7 @@ export default function GestaoMembrosScreen() {
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptDesc, setNewDeptDesc] = useState('');
   const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
+  const [selectedCoLeaderId, setSelectedCoLeaderId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +38,7 @@ export default function GestaoMembrosScreen() {
   const [managingTeamProfile, setManagingTeamProfile] = useState<Profile | null>(null);
   const [userDepts, setUserDepts] = useState<string[]>([]);
   const [deptChangingLeader, setDeptChangingLeader] = useState<string | null>(null);
+  const [deptChangingCoLeader, setDeptChangingCoLeader] = useState<string | null>(null);
   const [editingDept, setEditingDept] = useState<any | null>(null);
   const [deptToDelete, setDeptToDelete] = useState<any | null>(null);
 
@@ -141,11 +143,11 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId);
+    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined);
     setLoading(false);
     if (error) Alert.alert('Erro DB', error.message);
     else {
-      setNewDeptName(''); setNewDeptDesc(''); setSelectedLeaderId(null);
+      setNewDeptName(''); setNewDeptDesc(''); setSelectedLeaderId(null); setSelectedCoLeaderId(null);
       loadDepartments();
     }
   };
@@ -179,6 +181,20 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
     else {
       setDeptChangingLeader(null);
+      loadDepartments();
+    }
+  };
+  
+  const handleUpdateCoLeader = (deptId: string) => setDeptChangingCoLeader(deptId);
+
+  const confirmUpdateCoLeader = async (coLeaderId: string | null) => {
+    if (!deptChangingCoLeader) return;
+    setLoading(true);
+    const { error } = await adminService.updateDepartmentCoLeader(deptChangingCoLeader, coLeaderId);
+    setLoading(false);
+    if (error) Alert.alert('Erro', error.message);
+    else {
+      setDeptChangingCoLeader(null);
       loadDepartments();
     }
   };
@@ -283,7 +299,7 @@ export default function GestaoMembrosScreen() {
     }
   };
 
-  const updateRole = async (newRole: 'ADMIN' | 'LÍDER' | 'VOLUNTÁRIO') => {
+  const updateRole = async (newRole: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO') => {
     if (!selectedProfile?.id) return;
     setLoading(true);
     const { error } = await adminService.updateVolunteerRole(selectedProfile.id, newRole);
@@ -426,6 +442,23 @@ export default function GestaoMembrosScreen() {
                       ))}
                     </ScrollView>
                   </View>
+                  <Text style={styles.inputLabel}>Selecionar Co-Líder (Opcional):</Text>
+                  <View style={[styles.leaderPickerGrid, { maxHeight: 150 }]}>
+                    <ScrollView nestedScrollEnabled>
+                      <TouchableOpacity style={[styles.leaderPickerItem, !selectedCoLeaderId && styles.leaderPickerItemSelected]} onPress={() => setSelectedCoLeaderId(null)}>
+                        <Ionicons name={!selectedCoLeaderId ? "radio-button-on" : "radio-button-off"} size={16} color={!selectedCoLeaderId ? theme.colors.primary : theme.colors.textSecondary} />
+                        <Text style={[styles.leaderPickerLabel, !selectedCoLeaderId && { color: theme.colors.primary }]}>Nenhum</Text>
+                      </TouchableOpacity>
+                      {volunteers.filter(v => v.role === 'LÍDER' || v.role === 'CO-LÍDER').map(l => (
+                        <TouchableOpacity key={l.id} style={[styles.leaderPickerItem, selectedCoLeaderId === l.id && styles.leaderPickerItemSelected]} onPress={() => setSelectedCoLeaderId(l.id || null)} disabled={selectedLeaderId === l.id}>
+                          <Ionicons name={selectedCoLeaderId === l.id ? "radio-button-on" : "radio-button-off"} size={16} color={selectedCoLeaderId === l.id ? theme.colors.primary : theme.colors.textSecondary} />
+                          <Text style={[styles.leaderPickerLabel, selectedCoLeaderId === l.id && { color: theme.colors.primary }, selectedLeaderId === l.id && { opacity: 0.5 }]}>
+                            {l.name || l.email.split('@')[0]}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
                   <TouchableOpacity style={[styles.addButton, (loading || !selectedLeaderId) && { opacity: 0.7 }]} onPress={handleAddDepartment} disabled={loading || !selectedLeaderId}>
                     <Text style={styles.addButtonText}>Criar Equipe</Text>
                   </TouchableOpacity>
@@ -437,6 +470,9 @@ export default function GestaoMembrosScreen() {
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{item.name}</Text>
                     <Text style={styles.memberEmail}>Líder: <Text style={{ color: theme.colors.primary }}>{item.leader?.full_name || 'N/A'}</Text></Text>
+                    {item.co_leader && (
+                      <Text style={styles.memberEmail}>Co-Líder: <Text style={{ color: theme.colors.primary }}>{item.co_leader?.full_name}</Text></Text>
+                    )}
                   </View>
                   {user?.role === 'ADMIN' && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -445,6 +481,9 @@ export default function GestaoMembrosScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateLeader(item.id)}>
                         <Ionicons name="person-add-outline" size={20} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateCoLeader(item.id)}>
+                        <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteDepartment(item)}>
                         <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
@@ -531,6 +570,13 @@ export default function GestaoMembrosScreen() {
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>LÍDER</Text>
                   <Text style={styles.roleOptionDesc}>Gestão das próprias equipes.</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('CO-LÍDER')}>
+                <Ionicons name="star-outline" size={20} color={theme.colors.primary} />
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={styles.roleOptionTitle}>CO-LÍDER</Text>
+                  <Text style={styles.roleOptionDesc}>Mesmos direitos do Líder.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('VOLUNTÁRIO')}>
@@ -640,6 +686,37 @@ export default function GestaoMembrosScreen() {
           </View>
         </View>
       )}
+      
+      {deptChangingCoLeader && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Trocar Co-Líder</Text>
+              <TouchableOpacity onPress={() => setDeptChangingCoLeader(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+            </View>
+            <ScrollView>
+              <TouchableOpacity 
+                style={styles.roleOptionRow} 
+                onPress={() => confirmUpdateCoLeader(null)}
+              >
+                <Ionicons name="close-circle-outline" size={24} color={theme.colors.textSecondary} />
+                <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>Remover Co-Líder</Text>
+              </TouchableOpacity>
+              {volunteers.filter(v => v.role === 'LÍDER' || v.role === 'CO-LÍDER').map(l => (
+                <TouchableOpacity 
+                  key={l.id} 
+                  style={styles.roleOptionRow} 
+                  onPress={() => confirmUpdateCoLeader(l.id!)}
+                >
+                  <Ionicons name="person-circle-outline" size={24} color={theme.colors.primary} />
+                  <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
       {/* MODAL DE EDIÇÃO DE EQUIPE (MANTIDO COMO MODAL DE FORMULÁRIO) */}
       {editingDept && (
         <View style={styles.modalOverlay}>
