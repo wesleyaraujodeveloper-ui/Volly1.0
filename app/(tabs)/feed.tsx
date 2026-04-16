@@ -38,6 +38,9 @@ export default function FeedScreen() {
   const [feedMode, setFeedMode] = useState<'MURAL' | 'PANORAMA'>('MURAL');
   const [panoramaData, setPanoramaData] = useState<any[]>([]);
   const [loadingPanorama, setLoadingPanorama] = useState(false);
+  
+  // Estado de Notificações
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const loadData = useCallback(() => {
     if (!user) return;
@@ -79,6 +82,26 @@ export default function FeedScreen() {
       setLoading(true);
       loadData();
 
+      // Busca contagem inicial de notificações
+      notificationService.getUnreadCount(user.id).then(res => {
+        setUnreadCount(res.count || 0);
+      });
+
+      // Ouvinte para notificações em tempo real
+      const notifSubscription = supabase
+        .channel('unread_count')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'notifications', 
+          filter: `user_id=eq.${user.id}` 
+        }, () => {
+          notificationService.getUnreadCount(user.id).then(res => {
+            setUnreadCount(res.count || 0);
+          });
+        })
+        .subscribe();
+
       // Configura o ouvinte para atualizar posts, curtidas e comentários em tempo real
       const subscription = feedService.subscribeToFeed(() => {
         // Atualiza a lista de forma silenciosa para não travar a tela
@@ -89,6 +112,7 @@ export default function FeedScreen() {
 
       return () => {
         subscription.unsubscribe();
+        notifSubscription.unsubscribe();
       };
     }
   }, [loadData, user]);
@@ -281,14 +305,30 @@ export default function FeedScreen() {
         <Text style={styles.dateText}>{format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
         <Text style={styles.greeting}>Olá, {user?.name?.split(' ')[0] || 'Voluntário'}! 👋</Text>
       </View>
-      <View style={styles.avatarContainer}>
-        {user?.avatar_url ? (
-          <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
-          </View>
-        )}
+      
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TouchableOpacity 
+          style={styles.notificationBtn} 
+          onPress={() => router.push('/notifications')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="notifications-outline" size={26} color={theme.colors.text} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.avatarContainer}>
+          {user?.avatar_url ? (
+            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -746,6 +786,30 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  notificationBtn: {
+    marginRight: 15,
+    padding: 5,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: theme.colors.error,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   section: {
     marginBottom: 25,

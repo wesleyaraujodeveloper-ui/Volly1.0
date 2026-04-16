@@ -136,7 +136,7 @@ export default function PerfilScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configurações</Text>
         
-        <TouchableOpacity style={styles.menuItem} onPress={() => alertSoon('Notificações')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
           <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
           <Text style={styles.menuItemText}>Notificações</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />

@@ -127,7 +127,7 @@ export default function EventsScreen() {
         };
       });
 
-      const { error } = await eventService.createEvents(events);
+      const { data: createdEvents, error } = await eventService.createEvents(events);
       
       if (error) {
         throw error;
@@ -135,7 +135,11 @@ export default function EventsScreen() {
 
       // Dispara notificações para os departamentos envolvidos
       try {
-        await notificationService.notifyNewEvent(title, selectedDeptIds);
+        if (createdEvents && createdEvents.length > 0) {
+          for (const ev of createdEvents) {
+            await notificationService.notifyNewEvent(ev.title, ev.id, selectedDeptIds);
+          }
+        }
       } catch (notifyErr) {
         console.error('Erro silencioso ao notificar:', notifyErr);
       }
