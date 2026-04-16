@@ -1,7 +1,6 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, BlurView, Platform } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { theme } from '../theme';
-import { BlurView as ExpoBlurView } from 'expo-blur';
 
 interface CustomModalProps {
   visible: boolean;
@@ -32,7 +31,7 @@ export const CustomModal: React.FC<CustomModalProps> = ({
       onRequestClose={onCancel}
     >
       <View style={styles.overlay}>
-        <ExpoBlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+        {/* Overlay semi-transparente */}
         
         <View style={styles.modalCard}>
           <Text style={[styles.title, type === 'danger' && { color: theme.colors.error }]}>

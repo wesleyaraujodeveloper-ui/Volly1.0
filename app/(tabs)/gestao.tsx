@@ -183,11 +183,6 @@ export default function GestaoMembrosScreen() {
     }
   };
 
-  const handleDeleteDepartment = (dept: any) => {
-    console.log('Abrindo modal de confirmação para:', dept.name);
-    setDeptToDelete(dept);
-  };
-
   const confirmDeleteAction = async () => {
     if (!deptToDelete) return;
     try {
@@ -631,6 +626,20 @@ export default function GestaoMembrosScreen() {
               <TouchableOpacity onPress={() => setDeptChangingLeader(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
             </View>
             <ScrollView>
+              {volunteers.filter(v => v.role === 'LÍDER').map(l => (
+                <TouchableOpacity 
+                  key={l.id} 
+                  style={styles.roleOptionRow} 
+                  onPress={() => confirmUpdateLeader(l.id!)}
+                >
+                  <Ionicons name="person-circle-outline" size={24} color={theme.colors.primary} />
+                  <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
       {/* MODAL DE EDIÇÃO DE EQUIPE (MANTIDO COMO MODAL DE FORMULÁRIO) */}
       {editingDept && (
         <View style={styles.modalOverlay}>
