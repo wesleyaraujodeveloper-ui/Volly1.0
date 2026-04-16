@@ -48,18 +48,28 @@ export default function RootLayout() {
               role: (profile.access_level as any) || 'VOLUNTÁRIO',
               avatar_url: profile.avatar_url
             });
-            
-            // Salva o token do provedor (Google) se disponível na sessão
-            if (session.provider_token) {
-              setProviderToken(session.provider_token);
-            }
+          } else {
+            // FALLBACK: Se não achar o perfil (ou erro de tabela), entra com dados básicos da sessão
+            console.log('DEBUG: Usando fallback de sessão (Perfil não encontrado ou erro de tabela)');
+            setUser({
+              id: session.user.id,
+              name: session.user.user_metadata?.full_name || 'Voluntário',
+              email: session.user.email || '',
+              role: 'VOLUNTÁRIO',
+              avatar_url: session.user.user_metadata?.avatar_url
+            });
+          }
+          
+          // Salva o token do provedor (Google) se disponível na sessão
+          if (session.provider_token) {
+            setProviderToken(session.provider_token);
           }
         } else {
           setUser(null);
         }
       } catch (err) {
-        console.error('DEBUG: Erro no handleSession:', err);
-        setUser(null);
+        console.error('DEBUG: Erro no handleSession (Silenciado para evitar loop):', err);
+        // Não resetamos o user aqui para evitar que o usuário fique preso na tela de login
       } finally {
         setIsLoadingData(false);
       }
