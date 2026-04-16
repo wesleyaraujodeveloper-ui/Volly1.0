@@ -1,7 +1,6 @@
 {
   "outputDirectory": "dist",
   "cleanUrls": true,
-  "framework": "static",
   "rewrites": [
     {
       "source": "/(.*)",
