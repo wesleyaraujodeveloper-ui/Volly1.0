@@ -11,15 +11,22 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   
-  // Período padrão: Últimos 30 dias
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  // Período padrão: Últimos 30 dias (Inicializados vazios para evitar erro de hidratação #418)
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    // Define as datas apenas no cliente
+    setStartDate(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+    setEndDate(format(new Date(), 'yyyy-MM-dd'));
+  }, []);
 
   useEffect(() => {
     loadHistory();
   }, []);
 
   const loadHistory = async () => {
+    if (!startDate || !endDate) return; // Aguarda as datas serem definidas no client
     setLoading(true);
     const { data } = await eventService.listHistory(startDate, endDate);
     setEvents(data || []);

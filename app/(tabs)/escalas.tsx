@@ -39,7 +39,7 @@ export default function EscalasTabsScreen() {
   const [eventSchedules, setEventSchedules] = useState<any[]>([]);
 
   // Estados para Escala Mensal (Aba 3)
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
   const [monthlyEvents, setMonthlyEvents] = useState<Event[]>([]);
   const [allMonthlySchedules, setAllMonthlySchedules] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
@@ -86,10 +86,14 @@ export default function EscalasTabsScreen() {
   }, [selectedEventId]);
 
   useEffect(() => {
-    if (activeTab === 'MENSAL' && selectedDeptId) {
+    if (activeTab === 'MENSAL' && selectedDeptId && selectedMonth) {
       loadMonthlyData();
     }
   }, [activeTab, selectedMonth, selectedDeptId]);
+
+  useEffect(() => {
+    setSelectedMonth(new Date());
+  }, []);
 
   const loadInitialData = async () => {
     setLoading(true);
@@ -159,7 +163,7 @@ export default function EscalasTabsScreen() {
   };
 
   const loadMonthlyData = async () => {
-    if (!selectedDeptId) return;
+    if (!selectedDeptId || !selectedMonth) return;
     setLoading(true);
     try {
       const start = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).toISOString().split('T')[0];
@@ -200,6 +204,7 @@ export default function EscalasTabsScreen() {
   };
 
   const changeMonth = (offset: number) => {
+    if (!selectedMonth) return;
     const newMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + offset, 1);
     setSelectedMonth(newMonth);
   };
@@ -591,7 +596,7 @@ export default function EscalasTabsScreen() {
               <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
             </TouchableOpacity>
             <Text style={styles.dateRangeText}>
-              {format(selectedMonth, 'MMMM / yyyy', { locale: ptBR })}
+              {selectedMonth ? format(selectedMonth, 'MMMM / yyyy', { locale: ptBR }) : '...'}
             </Text>
             <TouchableOpacity onPress={() => changeMonth(1)}>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />

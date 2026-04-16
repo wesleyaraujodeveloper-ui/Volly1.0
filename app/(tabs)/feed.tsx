@@ -42,6 +42,9 @@ export default function FeedScreen() {
   // Estado de Notificações
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Controle de Hidratação
+  const [isMounted, setIsMounted] = useState(false);
+
   const loadData = useCallback(() => {
     if (!user) return;
     
@@ -116,6 +119,10 @@ export default function FeedScreen() {
       };
     }
   }, [loadData, user]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     // Sincroniza os comentários do modal com o tempo real disparado nas atualizações do feed
@@ -302,7 +309,9 @@ export default function FeedScreen() {
   const renderHeader = () => (
     <View style={styles.header}>
       <View>
-        <Text style={styles.dateText}>{format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
+        <Text style={styles.dateText}>
+          {isMounted ? format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR }) : '...'}
+        </Text>
         <Text style={styles.greeting}>Olá, {user?.name?.split(' ')[0] || 'Voluntário'}! 👋</Text>
       </View>
       
