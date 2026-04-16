@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { decode } from 'base64-arraybuffer';
+import { notificationService } from './notificationService';
 
 export interface Post {
   id: string;
@@ -171,11 +172,34 @@ export const feedService = {
    * Cria uma nova postagem.
    */
   createPost: async (userId: string, content: string, imageUrl?: string) => {
-    return await supabase
+    const result = await supabase
       .from('posts')
       .insert([{ user_id: userId, content, image_url: imageUrl }])
       .select()
       .single();
+
+    if (!result.error && result.data) {
+      // Busca o nome do autor para a notificação
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .single();
+
+      const senderName = profile?.full_name || 'Alguém';
+      
+      // Notifica a todos (o serviço deve filtrar o próprio autor se necessário, 
+      // mas aqui mandamos para todos e o notifyAllUsers cuida do envio geral)
+      // Idealmente o notifyAllUsers poderia receber o ID do autor para excluir, 
+      // mas por simplicidade mandamos para todos.
+      notificationService.notifyAllUsers(
+        'Nova postagem no Mural! 📸',
+        `${senderName} postou algo novo. Confira!`,
+        { type: 'NEW_POST', related_id: result.data.id, screen: 'Feed' }
+      );
+    }
+
+    return result;
   },
 
   /**
@@ -244,9 +268,34 @@ export const feedService = {
         .eq('post_id', postId)
         .eq('user_id', userId);
     } else {
-      return await supabase
+      const result = await supabase
         .from('post_likes')
         .insert([{ post_id: postId, user_id: userId }]);
+
+      if (!result.error) {
+        // Busca o autor do post e o nome de quem curtiu
+        const { data: post } = await supabase
+          .from('posts')
+          .select('user_id')
+          .eq('id', postId)
+          .single();
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .single();
+
+        if (post && post.user_id !== userId) {
+          notificationService.notifySpecificUser(
+            post.user_id,
+            'Nova curtida! ❤️',
+            `${profile?.full_name || 'Alguém'} curtiu sua postagem.`,
+            { type: 'NEW_LIKE', related_id: postId, screen: 'Feed' }
+          );
+        }
+      }
+      return result;
     }
   },
 
@@ -265,11 +314,37 @@ export const feedService = {
    * Adiciona um comentário a um post.
    */
   addComment: async (postId: string, userId: string, content: string) => {
-    return await supabase
+    const result = await supabase
       .from('post_comments')
       .insert([{ post_id: postId, user_id: userId, content }])
       .select()
       .single();
+
+    if (!result.error && result.data) {
+      // Busca o autor do post e o nome de quem comentou
+      const { data: post } = await supabase
+        .from('posts')
+        .select('user_id')
+        .eq('id', postId)
+        .single();
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userId)
+        .single();
+
+      if (post && post.user_id !== userId) {
+        notificationService.notifySpecificUser(
+          post.user_id,
+          'Novo comentário! 💬',
+          `${profile?.full_name || 'Alguém'} comentou no seu post.`,
+          { type: 'NEW_COMMENT', related_id: postId, screen: 'Feed' }
+        );
+      }
+    }
+
+    return result;
   },
 
   /**

@@ -78,9 +78,6 @@ export const notificationService = {
     }
   },
 
-  /**
-   * Atalho específico para criação de eventos
-   */
   notifyNewEvent: async (eventTitle: string, eventId: string, departmentIds: string[]) => {
     return notificationService.notifyDepartments(
       departmentIds,
@@ -88,6 +85,113 @@ export const notificationService = {
       `O evento "${eventTitle}" foi agendado. Preencha sua escala!`,
       { type: 'NEW_EVENT', related_id: eventId, screen: 'Escalas' }
     );
+  },
+
+  /**
+   * Envia uma notificação para todos os usuários cadastrados
+   */
+  notifyAllUsers: async (title: string, body: string, data?: any) => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, expo_push_token');
+
+      if (error) throw error;
+      if (!profiles || profiles.length === 0) return { success: true, count: 0 };
+
+      const userIds = profiles.map(p => p.id);
+      const tokens = profiles
+        .map(p => p.expo_push_token)
+        .filter(t => t && (t.startsWith('ExporterPushToken') || t?.startsWith('ExponentPushToken')));
+
+      // Salva no banco
+      const dbNotifications = userIds.map(userId => ({
+        user_id: userId,
+        title,
+        body,
+        type: data?.type || 'SYSTEM',
+        related_id: data?.related_id || null,
+        is_read: false
+      }));
+
+      await supabase.from('notifications').insert(dbNotifications);
+
+      // Envia Push
+      if (tokens.length > 0) {
+        const messages = tokens.map(token => ({
+          to: token,
+          sound: 'default',
+          title,
+          body,
+          data: data || {},
+        }));
+
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(messages),
+        });
+      }
+
+      return { success: true, count: userIds.length };
+    } catch (error) {
+      console.error('Erro ao notificar todos:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Envia uma notificação para um usuário específico
+   */
+  notifySpecificUser: async (userId: string, title: string, body: string, data?: any) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('expo_push_token')
+        .eq('id', userId)
+        .single();
+
+      if (error || !profile) throw error || new Error('Perfil não encontrado');
+
+      // Salva no banco
+      await supabase.from('notifications').insert([{
+        user_id: userId,
+        title,
+        body,
+        type: data?.type || 'SYSTEM',
+        related_id: data?.related_id || null,
+        is_read: false
+      }]);
+
+      // Envia Push se tiver token
+      const token = profile.expo_push_token;
+      if (token && (token.startsWith('ExporterPushToken') || token?.startsWith('ExponentPushToken'))) {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: token,
+            sound: 'default',
+            title,
+            body,
+            data: data || {},
+          }),
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao notificar usuário:', error);
+      return { success: false, error };
+    }
   },
 
   /**
