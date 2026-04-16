@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert } from 'react-native';
+import { View, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { StatusBar } from 'expo-status-bar';
@@ -48,6 +48,11 @@ export default function RootLayout() {
               role: (profile.access_level as any) || 'VOLUNTÁRIO',
               avatar_url: profile.avatar_url
             });
+            
+            // Salva o token do provedor (Google) se disponível na sessão
+            if (session.provider_token) {
+              setProviderToken(session.provider_token);
+            }
           }
         } else {
           setUser(null);
@@ -87,7 +92,13 @@ export default function RootLayout() {
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#FFD700" />
+      </View>
+    );
+  }
 
   return (
     <>

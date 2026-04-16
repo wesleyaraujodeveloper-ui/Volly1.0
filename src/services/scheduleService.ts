@@ -145,9 +145,43 @@ export const scheduleService = {
     const explicitlyAvailableIds = availables?.filter(a => a.is_available === true).map(a => a.user_id) || [];
     const explicitlyUnavailableIds = availables?.filter(a => a.is_available === false).map(a => a.user_id) || [];
 
-    // 4. Pegar dados do evento para o balanceamento
-    const { data: event, error: evErr } = await supabase.from('events').select('event_date').eq('id', eventId).single();
+    // 4. Pegar dados do evento para o balanceamento e verificação de conflitos
+    const { data: event, error: evErr } = await supabase
+      .from('events')
+      .select('event_date, end_date')
+      .eq('id', eventId)
+      .single();
+    
     if (evErr || !event) return { error: 'Erro ao localizar dados do evento.' };
+
+    // 4.1 Definir intervalo do evento atual (duração padrão de 2h se não houver end_date)
+    const currentStart = new Date(event.event_date);
+    const currentEnd = event.end_date 
+      ? new Date(event.end_date) 
+      : new Date(currentStart.getTime() + 2 * 60 * 60 * 1000);
+
+    // 4.2 Buscar TODAS as escalas do dia para verificar sobreposição (qualquer equipe)
+    const startOfDay = new Date(currentStart);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(currentStart);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data: daySchedules } = await supabase
+      .from('schedules')
+      .select('user_id, status, events!inner(event_date, end_date)')
+      .gte('events.event_date', startOfDay.toISOString())
+      .lte('events.event_date', endOfDay.toISOString())
+      .in('status', ['PENDENTE', 'CONFIRMADO']);
+
+    const conflictedUserIds = daySchedules?.filter(s => {
+      const startB = new Date((s.events as any).event_date);
+      const endB = (s.events as any).end_date 
+        ? new Date((s.events as any).end_date) 
+        : new Date(startB.getTime() + 2 * 60 * 60 * 1000);
+      
+      // Lógica de intersecção: (StartA < EndB) E (StartB < EndA)
+      return currentStart < endB && startB < currentEnd;
+    }).map(s => s.user_id) || [];
 
     // 5. Pegar balanceamento mensal dos voluntários
     const { data: balancing, error: balErr } = await scheduleService.getVolunteerBalancing(departmentId, event.event_date);
@@ -155,8 +189,11 @@ export const scheduleService = {
 
     const results = [];
     
-    // Lista de IDs de usuários já escalados neste evento (para não repetir a mesma pessoa em 2 funções)
-    const assignedUserIds = new Set(existing?.map(s => s.user_id) || []);
+    // Lista de IDs de usuários já escalados neste evento ou em eventos conflitantes
+    const assignedUserIds = new Set([
+      ...(existing?.map(s => s.user_id) || []),
+      ...conflictedUserIds
+    ]);
 
     for (const role of roles) {
       if (existingRoleIds.includes(role.id)) continue; 

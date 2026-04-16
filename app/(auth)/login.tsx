@@ -25,9 +25,11 @@ export default function LoginScreen() {
       setIsAuthenticating(true);
       console.log('--- INICIANDO OAUTH ---');
       
-      // No modo de desenvolvimento (Expo Go), o makeRedirectUri sem parâmetros 
-      // costuma funcionar melhor para evitar erros de esquema.
-      const redirectTo = AuthSession.makeRedirectUri();
+      // Ajuste crítico para o Vercel: garantir que o redirecionamento seja um URL web válido.
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: 'vollyapp',
+        preferLocalhost: false, // Força o uso do domínio atual (Vercel) em vez de localhost/IP
+      });
 
       console.log('Iniciando login Google com redirectTo:', redirectTo);
 
@@ -38,7 +40,7 @@ export default function LoginScreen() {
           skipBrowserRedirect: true,
           scopes: 'https://www.googleapis.com/auth/calendar.events',
           queryParams: {
-            prompt: 'consent',
+            prompt: 'select_account',
             access_type: 'offline',
           },
         },
