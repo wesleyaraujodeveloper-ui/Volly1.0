@@ -12,6 +12,8 @@ import { chatService } from '../../src/services/chatService';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
+import { notificationService } from '../../src/services/notificationService';
+import { supabase } from '../../src/services/supabase';
 
 export default function FeedScreen() {
   const { user } = useAppStore();
@@ -312,7 +314,9 @@ export default function FeedScreen() {
         <Text style={styles.dateText}>
           {isMounted ? format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR }) : '...'}
         </Text>
-        <Text style={styles.greeting}>Olá, {user?.name?.split(' ')[0] || 'Voluntário'}! 👋</Text>
+        <Text style={styles.greeting}>
+          {isMounted ? `Olá, ${user?.name?.split(' ')[0] || 'Voluntário'}! 👋` : 'Olá! 👋'}
+        </Text>
       </View>
       
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
