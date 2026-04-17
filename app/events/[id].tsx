@@ -364,8 +364,24 @@ export default function EventDetailScreen() {
                       <View style={styles.roleLabelArea}><Text style={styles.roleLabel}>{role.name}</Text></View>
                       <View style={styles.assigneeArea}>
                         {assigned ? (
-                          <View style={styles.assignedUserCard}>
-                            <Text style={styles.assignedUserName}>{assigned.profiles?.full_name}</Text>
+                          <View style={[
+                            styles.assignedUserCard, 
+                            assigned.status === 'TROCA_SOLICITADA' && { borderColor: theme.colors.error, borderWeight: 1.5, backgroundColor: 'rgba(244, 67, 54, 0.05)' }
+                          ]}>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={styles.assignedUserName}>{assigned.profiles?.full_name}</Text>
+                                {assigned.status === 'TROCA_SOLICITADA' && (
+                                  <View style={styles.swapBadge}>
+                                    <Ionicons name="swap-horizontal" size={10} color="#fff" />
+                                    <Text style={styles.swapBadgeText}>TROCA</Text>
+                                  </View>
+                                )}
+                              </View>
+                              {assigned.status === 'TROCA_SOLICITADA' && assigned.swap_reason && (
+                                <Text style={styles.swapReasonText}>Motivo: {assigned.swap_reason}</Text>
+                              )}
+                            </View>
                             {canEditSchedule && (
                               <TouchableOpacity onPress={() => scheduleService.removeSchedule(assigned.id!, providerToken).then(() => loadData())}>
                                 <Ionicons name="close-circle" size={18} color={theme.colors.error} />
@@ -706,6 +722,27 @@ const styles = StyleSheet.create({
   assignedUserName: {
     color: theme.colors.text,
     fontSize: 14,
+  },
+  swapBadge: {
+    backgroundColor: theme.colors.error,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  swapBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  swapReasonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   emptyAssignButton: {
     borderWidth: 1,

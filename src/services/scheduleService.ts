@@ -1,13 +1,15 @@
 import { supabase } from './supabase';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { calendarService } from './calendarService';
+import { notificationService } from './notificationService';
 
 export interface Schedule {
   id?: string;
   event_id: string;
   user_id: string;
   role_id: string;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'AUSENTE';
+  status: 'PENDENTE' | 'CONFIRMADO' | 'AUSENTE' | 'TROCA_SOLICITADA';
+  swap_reason?: string;
   google_event_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -45,10 +47,85 @@ export const scheduleService = {
 
     const { data, error } = await supabase
       .from('schedules')
-      .upsert([{ ...schedule, google_event_id }], { onConflict: 'event_id, user_id' })
-      .select();
+      .upsert([{ ...schedule, google_event_id, swap_reason: null }], { onConflict: 'event_id, user_id' })
+      .select('*, events(title)');
+
+    // Notificar o voluntário que ele foi escalado
+    if (!error && data && data.length > 0) {
+      const eventTitle = (data[0] as any).events?.title || 'Novo Evento';
+      notificationService.notifySpecificUser(
+        schedule.user_id,
+        'Você foi Escalado! 📅',
+        `Você foi selecionado para participar do evento "${eventTitle}". Clique para conferir!`,
+        { type: 'NEW_SCHEDULE', related_id: schedule.event_id, screen: 'Escalas' }
+      );
+    }
 
     return { data, error };
+  },
+
+  /**
+   * Solicita a troca de uma escala (Voluntário -> Líder).
+   */
+  requestSwap: async (scheduleId: string, reason: string = '') => {
+    try {
+      // 1. Pegar detalhes da escala e do evento para a notificação
+      const { data: sch, error: schErr } = await supabase
+        .from('schedules')
+        .select('*, profiles(full_name), events(title, department_id, event_departments(department_id))')
+        .eq('id', scheduleId)
+        .single();
+
+      if (schErr || !sch) throw schErr || new Error('Escala não encontrada');
+
+      // 2. Atualizar status da escala
+      const { error: updateErr } = await supabase
+        .from('schedules')
+        .update({ 
+          status: 'TROCA_SOLICITADA', 
+          swap_reason: reason.trim() || 'Motivo não informado' 
+        })
+        .eq('id', scheduleId);
+
+      if (updateErr) throw updateErr;
+
+      // 3. Notificar Líderes e Co-Líderes do departamento
+      // Buscamos os IDs dos depto vinculados
+      const deptIds = sch.events?.event_departments?.map((ed: any) => ed.department_id) || [];
+      if (sch.events?.department_id) deptIds.push(sch.events.department_id);
+
+      if (deptIds.length > 0) {
+        // Buscar líderes desses departamentos
+        const { data: leaders } = await supabase
+          .from('departments')
+          .select('leader_id, co_leader_id')
+          .in('id', deptIds);
+
+        const leaderIds = new Set<string>();
+        leaders?.forEach(l => {
+          if (l.leader_id) leaderIds.add(l.leader_id);
+          if (l.co_leader_id) leaderIds.add(l.co_leader_id);
+        });
+
+        // Notificar cada líder
+        const volunteerName = sch.profiles?.full_name || 'Um voluntário';
+        const eventTitle = sch.events?.title || 'evento';
+        
+        for (const leaderId of Array.from(leaderIds)) {
+          await notificationService.notifySpecificUser(
+            leaderId,
+            'Solicitação de Troca 🔄',
+            `${volunteerName} solicitou troca no evento "${eventTitle}". Motivo: ${reason || 'Não informado'}`,
+            { type: 'SWAP_REQUEST', related_id: sch.event_id, screen: 'Escalas' }
+          );
+        }
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error requestSwap:', error);
+      return { success: false, error: error.message };
+    }
   },
 
   /**
@@ -250,6 +327,9 @@ export const scheduleService = {
       .select();
 
     // Aqui no futuro dispararíamos push/email via Edge Function
+    return { data, error };
+  }
+};ia Edge Function
     return { data, error };
   }
 };

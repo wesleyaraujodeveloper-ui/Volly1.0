@@ -105,6 +105,10 @@ export default function GestaoMembrosScreen() {
     };
   }, [user?.id, user?.role]);
 
+  const isGmail = email.trim().toLowerCase().endsWith('@gmail.com');
+  const isDeptSelected = !!selectedInviteDeptId;
+  const canInvite = isGmail && isDeptSelected && !loading;
+
   if (user?.role === 'VOLUNTÁRIO') {
     return (
       <View style={[globalStyles.container, globalStyles.center]}>
@@ -400,9 +404,20 @@ export default function GestaoMembrosScreen() {
                   </View>
                 )}
 
-                <TouchableOpacity style={[styles.addButton, loading && { opacity: 0.7 }]} onPress={handleAddVolunteer} disabled={loading}>
-                  {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>Convidar Membro</Text>}
+                <TouchableOpacity 
+                  style={[styles.addButton, !canInvite && { backgroundColor: theme.colors.border, opacity: 0.5 }]} 
+                  onPress={handleAddVolunteer} 
+                  disabled={!canInvite}
+                >
+                  {loading ? <ActivityIndicator color="#121212" /> : <Text style={[styles.addButtonText, !canInvite && { color: theme.colors.textSecondary }]}>Convidar Membro</Text>}
                 </TouchableOpacity>
+
+                {!canInvite && !loading && (
+                  <Text style={styles.inviteInstruction}>
+                    {!isDeptSelected ? '• Selecione uma equipe acima' : ''}
+                    {!isGmail ? '\n• Use um e-mail @gmail.com' : ''}
+                  </Text>
+                )}
               </View>
             }
             renderItem={({ item }) => (
@@ -796,8 +811,15 @@ const styles = StyleSheet.create({
   memberInfo: { flex: 1 },
   memberName: { color: theme.colors.text, fontWeight: 'bold', fontSize: 16 },
   memberEmail: { color: theme.colors.textSecondary, fontSize: 12 },
-  roleBadge: { backgroundColor: theme.colors.border, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginLeft: 10 },
   roleText: { color: theme.colors.primary, fontSize: 10, fontWeight: 'bold' },
+  inviteInstruction: {
+    color: theme.colors.primary,
+    fontSize: 11,
+    marginTop: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },

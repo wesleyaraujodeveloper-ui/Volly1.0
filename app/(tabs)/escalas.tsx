@@ -48,6 +48,11 @@ export default function EscalasTabsScreen() {
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [newAbsence, setNewAbsence] = useState({ start_date: '', end_date: '', description: '' });
 
+  // Estados para Solicitação de Troca
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [swapReason, setSwapReason] = useState('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+
   const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   useEffect(() => {
@@ -314,6 +319,22 @@ export default function EscalasTabsScreen() {
     setSaving(false);
   };
 
+  const handleRequestSwap = async () => {
+    if (!selectedScheduleId) return;
+    setSaving(true);
+    const result = await scheduleService.requestSwap(selectedScheduleId, swapReason);
+    setSaving(false);
+    
+    if (result.success) {
+      showAlert('Solicitação Enviada', 'Seu líder foi notificado sobre a sua necessidade de troca.', 'success');
+      setSwapModalVisible(false);
+      setSwapReason('');
+      loadEventSchedules();
+    } else {
+      showAlert('Erro', 'Não foi possível enviar a solicitação: ' + result.error, 'danger');
+    }
+  };
+
   const renderDepartmentChips = () => (
     <ScrollView 
       horizontal 
@@ -565,7 +586,28 @@ export default function EscalasTabsScreen() {
                         <View style={styles.volunteerCell}>
                           <View style={styles.avatarMini} />
                           <Text style={styles.volunteerNameText}>{sch.profiles?.full_name}</Text>
-                          <View style={[styles.smallDot, { backgroundColor: sch.status === 'CONFIRMADO' ? theme.colors.success : '#ff9000' }]} />
+                          
+                          {sch.status === 'TROCA_SOLICITADA' ? (
+                            <View style={styles.swapRequestedBadge}>
+                              <Ionicons name="alert-circle" size={12} color="#fff" />
+                              <Text style={styles.swapRequestedText}>Troca Pedida</Text>
+                            </View>
+                          ) : (
+                            <View style={[styles.smallDot, { backgroundColor: sch.status === 'CONFIRMADO' ? theme.colors.success : '#ff9000' }]} />
+                          )}
+
+                          {sch.user_id === user?.id && sch.status !== 'TROCA_SOLICITADA' && sch.status !== 'AUSENTE' && (
+                            <TouchableOpacity 
+                              style={styles.requestSwapBtn} 
+                              onPress={() => {
+                                setSelectedScheduleId(sch.id);
+                                setSwapModalVisible(true);
+                              }}
+                            >
+                              <Ionicons name="swap-horizontal" size={14} color={theme.colors.primary} />
+                              <Text style={styles.requestSwapBtnText}>Trocar</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
                     ))
@@ -682,6 +724,46 @@ export default function EscalasTabsScreen() {
         onCancel={() => setModalVisible(false)}
         confirmText="OK"
       />
+
+      <Modal visible={swapModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Solicitar Troca de Escala</Text>
+            <Text style={styles.modalSubtitle}>Explique brevemente ao seu líder o motivo da troca (opcional).</Text>
+            
+            <TextInput
+              style={styles.reasonInput}
+              placeholder="Ex: Tive um imprevisto no trabalho..."
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              numberOfLines={4}
+              value={swapReason}
+              onChangeText={setSwapReason}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn} 
+                onPress={() => setSwapModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalConfirmBtn} 
+                onPress={handleRequestSwap}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Enviar Solicitação</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1204,5 +1286,80 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 5,
+  },
+  requestSwapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '40',
+    marginLeft: 10,
+  },
+  requestSwapBtnText: {
+    color: theme.colors.primary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  swapRequestedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.error,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  swapRequestedText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  reasonInput: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    color: theme.colors.text,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    textAlignVertical: 'top',
+    height: 80,
+    marginBottom: 20,
+    fontSize: 14,
+  },
+  modalSubtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 15,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    padding: 12,
+    marginRight: 10,
+  },
+  modalCancelText: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  modalConfirmText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
 });
