@@ -27,6 +27,17 @@ export const adminService = {
       return { data: null, error: { message: 'Voluntário já está Cadastrado!' } };
     }
 
+    // 1.1 Verifica se já possui convite pendente
+    const { data: existingInvite } = await supabase
+      .from('invitations')
+      .select('email')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (existingInvite) {
+      return { data: null, error: { message: 'Este e-mail já possui um convite enviado!' } };
+    }
+
     // 2. Insere ou atualiza o convite (Upsert evita o erro 409 Conflict)
     const { data, error } = await supabase
       .from('invitations')

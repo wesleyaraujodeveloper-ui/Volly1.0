@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, ActivityIndicator, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { useAppStore } from '../src/store/useAppStore';
 import { StatusBar } from 'expo-status-bar';
@@ -8,9 +8,14 @@ import { useNotifications } from '../src/hooks/useNotifications';
 import { useFonts } from 'expo-font';
 
 export default function RootLayout() {
+  const [isMounted, setIsMounted] = useState(false);
   const [fontsLoaded] = useFonts({
     'CreamCake': require('../assets/fonts/Cream Cake.otf'),
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // useNotifications(); // Desativado temporariamente para evitar crash no Expo Go SDK 53
   
@@ -102,7 +107,7 @@ export default function RootLayout() {
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !isMounted) {
     return (
       <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#FFD700" />

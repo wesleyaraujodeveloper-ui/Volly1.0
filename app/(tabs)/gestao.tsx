@@ -127,9 +127,22 @@ export default function GestaoMembrosScreen() {
     }
     setLoading(true);
     const { error } = await adminService.inviteVolunteer(email, name, selectedInviteDeptId);
-    if (error) Alert.alert('Erro', error.message);
-    else {
-      Alert.alert('Sucesso', 'Membro convidado.');
+    if (error) {
+      setModalData({
+        title: 'Atenção',
+        message: error.message,
+        type: 'info',
+        onConfirm: () => setModalVisible(false)
+      });
+      setModalVisible(true);
+    } else {
+      setModalData({
+        title: 'Sucesso!',
+        message: 'O convite foi enviado para o e-mail informado.',
+        type: 'success',
+        onConfirm: () => setModalVisible(false)
+      });
+      setModalVisible(true);
       setEmail(''); setName('');
       if (leaderTeams.length !== 1) setSelectedInviteDeptId(null);
       loadVolunteers();
