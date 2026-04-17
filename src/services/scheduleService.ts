@@ -329,7 +329,4 @@ export const scheduleService = {
     // Aqui no futuro dispararíamos push/email via Edge Function
     return { data, error };
   }
-};ia Edge Function
-    return { data, error };
-  }
 };
