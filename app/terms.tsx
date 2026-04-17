@@ -36,7 +36,7 @@ export default function TermsScreen() {
         <View style={styles.bulletList}>
           <Text style={styles.bulletItem}>• Fornecer informações precisas durante o seu registro de conta.</Text>
           <Text style={styles.bulletItem}>• Não utilizar a plataforma para fins ilegais, difamatórios ou maliciosos.</Text>
-          <Text style={styles.bulletItem}>• Manter as interações na aba "Volly Connect" (Mural Social) e nas abas de chat respeitosas com todos os demais voluntários.</Text>
+          <Text style={styles.bulletItem}>• Manter as interações na aba &quot;Volly Connect&quot; (Mural Social) e nas abas de chat respeitosas com todos os demais voluntários.</Text>
           <Text style={styles.bulletItem}>• Honrar, na medida do possível, com a disponibilidade e compromissos marcados através das nossas escalas integradas.</Text>
         </View>
 
@@ -57,7 +57,7 @@ export default function TermsScreen() {
 
         <Text style={styles.sectionTitle}>6. Disponibilidade de Serviço e Bugs</Text>
         <Text style={styles.paragraph}>
-          Trabalhamos duro para manter o serviço operando de forma perfeita ("as is"). No entanto, por se tratar de um software dependente da infraestrutura web (Supabase Cloud e servidores de autenticação), podem existir janelas de interrupção ou bugs inesperados. Não nos responsabilizamos por perdas de agendamento ou outros ônus devidos às falhas técnicas.
+          Trabalhamos duro para manter o serviço operando de forma perfeita (&quot;as is&quot;). No entanto, por se tratar de um software dependente da infraestrutura web (Supabase Cloud e servidores de autenticação), podem existir janelas de interrupção ou bugs inesperados. Não nos responsabilizamos por perdas de agendamento ou outros ônus devidos às falhas técnicas.
         </Text>
 
         <Text style={styles.sectionTitle}>7. Modificações nestes Termos</Text>
