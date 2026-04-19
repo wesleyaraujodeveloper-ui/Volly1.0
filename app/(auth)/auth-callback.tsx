@@ -35,12 +35,16 @@ export default function AuthCallback() {
         console.log('DEBUG: AuthCallback session check:', !!session);
         
         if (session) {
-          console.log('DEBUG: Sessão confirmada, indo para o Feed.');
-          router.replace('/(tabs)/feed');
+          console.log('DEBUG: Sessão confirmada via getSession. Aguardando Store atualizar...');
+          // Não redirecionamos manualmente aqui. 
+          // O _layout.tsx detectará o 'user' no store e fará o redirecionamento seguro.
         } else {
-          // Se não houver sessão nem código, voltamos para o login após um tempo
-          console.log('DEBUG: Nenhuma sessão encontrada após callback.');
-          router.replace('/(auth)/login');
+          console.log('DEBUG: Nenhuma sessão encontrada após callback via getSession.');
+          // Apenas se realmente não houver sessão APÓS o processamento tentamos voltar
+          // Mas vamos dar um tempo para os listeners agirem.
+          setTimeout(() => {
+             router.replace('/(auth)/login');
+          }, 2000);
         }
       } catch (err) {
         console.error('Erro no processamento do callback:', err);

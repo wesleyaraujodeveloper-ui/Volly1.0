@@ -28,24 +28,32 @@ export default function RootLayout() {
     if (!navigationState?.key) return;
 
     const handleSession = async (session: any) => {
-      console.log('DEBUG: handleSession iniciado. Session:', !!session);
+      console.log('DEBUG: handleSession iniciado. Evento:', !!session ? 'SESSÃO_ATIVA' : 'SEM_SESSÃO');
+      
+      // Sempre marcar como carregando ao processar uma possível mudança de estado
+      setIsLoadingData(true);
+
       try {
         if (session?.user) {
-          // Busca o perfil
+          console.log('DEBUG: Buscando perfil para user:', session.user.id);
+          
           const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-          if (error && error.message.includes('Refresh Token Not Found')) {
-            console.log('Sessão expirada, deslogando...');
-            await supabase.auth.signOut();
-            setUser(null);
-            return;
+          if (error) {
+            console.log('DEBUG: Erro ao buscar perfil:', error.message);
+            // Se o erro for Refresh Token, apenas logamos. Não chamamos signOut aqui 
+            // para evitar conflito durante o fluxo de login inicial.
+            if (error.message.includes('Refresh Token Not Found')) {
+              console.log('DEBUG: Refresh Token inválido detectado.');
+            }
           }
 
           if (profile) {
+            console.log('DEBUG: Perfil encontrado:', profile.full_name);
             setUser({
               id: profile.id,
               name: profile.full_name || '',
@@ -54,8 +62,7 @@ export default function RootLayout() {
               avatar_url: profile.avatar_url
             });
           } else {
-            // FALLBACK: Se não achar o perfil (ou erro de tabela), entra com dados básicos da sessão
-            console.log('DEBUG: Usando fallback de sessão (Perfil não encontrado ou erro de tabela)');
+            console.log('DEBUG: Usando fallback (Perfil não encontrado)');
             setUser({
               id: session.user.id,
               name: session.user.user_metadata?.full_name || 'Voluntário',
@@ -65,17 +72,17 @@ export default function RootLayout() {
             });
           }
           
-          // Salva o token do provedor (Google) se disponível na sessão
           if (session.provider_token) {
             setProviderToken(session.provider_token);
           }
         } else {
+          console.log('DEBUG: Nenhuma sessão ativa conectada.');
           setUser(null);
         }
       } catch (err) {
-        console.error('DEBUG: Erro no handleSession (Silenciado para evitar loop):', err);
-        // Não resetamos o user aqui para evitar que o usuário fique preso na tela de login
+        console.error('DEBUG: Erro crítico no handleSession:', err);
       } finally {
+        console.log('DEBUG: handleSession finalizado. Configurando isLoadingData(false)');
         setIsLoadingData(false);
       }
     };
