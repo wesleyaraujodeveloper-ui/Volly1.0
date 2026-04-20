@@ -507,7 +507,13 @@ export default function FeedScreen() {
             onPress={() => setFeedMode('MURAL')}
           >
             <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#121212' : theme.colors.textSecondary} />
-            <Text style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}>Volly Connect</Text>
+            <Text 
+              style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
+              translate="no"
+              className="notranslate"
+            >
+              Volly Connect
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}

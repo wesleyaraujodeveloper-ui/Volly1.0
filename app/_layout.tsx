@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
+import Head from 'expo-router/head';
 import { useAppStore } from '../src/store/useAppStore';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/services/supabase';
@@ -153,6 +154,11 @@ export default function RootLayout() {
 
   return (
     <>
+      {Platform.OS === 'web' && (
+        <Head>
+          <meta name="google" content="notranslate" />
+        </Head>
+      )}
       <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#121212' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

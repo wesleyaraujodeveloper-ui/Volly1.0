@@ -20,9 +20,9 @@ export default function PrivacyScreen() {
         <Text style={styles.updatedText}>Última atualização: 15 de Abril de 2026</Text>
 
         <Text style={styles.paragraph}>
-          O <Text style={styles.bold}>Volly</Text> respeita a sua privacidade e está comprometido em proteger os seus dados pessoais. 
+          O <Text style={styles.bold} translate="no" className="notranslate">Volly</Text> respeita a sua privacidade e está comprometido em proteger os seus dados pessoais. 
           Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e compartilhamos as suas informações quando você utiliza o nosso aplicativo. 
-          Ao utilizar o Volly, você concorda com as práticas descritas neste documento.
+          Ao utilizar o <Text translate="no" className="notranslate">Volly</Text>, você concorda com as práticas descritas neste documento.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Informações que Coletamos</Text>
@@ -32,7 +32,7 @@ export default function PrivacyScreen() {
         </Text>
         <Text style={styles.paragraph}>
           <Text style={styles.bold}>Dados operacionais:</Text> Registramos sua disponibilidade na agenda, departamentos aos quais 
-          pertence, interações no mural (Volly Connect) e mensagens enviadas no chat institucional.
+          pertence, interações no mural (<Text translate="no" className="notranslate">Volly Connect</Text>) e mensagens enviadas no chat institucional.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Como Usamos Seus Dados</Text>
@@ -48,7 +48,7 @@ export default function PrivacyScreen() {
 
         <Text style={styles.sectionTitle}>3. Compartilhamento de Informações</Text>
         <Text style={styles.paragraph}>
-          O Volly não vende, aluga ou monetiza suas informações pessoais sob nenhuma circunstância. Seus dados são visíveis apenas para:
+          O <Text translate="no" className="notranslate">Volly</Text> não vende, aluga ou monetiza suas informações pessoais sob nenhuma circunstância. Seus dados são visíveis apenas para:
         </Text>
         <View style={styles.bulletList}>
           <Text style={styles.bulletItem}>•  <Text style={styles.bold}>Sua Organização:</Text> Líderes e administradores terão acesso às suas escalas, disponibilidade e perfil.</Text>
