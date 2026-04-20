@@ -274,23 +274,22 @@ export const adminService = {
   },
 
   /**
-   * Assina o canal de tempo real para escutar novos acessos e novos perfis criados.
+   * Assina canais de tempo real para todas as tabelas relacionadas à gestão.
    */
-  subscribeToVolunteers: (callback: () => void) => {
-    const subscription = supabase
-      .channel('volunteers-changes')
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'profiles' }, 
-        () => {
-          callback();
-        }
-      )
+  subscribeToAdminChanges: (callback: () => void) => {
+    const channel = supabase
+      .channel('admin-realtime-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => callback())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invitations' }, () => callback())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'departments' }, () => callback())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'roles' }, () => callback())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_departments' }, () => callback())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' }, () => callback())
       .subscribe();
       
     return {
       unsubscribe: () => {
-        supabase.removeChannel(subscription);
+        supabase.removeChannel(channel);
       }
     };
   }

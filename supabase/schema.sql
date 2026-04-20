@@ -121,12 +121,22 @@ CREATE TRIGGER tr_departments_updated BEFORE UPDATE ON public.departments FOR EA
 CREATE TRIGGER tr_events_updated BEFORE UPDATE ON public.events FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER tr_schedules_updated BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
--- Trigger para criar Profile Automaticamente após Auth.Users
+-- Trigger robusto para criar Profile Automaticamente após Auth.Users
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, full_name, avatar_url)
-  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  VALUES (
+    new.id, 
+    new.email, 
+    COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Voluntário'),
+    COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture')
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = EXCLUDED.full_name,
+    avatar_url = EXCLUDED.avatar_url,
+    updated_at = NOW();
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -146,6 +156,7 @@ CREATE INDEX idx_user_departments_user ON public.user_departments(user_id);
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Qualquer um pode ver perfis" ON public.profiles FOR SELECT USING (true);
 CREATE POLICY "Usuários editam o próprio perfil" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Usuários criam o próprio perfil" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Qualquer um vê departamentos" ON public.departments FOR SELECT USING (true);

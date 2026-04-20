@@ -57,23 +57,23 @@ export default function GestaoMembrosScreen() {
     if (!silent) setRefreshing(false);
   };
 
-  const loadDepartments = async () => {
-    setRefreshing(true);
+  const loadDepartments = async (silent: boolean = false) => {
+    if (!silent) setRefreshing(true);
     const { data, error } = await adminService.listDepartments();
     if (error) {
       console.error('Erro Equipes:', error.message);
-      Alert.alert('Erro ao carregar Equipes', 'Não foi possível carregar a lista. Verifique se a coluna leader_id existe no banco.');
+      if (!silent) Alert.alert('Erro ao carregar Equipes', 'Não foi possível carregar a lista. Verifique se a coluna leader_id existe no banco.');
     } else if (data) {
       setDepartments(data);
     }
-    setRefreshing(false);
+    if (!silent) setRefreshing(false);
   };
 
-  const loadRoles = async () => {
-    setRefreshing(true);
+  const loadRoles = async (silent: boolean = false) => {
+    if (!silent) setRefreshing(true);
     const { data } = await adminService.listAllRoles();
     if (data) setRoles(data);
-    setRefreshing(false);
+    if (!silent) setRefreshing(false);
   };
 
   useEffect(() => {
@@ -84,9 +84,11 @@ export default function GestaoMembrosScreen() {
       loadDepartments();
       loadRoles();
 
-      // Assina a tabela de perfis para atualizar quando alguém logar pela 1ª vez
-      subscription = adminService.subscribeToVolunteers(() => {
-        loadVolunteers(true); // Atualização silenciosa
+      // Assina múltiplas tabelas para atualização em tempo real
+      subscription = adminService.subscribeToAdminChanges(() => {
+        loadVolunteers(true);
+        loadDepartments(true);
+        loadRoles(true);
       });
     }
     

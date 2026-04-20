@@ -30,7 +30,12 @@ export default function TabsLayout() {
               style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
-            <Text style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 30, marginLeft: 6 }}>
+            <Text 
+              style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 30, marginLeft: 6 }}
+              // @ts-ignore - Propriedades para evitar tradução automática no navegador
+              translate="no"
+              className="notranslate"
+            >
               Volly
             </Text>
           </View>

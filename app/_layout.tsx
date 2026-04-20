@@ -62,14 +62,43 @@ export default function RootLayout() {
               avatar_url: profile.avatar_url
             });
           } else {
-            console.log('DEBUG: Usando fallback (Perfil não encontrado)');
-            setUser({
+            console.log('DEBUG: Perfil não encontrado. Iniciando sincronização ativa...');
+            
+            // Dados para o novo perfil vindo dos metadados da sessão
+            const newProfile = {
               id: session.user.id,
-              name: session.user.user_metadata?.full_name || 'Voluntário',
-              email: session.user.email || '',
-              role: 'VOLUNTÁRIO',
-              avatar_url: session.user.user_metadata?.avatar_url
-            });
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Voluntário',
+              avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+            };
+
+            // Tenta criar o perfil diretamente (caso o trigger tenha falhado)
+            const { data: upsertedProfile, error: upsertError } = await supabase
+              .from('profiles')
+              .upsert(newProfile)
+              .select('*')
+              .single();
+
+            if (upsertError) {
+              console.error('DEBUG: Erro ao sincronizar perfil (fallback local):', upsertError.message);
+              // Fallback local se tudo falhar (ex: problemas de rede ou RLS)
+              setUser({
+                id: session.user.id,
+                name: newProfile.full_name,
+                email: session.user.email || '',
+                role: 'VOLUNTÁRIO',
+                avatar_url: newProfile.avatar_url
+              });
+            } else {
+              console.log('DEBUG: Perfil sincronizado com sucesso no banco de dados!');
+              setUser({
+                id: upsertedProfile.id,
+                name: upsertedProfile.full_name || '',
+                email: upsertedProfile.email || '',
+                role: (upsertedProfile.access_level as any) || 'VOLUNTÁRIO',
+                avatar_url: upsertedProfile.avatar_url
+              });
+            }
           }
           
           if (session.provider_token) {
