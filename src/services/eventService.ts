@@ -133,7 +133,10 @@ export const eventService = {
     }
 
     if (filters?.date) {
-      query = query.gte('event_date', `${filters.date}T00:00:00Z`).lte('event_date', `${filters.date}T23:59:59Z`);
+      const [y, m, d] = filters.date.split('-').map(Number);
+      const startOfDay = new Date(y, m - 1, d, 0, 0, 0).toISOString();
+      const endOfDay = new Date(y, m - 1, d, 23, 59, 59).toISOString();
+      query = query.gte('event_date', startOfDay).lte('event_date', endOfDay);
     }
 
     const { data, error } = await query;

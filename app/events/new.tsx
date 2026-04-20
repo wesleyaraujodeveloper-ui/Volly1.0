@@ -126,12 +126,18 @@ export default function EventsScreen() {
       }
 
       const events: Event[] = dateKeys.map(dString => {
-        const startISO = `${dString}T${normStart}:00-03:00`;
-        const endISO = `${dString}T${normEnd}:00-03:00`;
+        const [y, mm, d] = dString.split('-').map(Number);
+        
+        // Construção robusta usando o fuso horário local do dispositivo
+        const startDate = new Date(y, mm - 1, d, hStart, mStart);
+        const startISO = startDate.toISOString();
+        
+        const endDateObj = new Date(y, mm - 1, d, hEnd, mEnd);
+        const endISO = endDateObj.toISOString();
         
         // Janela de chat total em horas (Nova regra: 2h antes + 1h depois)
         const diff = (hEnd + (mEnd/60)) - (hStart + (mStart/60));
-        const chatWindowTotal = Math.ceil(diff + 3); // (Fim - Início) + 2h antes + 1h depois = +3
+        const chatWindowTotal = Math.ceil(diff + 3); 
 
         return {
           title,
