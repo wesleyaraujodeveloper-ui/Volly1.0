@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_access_level') THEN
-        CREATE TYPE user_access_level AS ENUM ('ADMIN', 'LÍDER', 'VOLUNTÁRIO');
+        CREATE TYPE user_access_level AS ENUM ('ADMIN', 'LÍDER', 'CO-LÍDER', 'VOLUNTÁRIO');
     END IF;
 END $$;
 
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.departments (
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     leader_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    co_leader_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -169,7 +170,7 @@ CREATE POLICY "Usuários vêem chat de seus eventos" ON public.messages FOR SELE
 CREATE POLICY "Participantes ou Líderes enviam mensagens" ON public.messages 
 FOR INSERT WITH CHECK (
   auth.uid() = user_id AND (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER'))
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER'))
     OR
     EXISTS (SELECT 1 FROM public.schedules WHERE event_id = messages.event_id AND user_id = auth.uid())
   )
@@ -227,10 +228,10 @@ DECLARE
     v_admin_count INT;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER');
+    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e LÍDERES podem gerenciar membros.';
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem gerenciar membros.';
     END IF;
 
     IF p_action = 'ADD' THEN
@@ -299,10 +300,10 @@ DECLARE
     v_new_role public.roles;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level = 'ADMIN';
+    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem criar funções departamentais.';
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem criar funções departamentais.';
     END IF;
 
     INSERT INTO public.roles (name, department_id) 
@@ -320,10 +321,10 @@ DECLARE
     v_admin_count INT;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level = 'ADMIN';
+    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem alterar o vínculo de voluntários.';
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem alterar o vínculo de voluntários.';
     END IF;
 
     IF p_action = 'ADD' THEN

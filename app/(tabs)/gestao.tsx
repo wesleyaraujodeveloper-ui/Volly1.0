@@ -122,7 +122,7 @@ export default function GestaoMembrosScreen() {
   }
 
   const handleAddVolunteer = async () => {
-    if (user?.role !== 'LÍDER' && user?.role !== 'ADMIN') {
+    if (user?.role !== 'LÍDER' && user?.role !== 'ADMIN' && user?.role !== 'CO-LÍDER') {
       Alert.alert('Erro', 'Usuário Não Autorizado a enviar Convite!');
       return;
     }
