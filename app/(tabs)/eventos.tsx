@@ -58,7 +58,7 @@ export default function EventosScreen() {
       <View style={styles.eventInfo}>
         <Text style={styles.eventTitle}>{item.title}</Text>
         <Text style={styles.eventSubtitle}>
-          {item.event_departments?.map((ed: any) => ed.departments?.name).join(', ') || 'Sem departamento'} • {format(parseISO(item.event_date), 'HH:mm')}
+          {item.event_departments?.map((ed: any) => ed.departments?.name).join(', ') || 'Sem departamento'} • {format(parseISO(item.event_date), 'HH:mm')}{item.end_date ? ` - ${format(parseISO(item.end_date), 'HH:mm')}` : ''}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={theme.colors.border} />

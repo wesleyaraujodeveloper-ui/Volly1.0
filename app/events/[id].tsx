@@ -224,7 +224,10 @@ export default function EventDetailScreen() {
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{event?.title}</Text>
           <Text style={styles.headerDate}>
-            {event?.event_date && format(parseISO(event.event_date), "eeee, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+            {event?.event_date && format(parseISO(event.event_date), "eeee, dd 'de' MMMM", { locale: ptBR })}
+            {" • "}
+            {event?.event_date && format(parseISO(event.event_date), "HH:mm")}
+            {event?.end_date && ` - ${format(parseISO(event.end_date), "HH:mm")}`}
           </Text>
         </View>
       </View>
@@ -241,6 +244,15 @@ export default function EventDetailScreen() {
             <View style={styles.infoContent}>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Sobre o Evento</Text>
+                
+                <View style={styles.infoRow}>
+                  <Ionicons name="time-outline" size={16} color={theme.colors.primary} />
+                  <Text style={styles.infoRowText}>
+                    {event?.event_date && format(parseISO(event.event_date), "HH:mm")}
+                    {event?.end_date ? ` às ${format(parseISO(event.end_date), "HH:mm")}` : ' (Sem horário de término)'}
+                  </Text>
+                </View>
+
                 <Text style={styles.descriptionText}>{event?.description || 'Nenhuma descrição fornecida.'}</Text>
                 <View style={styles.deptBadge}>
                   <Ionicons name="pricetag-outline" size={12} color={theme.colors.primary} />
@@ -581,6 +593,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     marginLeft: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    padding: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  infoRowText: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   songCard: {
     paddingVertical: 12,
