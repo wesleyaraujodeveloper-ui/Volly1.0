@@ -95,6 +95,14 @@ export default function EventsScreen() {
     return formatted;
   };
 
+  const normalizeTime = (time: string) => {
+    if (!time.includes(':')) {
+      return `${time.padStart(2, '0')}:00`;
+    }
+    const [h, m] = time.split(':');
+    return `${h.padStart(2, '0')}:${(m || '0').padEnd(2, '0')}`;
+  };
+
   const handleCreateEvents = async () => {
     const dateKeys = Object.keys(selectedDates);
     if (!title || dateKeys.length === 0 || selectedDeptIds.length === 0) {
@@ -104,18 +112,26 @@ export default function EventsScreen() {
 
     setLoading(true);
     try {
+      const normStart = normalizeTime(startTime);
+      const normEnd = normalizeTime(endTime);
+
+      const [hStart, mStart] = normStart.split(':').map(Number);
+      const [hEnd, mEnd] = normEnd.split(':').map(Number);
+
+      // Validação de intervalo
+      if ((hEnd + (mEnd/60)) <= (hStart + (mStart/60))) {
+        Alert.alert('Horário Inválido', 'O horário de término deve ser posterior ao de início.');
+        setLoading(false);
+        return;
+      }
+
       const events: Event[] = dateKeys.map(dString => {
-        // Lógica de Janela de Chat: 1h antes do início, 1h depois do fim.
-        // Diferença entre (End + 1h) e (Start - 1h) = (End - Start) + 2h.
-        const [hStart, mStart] = startTime.split(':').map(Number);
-        const [hEnd, mEnd] = endTime.split(':').map(Number);
+        const startISO = `${dString}T${normStart}:00-03:00`;
+        const endISO = `${dString}T${normEnd}:00-03:00`;
         
-        const startISO = `${dString}T${startTime}:00-03:00`;
-        const endISO = `${dString}T${endTime}:00-03:00`;
-        
-        // Janela de chat total em horas
+        // Janela de chat total em horas (Nova regra: 2h antes + 1h depois)
         const diff = (hEnd + (mEnd/60)) - (hStart + (mStart/60));
-        const chatWindowTotal = Math.ceil(diff + 2); 
+        const chatWindowTotal = Math.ceil(diff + 3); // (Fim - Início) + 2h antes + 1h depois = +3
 
         return {
           title,

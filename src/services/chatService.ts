@@ -31,7 +31,7 @@ export const chatService = {
   },
 
   isChatActive(eventDate: string, endDate?: string): boolean {
-    const chatStart = new Date(eventDate).getTime() - (60 * 60 * 1000); // 1h antes
+    const chatStart = new Date(eventDate).getTime() - (2 * 60 * 60 * 1000); // 2h antes
     const chatEnd = endDate 
       ? new Date(endDate).getTime() + (60 * 60 * 1000) // 1h depois do fim
       : new Date(eventDate).getTime() + (4 * 60 * 60 * 1000); // Default 4h se não houver fim
