@@ -123,13 +123,14 @@ CREATE TRIGGER tr_events_updated BEFORE UPDATE ON public.events FOR EACH ROW EXE
 CREATE TRIGGER tr_schedules_updated BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- Trigger robusto para criar Profile Automaticamente após Auth.Users
--- Versão Robusta e Blindada para criar Profile Automaticamente após Auth.Users
+-- Versão Ultra-Resiliente para criar Profile Automaticamente após Auth.Users
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
 DECLARE
   v_role_text TEXT;
   v_role_final user_access_level;
   v_dept_id UUID;
+  v_dept_exists BOOLEAN;
 BEGIN
   -- 1. Buscar dados do convite com normalização de e-mail (case-insensitive)
   SELECT role::TEXT, department_id 
@@ -138,8 +139,7 @@ BEGIN
   WHERE LOWER(email) = LOWER(new.email) 
   LIMIT 1;
 
-  -- 2. Tentar converter o texto para o Enum de forma segura
-  -- Se o cargo no convite for inválido ou nulo, assume 'VOLUNTÁRIO'
+  -- 2. Validar o Cargo de forma segura
   BEGIN
     IF v_role_text IS NOT NULL THEN
       v_role_final := v_role_text::user_access_level;
@@ -150,7 +150,7 @@ BEGIN
     v_role_final := 'VOLUNTÁRIO';
   END;
 
-  -- 3. Inserir no Profile (com tratamento de conflito)
+  -- 3. Inserir no Profile (Tenta garantir que o perfil nasça de qualquer jeito)
   INSERT INTO public.profiles (id, email, full_name, avatar_url, access_level)
   VALUES (
     new.id, 
@@ -162,15 +162,16 @@ BEGIN
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
-    avatar_url = EXCLUDED.avatar_url,
-    access_level = EXCLUDED.access_level,
-    updated_at = NOW();
+    avatar_url = EXCLUDED.avatar_url;
 
-  -- 4. Vincular ao departamento se houver convite específico
+  -- 4. Vincular ao departamento apenas se ele existir (previne erros de FK)
   IF v_dept_id IS NOT NULL THEN
-    INSERT INTO public.user_departments (user_id, department_id)
-    VALUES (new.id, v_dept_id)
-    ON CONFLICT DO NOTHING;
+    SELECT EXISTS (SELECT 1 FROM public.departments WHERE id = v_dept_id) INTO v_dept_exists;
+    IF v_dept_exists THEN
+      INSERT INTO public.user_departments (user_id, department_id)
+      VALUES (new.id, v_dept_id)
+      ON CONFLICT DO NOTHING;
+    END IF;
   END IF;
 
   RETURN new;
