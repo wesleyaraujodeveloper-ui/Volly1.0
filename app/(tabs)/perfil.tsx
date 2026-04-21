@@ -92,7 +92,7 @@ export default function PerfilScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Header com Gradiente */}
       <LinearGradient
-        colors={[theme.colors.primary, '#FFA726']}
+        colors={[theme.colors.primary, theme.colors.primaryDark]}
         style={styles.header}
       >
         <View style={styles.avatarContainer}>
@@ -256,12 +256,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   userName: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '800',
   },
   userEmail: {
-    color: 'rgba(0,0,0,0.6)',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     marginBottom: 10,
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   institutionNameText: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 15,
-    backgroundColor: 'rgba(255, 106, 0, 0.05)',
+    backgroundColor: 'rgba(223, 114, 27, 0.1)', // #DF721B com opacidade
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,

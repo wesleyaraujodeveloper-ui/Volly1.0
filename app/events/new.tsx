@@ -71,7 +71,7 @@ export default function EventsScreen() {
     if (newSelectedDates[dateString]) {
       delete newSelectedDates[dateString];
     } else {
-      newSelectedDates[dateString] = { selected: true, selectedColor: theme.colors.primary, selectedTextColor: '#121212' };
+      newSelectedDates[dateString] = { selected: true, selectedColor: theme.colors.primary, selectedTextColor: '#FFFFFF' };
     }
     setSelectedDates(newSelectedDates);
   };
@@ -233,14 +233,14 @@ export default function EventsScreen() {
           style={[styles.modeTab, activeMode === 'NOVO' && styles.activeModeTab]}
           onPress={() => setActiveMode('NOVO')}
         >
-          <Ionicons name="add-circle" size={18} color={activeMode === 'NOVO' ? '#121212' : theme.colors.textSecondary} />
+          <Ionicons name="add-circle" size={18} color={activeMode === 'NOVO' ? '#FFFFFF' : theme.colors.textSecondary} />
           <Text style={[styles.modeTabText, activeMode === 'NOVO' && styles.activeModeTabText]}>NOVO</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.modeTab, activeMode === 'GERENCIAR' && styles.activeModeTab]}
           onPress={() => setActiveMode('GERENCIAR')}
         >
-          <Ionicons name="settings" size={18} color={activeMode === 'GERENCIAR' ? '#121212' : theme.colors.textSecondary} />
+          <Ionicons name="settings" size={18} color={activeMode === 'GERENCIAR' ? '#FFFFFF' : theme.colors.textSecondary} />
           <Text style={[styles.modeTabText, activeMode === 'GERENCIAR' && styles.activeModeTabText]}>GERENCIAR</Text>
         </TouchableOpacity>
       </View>
@@ -325,9 +325,9 @@ export default function EventsScreen() {
               })}
             </View>
 
-            <TouchableOpacity style={styles.submitBtn} onPress={handleCreateEvents} disabled={loading}>
-              {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.submitBtnText}>Criar Eventos Selecionados</Text>}
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.submitBtn} onPress={handleCreateEvents} disabled={loading}>
+                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.submitBtnText}>Criar Eventos Selecionados</Text>}
+              </TouchableOpacity>
           </View>
         </ScrollView>
       ) : (
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   modeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10 },
   activeModeTab: { backgroundColor: theme.colors.primary },
   modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
-  activeModeTabText: { color: '#121212' },
+  activeModeTabText: { color: '#FFFFFF' },
   formCard: { backgroundColor: theme.colors.surface, padding: 16, borderRadius: 16 },
   label: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: 'bold', marginBottom: 8, textTransform: 'uppercase' },
   input: { backgroundColor: theme.colors.background, color: theme.colors.text, padding: 14, borderRadius: 10, marginBottom: 16, borderWidth: 1, borderColor: theme.colors.border },
@@ -425,9 +425,9 @@ const styles = StyleSheet.create({
   deptChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border, marginRight: 8, marginBottom: 8 },
   activeDeptChip: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   deptChipText: { color: theme.colors.textSecondary, fontSize: 12 },
-  activeDeptChipText: { color: '#121212', fontWeight: 'bold' },
+  activeDeptChipText: { color: '#FFFFFF', fontWeight: 'bold' },
   submitBtn: { backgroundColor: theme.colors.primary, padding: 16, borderRadius: 12, alignItems: 'center' },
-  submitBtnText: { color: '#121212', fontWeight: 'bold', fontSize: 16 },
+  submitBtnText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
   manageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   historyBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, padding: 8, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.primary },
   historyBtnText: { color: theme.colors.primary, fontWeight: 'bold', marginLeft: 6, fontSize: 13 },

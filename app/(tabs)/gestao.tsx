@@ -413,7 +413,7 @@ export default function GestaoMembrosScreen() {
                   onPress={handleAddVolunteer} 
                   disabled={!canInvite}
                 >
-                  {loading ? <ActivityIndicator color="#121212" /> : <Text style={[styles.addButtonText, !canInvite && { color: theme.colors.textSecondary }]}>Convidar Membro</Text>}
+                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.addButtonText}>Convidar Membro</Text>}
                 </TouchableOpacity>
 
                 {!canInvite && !loading && (
@@ -652,7 +652,7 @@ export default function GestaoMembrosScreen() {
               onPress={handleSaveTeams}
               disabled={loading}
             >
-              {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>SALVAR VÍNCULOS</Text>}
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.addButtonText}>SALVAR VÍNCULOS</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -779,7 +779,7 @@ export default function GestaoMembrosScreen() {
               onPress={handleSaveEditDepartment}
               disabled={loading}
             >
-              {loading ? <ActivityIndicator color="#121212" /> : <Text style={styles.addButtonText}>SALVAR ALTERAÇÕES</Text>}
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.addButtonText}>SALVAR ALTERAÇÕES</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   formCard: { backgroundColor: theme.colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: theme.colors.border },
   input: { backgroundColor: theme.colors.background, color: theme.colors.text, padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border },
   addButton: { backgroundColor: theme.colors.primary, padding: 14, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  addButtonText: { color: '#121212', fontWeight: 'bold' },
+  addButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
   memberCard: { backgroundColor: theme.colors.surface, padding: 16, borderRadius: 8, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   memberInfo: { flex: 1 },
   memberName: { color: theme.colors.text, fontWeight: 'bold', fontSize: 16 },
@@ -839,11 +839,11 @@ const styles = StyleSheet.create({
   listTitle: { color: theme.colors.text, fontWeight: 'bold', fontSize: 16 },
   leaderPickerGrid: { backgroundColor: theme.colors.background, borderRadius: 8, marginBottom: 12, padding: 4, borderWidth: 1, borderColor: theme.colors.border },
   leaderPickerItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  leaderPickerItemSelected: { backgroundColor: 'rgba(255, 144, 0, 0.05)' },
+  leaderPickerItemSelected: { backgroundColor: 'rgba(223, 114, 27, 0.1)' },
   leaderPickerLabel: { color: theme.colors.text, fontSize: 14, marginLeft: 10 },
   chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
   chip: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 8, marginBottom: 8 },
   chipSelected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: 'bold' },
-  chipTextSelected: { color: '#121212' }
+  chipTextSelected: { color: '#FFFFFF' }
 });

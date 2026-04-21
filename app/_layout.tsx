@@ -146,13 +146,11 @@ export default function RootLayout() {
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
 
-  if (!fontsLoaded || !isMounted) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#FFD700" />
+      <View style={{ flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#DF721B" />
       </View>
     );
-  }
 
   return (
     <>
@@ -162,7 +160,7 @@ export default function RootLayout() {
         </Head>
       )}
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#121212' } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

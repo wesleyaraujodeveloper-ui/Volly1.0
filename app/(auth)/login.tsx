@@ -131,8 +131,8 @@ export default function LoginScreen() {
             style={styles.logoImage}
             resizeMode="contain"
           />
-          <Text 
-            style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 64, marginLeft: 10 }}
+            <Text 
+            style={{ fontFamily: 'CreamCake', color: '#FFFFFF', fontSize: 64, marginLeft: 10 }}
             // @ts-ignore - Propriedades para evitar tradução automática no navegador
             translate="no"
             className="notranslate"
@@ -157,14 +157,14 @@ export default function LoginScreen() {
         >
           {isAuthenticating ? (
              <View style={{ alignItems: 'center' }}>
-               <ActivityIndicator color="#121212" size="large" />
-               <Text style={[styles.infoText, { marginTop: 10, color: '#121212' }]}>
+               <ActivityIndicator color="#FFFFFF" size="large" />
+               <Text style={[styles.infoText, { marginTop: 10, color: '#FFFFFF' }]}>
                  Finalize no navegador...
                </Text>
              </View>
           ) : (
             <>
-              <Ionicons name="logo-google" size={20} color="#121212" style={styles.icon} />
+              <Ionicons name="logo-google" size={20} color="#FFFFFF" style={styles.icon} />
               <Text style={styles.buttonText}>Entrar com Google</Text>
             </>
           )}
@@ -197,10 +197,10 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     borderRadius: theme.borderRadius.xl,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
     alignItems: 'center'
   },
   infoText: {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   buttonText: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
   },

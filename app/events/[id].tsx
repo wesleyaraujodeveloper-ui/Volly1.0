@@ -342,7 +342,7 @@ export default function EventDetailScreen() {
                       style={styles.addToListBtn} 
                       onPress={handleAddSongToList}
                     >
-                      <Ionicons name="add-circle" size={20} color="#121212" />
+                      <Ionicons name="add-circle" size={20} color="#FFFFFF" />
                       <Text style={styles.addToListBtnText}>Adicionar à Lista</Text>
                     </TouchableOpacity>
 
@@ -352,7 +352,7 @@ export default function EventDetailScreen() {
                       disabled={isSavingPlaylist}
                     >
                       {isSavingPlaylist ? (
-                        <ActivityIndicator size="small" color="#121212" />
+                        <ActivityIndicator size="small" color="#FFFFFF" />
                       ) : (
                         <Text style={styles.confirmAddSongText}>Confirmar Músicas</Text>
                       )}
@@ -436,13 +436,13 @@ export default function EventDetailScreen() {
               contentContainerStyle={{ padding: 10 }}
               renderItem={({ item }) => (
                 <View style={[styles.messageBubble, item.user_id === user?.id && styles.myMessage]}>
-                   <Text style={[styles.messageUser, item.user_id === user?.id && { color: '#121212' }]}>
+                   <Text style={[styles.messageUser, item.user_id === user?.id && { color: '#FFFFFF' }]}>
                      {item.profiles?.full_name || 'Usuário'}
                    </Text>
-                   <Text style={[styles.messageContent, item.user_id === user?.id && { color: '#121212' }]}>
+                   <Text style={[styles.messageContent, item.user_id === user?.id && { color: '#FFFFFF' }]}>
                      {item.content}
                    </Text>
-                   <Text style={[styles.messageTime, item.user_id === user?.id && { color: 'rgba(0,0,0,0.5)' }]}>
+                   <Text style={[styles.messageTime, item.user_id === user?.id && { color: 'rgba(255,255,255,0.6)' }]}>
                      {format(new Date(item.created_at), 'HH:mm')}
                    </Text>
                 </View>
@@ -474,7 +474,7 @@ export default function EventDetailScreen() {
                   onChangeText={setNewMessage}
                 />
                 <TouchableOpacity style={styles.sendBtn} onPress={handleSendMessage}>
-                  <Ionicons name="send" size={20} color="#121212" />
+                  <Ionicons name="send" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             )}
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    backgroundColor: 'rgba(223, 114, 27, 0.1)',
     padding: 8,
     borderRadius: 8,
     alignSelf: 'flex-start',
@@ -702,13 +702,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   addToListBtnText: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     marginLeft: 6,
     fontSize: 13,
   },
   confirmAddSongText: {
-    color: '#121212',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 14,
   },

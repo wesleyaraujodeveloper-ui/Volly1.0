@@ -2,17 +2,17 @@ import { StyleSheet } from 'react-native';
 
 export const theme = {
   colors: {
-    primary: '#FF6A00', // Laranja vibrante - Identidade Volly
-    primaryDark: '#CC5500',
-    primaryLight: '#FF8A33',
-    background: '#121212', // Fundo principal escuro
-    surface: '#1E1E1E',   // Fundo de cards e modais
-    surfaceHighlight: '#2A2A2A',
+    primary: '#DF721B', // Novo Laranja vibrante - Identidade Volly
+    primaryDark: '#BB5013',
+    primaryLight: '#F28B3C',
+    background: '#000000', // Fundo OLED Black - Moderno e econômico
+    surface: '#121212',   // Fundo de cards e modais
+    surfaceHighlight: '#1A1A1A',
     text: '#FFFFFF', // Texto claro
     textSecondary: '#A0A0A0', // Texto secundário acinzentado
-    error: '#CF6679',
-    success: '#03DAC6',
-    border: '#333333',
+    error: '#FF5252',
+    success: '#6BC5A7', // Verde menta sugerido
+    border: '#222222',
   },
   spacing: {
     xs: 4,

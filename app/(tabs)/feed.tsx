@@ -482,16 +482,12 @@ export default function FeedScreen() {
     );
   };
 
-  const renderChatFAB = () => {
-    if (!nextEvent?.events) return null;
-    const eventId = (nextEvent.events as any).id;
-
     return (
       <TouchableOpacity 
         style={styles.chatFAB}
         onPress={() => router.push(`/events/${eventId}?tab=CHAT`)}
       >
-        <Ionicons name="chatbubbles-outline" size={26} color="#121212" />
+        <Ionicons name="chatbubbles" size={26} color="#FFFFFF" />
         <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />
       </TouchableOpacity>
     );
@@ -510,7 +506,7 @@ export default function FeedScreen() {
             style={[styles.modeTab, feedMode === 'MURAL' && styles.activeModeTab]}
             onPress={() => setFeedMode('MURAL')}
           >
-            <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#121212' : theme.colors.textSecondary} />
+            <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} />
             <Text 
               style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
               translate="no"
@@ -523,7 +519,7 @@ export default function FeedScreen() {
             style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
             onPress={() => setFeedMode('PANORAMA')}
           >
-            <Ionicons name="grid" size={16} color={feedMode === 'PANORAMA' ? '#121212' : theme.colors.textSecondary} />
+            <Ionicons name="grid" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
             <Text style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}>Escala</Text>
           </TouchableOpacity>
         </View>
@@ -558,7 +554,7 @@ export default function FeedScreen() {
                   onPress={handleCreatePost}
                   disabled={isPosting || (!newPostContent.trim() && !selectedImage)}
                 >
-                  {isPosting ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="send" size={18} color="#000" />}
+                  {isPosting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="send" size={18} color="#FFFFFF" />}
                 </TouchableOpacity>
               </View>
             </View>
@@ -733,7 +729,7 @@ const styles = StyleSheet.create({
   modeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10 },
   activeModeTab: { backgroundColor: theme.colors.primary },
   modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
-  activeModeTabText: { color: '#121212' },
+  activeModeTabText: { color: '#FFFFFF' },
   panoramaEventCard: { marginBottom: 24 },
   panoramaEventTitle: { color: theme.colors.text, fontSize: 18, fontWeight: 'bold' },
   panoramaEventDate: { color: theme.colors.textSecondary, fontSize: 13, marginBottom: 16 },
@@ -1050,7 +1046,7 @@ const styles = StyleSheet.create({
   },
   chatFAB: {
     position: 'absolute',
-    bottom: 25,
+    bottom: 30,
     right: 25,
     backgroundColor: theme.colors.primary,
     width: 60,
@@ -1059,10 +1055,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
     zIndex: 999,
   },
   activeIndicator: {
@@ -1072,7 +1068,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#6BC5A7', // Verde menta moderno
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },

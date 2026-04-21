@@ -144,7 +144,7 @@ export default function EventosScreen() {
               calendarBackground: theme.colors.background,
               textSectionTitleColor: theme.colors.primary,
               selectedDayBackgroundColor: theme.colors.primary,
-              selectedDayTextColor: '#000',
+              selectedDayTextColor: '#FFFFFF',
               todayTextColor: theme.colors.primary,
               dayTextColor: theme.colors.text,
               textDisabledColor: theme.colors.border,
@@ -170,7 +170,7 @@ export default function EventosScreen() {
           style={styles.fab}
           onPress={() => router.push('/events/new' as any)}
         >
-          <Ionicons name="add" size={32} color="#121212" />
+          <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
     </View>
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   activeTabText: {
-    color: '#121212',
+    color: '#FFFFFF',
   },
   eventCard: {
     flexDirection: 'row',
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
   },
 });
