@@ -39,6 +39,24 @@ export const adminService = {
       return { data: null, error: { message: 'Este e-mail já possui um convite enviado!' } };
     }
 
+    // 1.2 Verifica se atingiu o limite de usuários da instituição
+    if (institutionId) {
+      const { data: inst } = await supabase
+        .from('institutions')
+        .select('user_limit')
+        .eq('id', institutionId)
+        .single();
+      
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId);
+
+      if (inst && count !== null && count >= inst.user_limit) {
+        return { data: null, error: { message: `Limite de usuários (${inst.user_limit}) atingido para esta instituição.` } };
+      }
+    }
+
     // 2. Insere ou atualiza o convite (Upsert evita o erro 409 Conflict)
     const { data, error } = await supabase
       .from('invitations')
@@ -295,5 +313,84 @@ export const adminService = {
         supabase.removeChannel(channel);
       }
     };
+  },
+
+  /**
+   * --- MÉTODOS EXCLUSIVOS MASTER ADMIN ---
+   */
+
+  /**
+   * Lista todas as instituições com a contagem atual de usuários.
+   */
+  listInstitutions: async () => {
+    const { data, error } = await supabase
+      .from('institutions')
+      .select(`
+        *,
+        profiles:profiles(count)
+      `)
+      .order('name');
+
+    if (error) return { data: null, error };
+
+    // Mapeia para incluir o total de usuários ativos
+    const mapped = data.map(inst => ({
+      ...inst,
+      userCount: inst.profiles?.[0]?.count || 0
+    }));
+
+    return { data: mapped, error: null };
+  },
+
+  /**
+   * Cria uma nova instituição.
+   */
+  createInstitution: async (name: string, slug: string, userLimit: number = 30) => {
+    return await supabase
+      .from('institutions')
+      .insert([{ name, slug, user_limit: userLimit }])
+      .select()
+      .single();
+  },
+
+  /**
+   * Atualiza dados de uma instituição.
+   */
+  updateInstitution: async (id: string, updates: any) => {
+    return await supabase
+       .from('institutions')
+       .update(updates)
+       .eq('id', id)
+       .select()
+       .single();
+  },
+
+  /**
+   * Upload de logo da instituição.
+   */
+  uploadInstitutionLogo: async (base64Data: string) => {
+    try {
+      const { decode } = require('base64-arraybuffer');
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+      const filePath = `logos/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('branding')
+        .upload(filePath, decode(base64Data), {
+          contentType: 'image/jpeg',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('branding')
+        .getPublicUrl(data.path);
+
+      return { publicUrl, error: null };
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      return { publicUrl: null, error };
+    }
   }
 };

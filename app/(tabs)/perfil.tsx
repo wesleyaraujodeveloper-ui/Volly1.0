@@ -17,6 +17,7 @@ export default function PerfilScreen() {
   const [loading, setLoading] = useState(false);
   const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
+  const [institution, setInstitution] = useState<{ name: string; logo_url: string | null } | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
 
@@ -36,7 +37,18 @@ export default function PerfilScreen() {
 
   useEffect(() => {
     loadDepartments();
+    loadInstitution();
   }, []);
+
+  const loadInstitution = async () => {
+    if (!user?.institution_id) return;
+    const { data } = await supabase
+      .from('institutions')
+      .select('name, logo_url')
+      .eq('id', user.institution_id)
+      .single();
+    if (data) setInstitution(data);
+  };
 
   const loadDepartments = async () => {
     try {
@@ -97,6 +109,15 @@ export default function PerfilScreen() {
          </View>
          <Text style={styles.userName}>{user?.name || 'Voluntário'}</Text>
          <Text style={styles.userEmail}>{user?.email}</Text>
+         
+         {institution && (
+           <View style={styles.institutionBadge}>
+             {institution.logo_url && (
+               <Image source={{ uri: institution.logo_url }} style={styles.institutionLogoMini} />
+             )}
+             <Text style={styles.institutionNameText}>{institution.name}</Text>
+           </View>
+         )}
        </LinearGradient>
 
       {/* Seção Equipes (Real time) */}
@@ -243,6 +264,26 @@ const styles = StyleSheet.create({
     color: 'rgba(0,0,0,0.6)',
     fontSize: 14,
     marginBottom: 10,
+  },
+  institutionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 5,
+  },
+  institutionLogoMini: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginRight: 6,
+  },
+  institutionNameText: {
+    color: '#121212',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 
   section: {

@@ -12,6 +12,17 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [lastBranding, setLastBranding] = useState<{ name: string; logo_url: string | null } | null>(null);
+
+  // Efeito para tentar carregar o branding da última igreja acessada (melhora a UX)
+  useEffect(() => {
+    const loadBranding = async () => {
+      // Aqui poderíamos buscar do AsyncStorage, mas por agora simularemos 
+      // ou buscaremos a padrão se houver apenas uma.
+      // Futuramente isso virá via Deep Link (slug na URL)
+    };
+    loadBranding();
+  }, []);
 
   const handleGoogleLogin = async () => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -116,7 +127,7 @@ export default function LoginScreen() {
       <View style={styles.logoContainer}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image 
-            source={require('../../assets/images/icons/volly-logo.png')} 
+            source={lastBranding?.logo_url ? { uri: lastBranding.logo_url } : require('../../assets/images/icons/volly-logo.png')} 
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -126,10 +137,12 @@ export default function LoginScreen() {
             translate="no"
             className="notranslate"
           >
-            Volly
+            {lastBranding?.name || 'Volly'}
           </Text>
         </View>
-        <Text style={styles.sloganText}>Juntos Fazemos a Diferença</Text>
+        <Text style={styles.sloganText}>
+          {lastBranding ? `Conectado à ${lastBranding.name}` : 'Juntos Fazemos a Diferença'}
+        </Text>
       </View>
 
       <View style={styles.formContainer}>

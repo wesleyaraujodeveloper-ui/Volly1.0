@@ -102,6 +102,18 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/* Aba de Gerenciamento Global (SaaS) visível apenas para MASTER */}
+      <Tabs.Screen
+        name="instituicoes"
+        options={{
+          title: 'Instituições',
+          href: (user?.role === 'MASTER' ? '/(tabs)/instituicoes' : null) as any,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="business-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
