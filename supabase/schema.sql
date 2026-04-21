@@ -8,9 +8,27 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 DO $$ 
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_access_level') THEN
-        CREATE TYPE user_access_level AS ENUM ('ADMIN', 'LÍDER', 'CO-LÍDER', 'VOLUNTÁRIO');
+        CREATE TYPE user_access_level AS ENUM ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER', 'VOLUNTÁRIO');
+    ELSE
+        -- Adiciona MASTER se o enum já existir (migração)
+        ALTER TYPE user_access_level ADD VALUE IF NOT EXISTS 'MASTER' BEFORE 'ADMIN';
     END IF;
 END $$;
+
+-- 0.1 TABELA: INSTITUTIONS
+CREATE TABLE IF NOT EXISTS public.institutions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    settings JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.institutions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Instituições são visíveis para usuários autenticados" ON public.institutions FOR SELECT USING (auth.role() = 'authenticated');
+
 
 -- 1. TABELA: PROFILES (Sincronizada com auth.users)
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -20,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     avatar_url TEXT,
     push_token TEXT,
     access_level user_access_level DEFAULT 'VOLUNTÁRIO',
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -27,12 +46,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- 2. TABELA: DEPARTMENTS
 CREATE TABLE IF NOT EXISTS public.departments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL UNIQUE,
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
     description TEXT,
     leader_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     co_leader_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(name, institution_id)
 );
 
 -- 3. TABELA: ROLES (Funções técnicas/artísticas, ex: Guitarra, Recepcionista)
@@ -55,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.user_departments (
 -- 5. TABELA: EVENTS
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
     event_date TIMESTAMPTZ NOT NULL,
@@ -130,41 +152,51 @@ DECLARE
   v_role_text TEXT;
   v_role_final user_access_level;
   v_dept_id UUID;
+  v_inst_id UUID;
   v_dept_exists BOOLEAN;
 BEGIN
-  -- 1. Buscar dados do convite com normalização de e-mail (case-insensitive)
-  SELECT role::TEXT, department_id 
-  INTO v_role_text, v_dept_id
-  FROM public.invitations 
-  WHERE LOWER(email) = LOWER(new.email) 
-  LIMIT 1;
+  -- 1. Identificar se é o Master Admin (wesleyaraujo.developer@gmail.com)
+  IF new.email = 'wesleyaraujo.developer@gmail.com' THEN
+    v_role_final := 'MASTER';
+    v_inst_id := NULL; -- Master não fica preso a uma única instituição
+  ELSE
+    -- 2. Buscar dados do convite para usuários comuns
+    SELECT role::TEXT, department_id, institution_id 
+    INTO v_role_text, v_dept_id, v_inst_id
+    FROM public.invitations 
+    WHERE LOWER(email) = LOWER(new.email) 
+    LIMIT 1;
 
-  -- 2. Validar o Cargo de forma segura
-  BEGIN
-    IF v_role_text IS NOT NULL THEN
-      v_role_final := v_role_text::user_access_level;
-    ELSE
+    -- Validar o Cargo
+    BEGIN
+      IF v_role_text IS NOT NULL THEN
+        v_role_final := v_role_text::user_access_level;
+      ELSE
+        v_role_final := 'VOLUNTÁRIO';
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
       v_role_final := 'VOLUNTÁRIO';
-    END IF;
-  EXCEPTION WHEN OTHERS THEN
-    v_role_final := 'VOLUNTÁRIO';
-  END;
+    END;
+  END IF;
 
-  -- 3. Inserir no Profile (Tenta garantir que o perfil nasça de qualquer jeito)
-  INSERT INTO public.profiles (id, email, full_name, avatar_url, access_level)
+  -- 3. Inserir no Profile
+  INSERT INTO public.profiles (id, email, full_name, avatar_url, access_level, institution_id)
   VALUES (
     new.id, 
     new.email, 
     COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Voluntário'),
     COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'),
-    v_role_final
+    v_role_final,
+    v_inst_id
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
-    avatar_url = EXCLUDED.avatar_url;
+    avatar_url = EXCLUDED.avatar_url,
+    access_level = EXCLUDED.access_level,
+    institution_id = COALESCE(EXCLUDED.institution_id, profiles.institution_id);
 
-  -- 4. Vincular ao departamento apenas se ele existir (previne erros de FK)
+  -- 4. Vincular ao departamento apenas se houver convite válido
   IF v_dept_id IS NOT NULL THEN
     SELECT EXISTS (SELECT 1 FROM public.departments WHERE id = v_dept_id) INTO v_dept_exists;
     IF v_dept_exists THEN
@@ -191,18 +223,32 @@ CREATE INDEX idx_user_departments_user ON public.user_departments(user_id);
 
 -- --- RLS (POLÍTICAS BÁSICAS) ---
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Qualquer um pode ver perfis" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Master vê tudo" ON public.profiles FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+);
+CREATE POLICY "Membros vêem perfis da sua instituição" ON public.profiles FOR SELECT USING (
+  institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
+);
 CREATE POLICY "Usuários editam o próprio perfil" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Usuários criam o próprio perfil" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Qualquer um vê departamentos" ON public.departments FOR SELECT USING (true);
+CREATE POLICY "Políticas de departamentos" ON public.departments FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+  OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
+);
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Qualquer um vê eventos" ON public.events FOR SELECT USING (true);
+CREATE POLICY "Políticas de eventos" ON public.events FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+  OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
+);
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Usuários vêem chat de seus eventos" ON public.messages FOR SELECT USING (true);
+CREATE POLICY "Políticas de mensagens" ON public.messages FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+  OR EXISTS (SELECT 1 FROM public.events e JOIN public.profiles p ON e.institution_id = p.institution_id WHERE e.id = messages.event_id AND p.id = auth.uid())
+);
+
 CREATE POLICY "Participantes ou Líderes enviam mensagens" ON public.messages 
 FOR INSERT WITH CHECK (
   auth.uid() = user_id AND (
@@ -409,9 +455,11 @@ ON public.user_event_availabilities FOR ALL USING (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS public.posts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT,
   image_url TEXT,
+  visibility TEXT DEFAULT 'INTERNAL', -- INTERNAL, GLOBAL
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

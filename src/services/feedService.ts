@@ -7,6 +7,8 @@ export interface Post {
   user_id: string;
   content: string;
   image_url?: string;
+  institution_id?: string;
+  visibility?: 'INTERNAL' | 'GLOBAL';
   created_at: string;
   profiles?: {
     full_name: string;
@@ -171,10 +173,16 @@ export const feedService = {
   /**
    * Cria uma nova postagem.
    */
-  createPost: async (userId: string, content: string, imageUrl?: string) => {
+  createPost: async (userId: string, content: string, imageUrl?: string, institutionId?: string | null, visibility: 'INTERNAL' | 'GLOBAL' = 'INTERNAL') => {
     const result = await supabase
       .from('posts')
-      .insert([{ user_id: userId, content, image_url: imageUrl }])
+      .insert([{ 
+        user_id: userId, 
+        content, 
+        image_url: imageUrl, 
+        institution_id: institutionId,
+        visibility 
+      }])
       .select()
       .single();
 

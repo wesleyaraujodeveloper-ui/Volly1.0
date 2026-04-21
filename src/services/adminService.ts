@@ -3,17 +3,18 @@ import { supabase } from './supabase';
 export interface Profile {
   id?: string;
   email: string;
-  role: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
+  role: 'MASTER' | 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
   name?: string;
   created_at?: string;
   teams?: string[];
+  institution_id?: string | null;
 }
 
 export const adminService = {
   /**
    * Registra um novo voluntário na tabela de convites (invitations).
    */
-  inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null) => {
+  inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null, institutionId?: string | null) => {
     const cleanEmail = email.toLowerCase().trim();
 
     // 1. Verifica se já não é um membro ativo
@@ -45,7 +46,8 @@ export const adminService = {
         { 
           email: cleanEmail, 
           role: 'VOLUNTÁRIO',
-          department_id: departmentId
+          department_id: departmentId,
+          institution_id: institutionId
         }
       ])
       .select();
@@ -122,7 +124,7 @@ export const adminService = {
   /**
    * Cria um departamento novo (via RPC).
    */
-  createDepartment: async (name: string, description: string = '', leaderId?: string, coLeaderId?: string) => {
+  createDepartment: async (name: string, description: string = '', leaderId?: string, coLeaderId?: string, institutionId?: string | null) => {
     const { data, error } = await supabase
       .from('departments')
       .insert([
@@ -130,7 +132,8 @@ export const adminService = {
           name, 
           description, 
           leader_id: leaderId,
-          co_leader_id: coLeaderId
+          co_leader_id: coLeaderId,
+          institution_id: institutionId
         }
       ])
       .select();
