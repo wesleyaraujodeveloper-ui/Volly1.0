@@ -125,19 +125,40 @@ CREATE TRIGGER tr_schedules_updated BEFORE UPDATE ON public.schedules FOR EACH R
 -- Trigger robusto para criar Profile Automaticamente após Auth.Users
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
+DECLARE
+  v_role user_access_level;
+  v_dept_id UUID;
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, avatar_url)
+  -- 1. Tentar buscar dados do convite (email deve bater exatamente)
+  SELECT role::user_access_level, department_id 
+  INTO v_role, v_dept_id
+  FROM public.invitations 
+  WHERE email = new.email 
+  LIMIT 1;
+
+  -- 2. Criar o perfil vinculando os dados
+  INSERT INTO public.profiles (id, email, full_name, avatar_url, access_level)
   VALUES (
     new.id, 
     new.email, 
     COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Voluntário'),
-    COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture')
+    COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'),
+    COALESCE(v_role, 'VOLUNTÁRIO')
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
     avatar_url = EXCLUDED.avatar_url,
+    access_level = COALESCE(v_role, EXCLUDED.access_level),
     updated_at = NOW();
+
+  -- 3. Vincular ao departamento se houver convite específico
+  IF v_dept_id IS NOT NULL THEN
+    INSERT INTO public.user_departments (user_id, department_id)
+    VALUES (new.id, v_dept_id)
+    ON CONFLICT DO NOTHING;
+  END IF;
+
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
