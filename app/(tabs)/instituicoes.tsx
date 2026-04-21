@@ -160,6 +160,52 @@ export default function GestaoInstituicoesScreen() {
     }
   };
 
+  const renderStatsDashboard = useMemo(() => {
+    if (institutions.length === 0) return null;
+
+    const totalInst = institutions.length;
+    const totalUsers = institutions.reduce((acc, inst) => acc + (inst.userCount || 0), 0);
+    const activeInst = institutions.filter(inst => inst.active).length;
+    const totalLimit = institutions.reduce((acc, inst) => acc + (inst.user_limit || 0), 0);
+    const capacityUsage = totalLimit > 0 ? (totalUsers / totalLimit) * 100 : 0;
+
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.statsDashboard}
+        contentContainerStyle={styles.statsDashboardContent}
+      >
+        <View style={[styles.statsCard, { borderColor: theme.colors.primary }]}>
+          <View style={styles.statsIconCircle}>
+            <Ionicons name="business" size={20} color={theme.colors.primary} />
+          </View>
+          <Text style={styles.statsValue}>{totalInst}</Text>
+          <Text style={styles.statsLabel}>Igrejas</Text>
+          <Text style={styles.statsSubLabel}>{activeInst} Ativas</Text>
+        </View>
+
+        <View style={[styles.statsCard, { borderColor: theme.colors.success }]}>
+          <View style={[styles.statsIconCircle, { backgroundColor: 'rgba(107, 197, 167, 0.1)' }]}>
+            <Ionicons name="people" size={20} color={theme.colors.success} />
+          </View>
+          <Text style={styles.statsValue}>{totalUsers}</Text>
+          <Text style={styles.statsLabel}>Membros</Text>
+          <Text style={styles.statsSubLabel}>Total Ativo</Text>
+        </View>
+
+        <View style={[styles.statsCard, { borderColor: '#5D5FEF' }]}>
+          <View style={[styles.statsIconCircle, { backgroundColor: 'rgba(93, 95, 239, 0.1)' }]}>
+            <Ionicons name="pie-chart" size={20} color="#5D5FEF" />
+          </View>
+          <Text style={styles.statsValue}>{capacityUsage.toFixed(1)}%</Text>
+          <Text style={styles.statsLabel}>Capacidade</Text>
+          <Text style={styles.statsSubLabel}>SaaS Global</Text>
+        </View>
+      </ScrollView>
+    );
+  }, [institutions]);
+
   const renderInstitutionCard = useCallback(({ item }: { item: Institution }) => {
     const userCount = item.userCount || 0;
     const usage = (userCount / item.user_limit) * 100;
@@ -222,6 +268,8 @@ export default function GestaoInstituicoesScreen() {
         <Text style={globalStyles.textTitle}>Gestão Global</Text>
         <Text style={globalStyles.textBody}>Controle de instituições e cotas SaaS.</Text>
       </View>
+
+      {renderStatsDashboard}
 
       <FlatList
         data={institutions}
@@ -316,7 +364,50 @@ export default function GestaoInstituicoesScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  statsDashboard: {
+    marginBottom: 24,
+    marginHorizontal: -16, // Bleed out to screen edges
+    paddingHorizontal: 16,
+  },
+  statsDashboardContent: {
+    paddingRight: 32,
+    gap: 12,
+  },
+  statsCard: {
+    width: 140,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+  },
+  statsIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(223, 114, 27, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statsValue: {
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  statsLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statsSubLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 10,
+    marginTop: 4,
+    opacity: 0.7,
   },
   card: {
     backgroundColor: theme.colors.surface,

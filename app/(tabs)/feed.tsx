@@ -435,7 +435,7 @@ export default function FeedScreen() {
     if (panoramaData.length === 0) return <Text style={[styles.emptyText, { marginTop: 40 }]}>Nenhuma escala gerada no momento.</Text>;
 
     return (
-      <View style={{ marginTop: 10, paddingBottom: 40 }}>
+      <View style={{ marginTop: 10, paddingBottom: 80 }}>
         {panoramaData.map((ev: any) => {
           const groupedDepts: Record<string, { deptName: string, schedules: any[] }> = {};
           
@@ -449,32 +449,47 @@ export default function FeedScreen() {
           }
 
           return (
-            <View key={ev.id} style={styles.panoramaEventCard}>
-               <Text style={styles.panoramaEventTitle}>{ev.title}</Text>
-               <Text style={styles.panoramaEventDate}>{format(new Date(ev.event_date), "EEEE, dd 'de' MMMM", { locale: ptBR })}</Text>
+            <View key={ev.id} style={styles.panoramaTimelineCard}>
+               <View style={styles.panoramaTimelineHeader}>
+                 <View style={styles.panoramaDateBadge}>
+                   <Text style={styles.panoramaDateDay}>{format(new Date(ev.event_date), "dd")}</Text>
+                   <Text style={styles.panoramaDateMonth}>{format(new Date(ev.event_date), "MMM", { locale: ptBR })}</Text>
+                 </View>
+                 <View style={{ flex: 1, marginLeft: 15 }}>
+                    <Text style={styles.panoramaEventTitle}>{ev.title}</Text>
+                    <Text style={styles.panoramaEventDayName}>{format(new Date(ev.event_date), "EEEE", { locale: ptBR })}</Text>
+                 </View>
+               </View>
                
-               {Object.values(groupedDepts).length === 0 ? (
-                 <Text style={[styles.emptyText, { marginTop: 10, fontSize: 12 }]}>Ninguém escalado ainda.</Text>
-               ) : (
-                 Object.values(groupedDepts).map((group, idx) => (
-                   <View key={idx} style={styles.panoramaDeptBlock}>
-                     <View style={styles.panoramaDeptHeader}>
-                       <View style={styles.panoramaDeptMarker} />
-                       <Text style={styles.panoramaDeptName}>{group.deptName}</Text>
-                     </View>
-                     {group.schedules.map((sch: any) => (
-                       <View key={sch.id} style={styles.panoramaSchItem}>
-                         <Image source={{ uri: sch.profiles?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.panoramaAvatar} />
-                         <View style={{ flex: 1 }}>
-                           <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
-                           <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
-                         </View>
+               <View style={styles.panoramaContent}>
+                 {Object.values(groupedDepts).length === 0 ? (
+                   <Text style={[styles.emptyText, { marginTop: 10, fontSize: 12 }]}>Ninguém escalado ainda.</Text>
+                 ) : (
+                   Object.values(groupedDepts).map((group, idx) => (
+                     <View key={idx} style={styles.panoramaDeptGroup}>
+                       <View style={styles.panoramaDeptLabel}>
+                         <View style={styles.panoramaDeptDot} />
+                         <Text style={styles.panoramaDeptName}>{group.deptName}</Text>
                        </View>
-                     ))}
-                   </View>
-                 ))
-               )}
-               <View style={styles.panoramaDivider} />
+                       
+                       <View style={styles.panoramaVolunteersList}>
+                         {group.schedules.map((sch: any) => (
+                           <View key={sch.id} style={styles.panoramaVolunteerCard}>
+                             <Image 
+                               source={{ uri: sch.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${sch.profiles?.full_name}&background=1A1A1A&color=fff` }} 
+                               style={styles.panoramaAvatar} 
+                             />
+                             <View style={{ flex: 1 }}>
+                               <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
+                               <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
+                             </View>
+                           </View>
+                         ))}
+                       </View>
+                     </View>
+                   ))
+                 )}
+               </View>
             </View>
           );
         })}
@@ -734,18 +749,100 @@ const styles = StyleSheet.create({
   activeModeTab: { backgroundColor: theme.colors.primary },
   modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
   activeModeTabText: { color: '#FFFFFF' },
-  panoramaEventCard: { marginBottom: 24 },
-  panoramaEventTitle: { color: theme.colors.text, fontSize: 18, fontWeight: 'bold' },
-  panoramaEventDate: { color: theme.colors.textSecondary, fontSize: 13, marginBottom: 16 },
-  panoramaDeptBlock: { marginBottom: 16, backgroundColor: theme.colors.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: theme.colors.border },
-  panoramaDeptHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  panoramaDeptMarker: { width: 4, height: 16, borderRadius: 2, backgroundColor: theme.colors.primary, marginRight: 8 },
-  panoramaDeptName: { color: theme.colors.primary, fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase' },
-  panoramaSchItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  panoramaAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.background, marginRight: 12 },
-  panoramaSchName: { color: theme.colors.text, fontSize: 14, fontWeight: 'bold' },
-  panoramaSchRole: { color: theme.colors.textSecondary, fontSize: 12 },
-  panoramaDivider: { height: 1, backgroundColor: theme.colors.border, marginTop: 8 },
+  panoramaTimelineCard: {
+    marginBottom: 30,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  panoramaTimelineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: theme.colors.surfaceHighlight,
+  },
+  panoramaDateBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  panoramaDateDay: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  panoramaDateMonth: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  panoramaEventTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  panoramaEventDayName: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  panoramaContent: {
+    padding: 16,
+  },
+  panoramaDeptGroup: {
+    marginBottom: 20,
+  },
+  panoramaDeptLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  panoramaDeptDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
+    marginRight: 8,
+  },
+  panoramaDeptName: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  panoramaVolunteersList: {
+    gap: 10,
+  },
+  panoramaVolunteerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 12,
+  },
+  panoramaAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: theme.colors.background,
+  },
+  panoramaSchName: {
+    color: theme.colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  panoramaSchRole: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+  },
   dateText: {
     color: theme.colors.textSecondary,
     fontSize: 12,
