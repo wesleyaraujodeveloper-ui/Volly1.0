@@ -11,6 +11,7 @@ interface CustomModalProps {
   confirmText?: string;
   cancelText?: string;
   type?: 'danger' | 'success' | 'info';
+  children?: React.ReactNode;
 }
 
 export const CustomModal: React.FC<CustomModalProps> = ({
@@ -21,7 +22,8 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   onCancel,
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  type = 'info'
+  type = 'info',
+  children
 }) => {
   return (
     <Modal
@@ -38,6 +40,8 @@ export const CustomModal: React.FC<CustomModalProps> = ({
             {title}
           </Text>
           <Text style={styles.message}>{message}</Text>
+          
+          {children}
           
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
