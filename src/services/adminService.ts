@@ -10,6 +10,17 @@ export interface Profile {
   institution_id?: string | null;
 }
 
+export interface Institution {
+  id: string;
+  name: string;
+  slug: string;
+  user_limit: number;
+  logo_url: string | null;
+  active: boolean;
+  created_at: string;
+  userCount?: number;
+}
+
 export const adminService = {
   /**
    * Registra um novo voluntário na tabela de convites (invitations).
@@ -344,7 +355,7 @@ export const adminService = {
         .order('name');
 
       if (error) {
-        console.error('Erro ao listar instituições (Supabase):', error);
+        console.error('[AdminService] listInstitutions Error:', error.message);
         return { data: null, error };
       }
 
@@ -352,11 +363,11 @@ export const adminService = {
       const mapped = data?.map(inst => ({
         ...inst,
         userCount: inst.profiles?.[0]?.count || 0
-      })) || [];
+      })) as Institution[];
 
       return { data: mapped, error: null };
     } catch (err: any) {
-      console.error('Erro crítico no adminService.listInstitutions:', err);
+      console.error('[AdminService] listInstitutions Critical Error:', err);
       return { data: null, error: err };
     }
   },

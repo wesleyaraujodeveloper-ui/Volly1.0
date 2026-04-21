@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, globalStyles } from '../../src/theme';
@@ -11,30 +11,42 @@ export default function InstitutionAdminsScreen() {
   const { id, name } = useLocalSearchParams<{ id: string, name: string }>();
   const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadAdmins = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    
+    try {
+      const { data, error } = await adminService.listInstitutionAdmins(id);
+      if (error) {
+        Alert.alert('Erro', 'Não foi possível carregar os administradores.');
+      } else {
+        setAdmins(data || []);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     loadAdmins();
-  }, [id]);
-
-  const loadAdmins = async () => {
-    setLoading(true);
-    const { data, error } = await adminService.listInstitutionAdmins(id);
-    if (error) {
-      Alert.alert('Erro', 'Não foi possível carregar os administradores.');
-    } else {
-      setAdmins(data || []);
-    }
-    setLoading(false);
-  };
+  }, [loadAdmins]);
 
   const renderAdminItem = ({ item }: { item: any }) => (
     <View style={styles.adminCard}>
-      <Image 
-        source={{ uri: item.avatar_url || `https://ui-avatars.com/api/?name=${item.full_name}&background=DF721B&color=fff` }} 
-        style={styles.avatar} 
-      />
+      <View style={styles.avatarContainer}>
+        {item.avatar_url ? (
+          <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Ionicons name="person" size={24} color={theme.colors.primary} />
+          </View>
+        )}
+      </View>
       <View style={styles.adminInfo}>
-        <Text style={styles.adminName}>{item.full_name}</Text>
+        <Text style={styles.adminName}>{item.full_name || 'Administrador'}</Text>
         <Text style={styles.adminEmail}>{item.email}</Text>
       </View>
       <View style={styles.badge}>
@@ -65,6 +77,13 @@ export default function InstitutionAdminsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderAdminItem}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={() => loadAdmins(true)} 
+              tintColor={theme.colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people-outline" size={64} color={theme.colors.border} />
@@ -106,11 +125,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  avatar: {
+  avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
     backgroundColor: theme.colors.background,
+  },
+  avatarPlaceholder: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   adminInfo: {
     flex: 1,

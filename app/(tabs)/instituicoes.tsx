@@ -1,21 +1,23 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme, globalStyles } from '../../src/theme';
-import { adminService } from '../../src/services/adminService';
+import { adminService, Institution } from '../../src/services/adminService';
 import { CustomModal } from '../../src/components/CustomModal';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useRouter } from 'expo-router';
 
 export default function GestaoInstituicoesScreen() {
   const { user } = useAppStore();
-  const [institutions, setInstitutions] = useState<any[]>([]);
+  const router = useRouter();
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingInst, setEditingInst] = useState<any | null>(null);
+  const [editingInst, setEditingInst] = useState<Institution | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [userLimit, setUserLimit] = useState('30');
@@ -24,23 +26,23 @@ export default function GestaoInstituicoesScreen() {
   const [adminEmail, setAdminEmail] = useState('');
   const [isSlugManual, setIsSlugManual] = useState(false);
 
-  const loadInstitutions = async (silent = false) => {
+  const loadInstitutions = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     const { data, error } = await adminService.listInstitutions();
     if (error) {
       console.error('Instituicoes Load Error:', error);
-      Alert.alert('Erro de Carregamento', error.message || 'Falha ao carregar instituições. Verifique os logs do console para detalhes técnicos.');
+      Alert.alert('Erro de Carregamento', error.message || 'Falha ao carregar instituições.');
     } else if (data) {
       setInstitutions(data);
     }
     if (!silent) setRefreshing(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (user?.role === 'MASTER') {
       loadInstitutions();
     }
-  }, [user]);
+  }, [user, loadInstitutions]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -62,17 +64,17 @@ export default function GestaoInstituicoesScreen() {
     if (!editingInst && !isSlugManual) {
       const generated = text
         .toLowerCase()
-        .normalize('NFD') // Remove acentos
+        .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-        .replace(/\s+/g, '-') // Espaços para hífens
-        .replace(/-+/g, '-'); // Remove hífens duplicados
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
       setSlug(generated);
     }
   };
 
   const handleSave = async () => {
-    if (!name || !slug || (!editingInst && !adminEmail)) {
+    if (!name.trim() || !slug.trim() || (!editingInst && !adminEmail.trim())) {
       Alert.alert('Erro', 'Nome, Slug e E-mail do Administrador são obrigatórios para novas instituições');
       return;
     }
@@ -88,8 +90,8 @@ export default function GestaoInstituicoesScreen() {
       }
 
       const finalUserLimit = parseInt(userLimit);
-      if (isNaN(finalUserLimit)) {
-        Alert.alert('Erro', 'O limite de usuários deve ser um número válido.');
+      if (isNaN(finalUserLimit) || finalUserLimit <= 0) {
+        Alert.alert('Erro', 'O limite de usuários deve ser um número válido e maior que zero.');
         setLoading(false);
         return;
       }
@@ -101,8 +103,6 @@ export default function GestaoInstituicoesScreen() {
         logo_url: currentLogoUrl
       };
 
-      console.log('Salvando Instituição - Payload:', payload);
-
       let error;
       if (editingInst) {
         const res = await adminService.updateInstitution(editingInst.id, payload);
@@ -113,7 +113,7 @@ export default function GestaoInstituicoesScreen() {
           payload.slug, 
           payload.user_limit, 
           payload.logo_url,
-          adminEmail
+          adminEmail.trim()
         );
         error = res.error;
       }
@@ -141,8 +141,7 @@ export default function GestaoInstituicoesScreen() {
     setIsSlugManual(false);
   };
 
-  const openEdit = (inst: any) => {
-    console.log('Abrindo edição para:', inst.name);
+  const openEdit = (inst: Institution) => {
     setEditingInst(inst);
     setName(inst.name);
     setSlug(inst.slug);
@@ -151,20 +150,19 @@ export default function GestaoInstituicoesScreen() {
     setModalVisible(true);
   };
 
-  const toggleStatus = async (inst: any) => {
-    console.log('Alternando status de:', inst.name, 'Ativo:', inst.active);
+  const toggleStatus = async (inst: Institution) => {
     const newStatus = !inst.active;
     const { error } = await adminService.updateInstitution(inst.id, { active: newStatus });
     if (error) {
-      console.error('Toggle Status Error:', error);
       Alert.alert('Erro', 'Falha ao mudar status: ' + error.message);
     } else {
       loadInstitutions(true);
     }
   };
 
-  const renderInstitutionCard = ({ item }: { item: any }) => {
-    const usage = (item.userCount / item.user_limit) * 100;
+  const renderInstitutionCard = useCallback(({ item }: { item: Institution }) => {
+    const userCount = item.userCount || 0;
+    const usage = (userCount / item.user_limit) * 100;
     const isCritical = usage > 90;
 
     return (
@@ -195,7 +193,7 @@ export default function GestaoInstituicoesScreen() {
             <View style={styles.statsLabels}>
               <Text style={styles.statsText}>Membros (Atuais / Limite)</Text>
               <Text style={[styles.statsText, { fontWeight: 'bold', color: isCritical ? theme.colors.error : theme.colors.primary }]}>
-                {item.userCount} / {item.user_limit}
+                {userCount} / {item.user_limit}
               </Text>
             </View>
             <View style={styles.progressBarBg}>
@@ -205,10 +203,7 @@ export default function GestaoInstituicoesScreen() {
           
           <TouchableOpacity 
             style={styles.editBtn} 
-            onPress={() => router.push({
-              pathname: '/admin/institution-admins',
-              params: { id: item.id, name: item.name }
-            } as any)}
+            onPress={() => router.push(`/admin/institution-admins?id=${item.id}&name=${encodeURIComponent(item.name)}` as any)}
           >
             <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
@@ -219,7 +214,7 @@ export default function GestaoInstituicoesScreen() {
         </View>
       </View>
     );
-  };
+  }, [router]);
 
   return (
     <View style={globalStyles.container}>
