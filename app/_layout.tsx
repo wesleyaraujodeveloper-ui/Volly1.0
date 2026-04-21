@@ -146,11 +146,13 @@ export default function RootLayout() {
     }
   }, [user, isLoadingData, segments, navigationState?.key]);
 
+  if (isLoadingData || !fontsLoaded || !isMounted) {
     return (
       <View style={{ flex: 1, backgroundColor: '#000000', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#DF721B" />
       </View>
     );
+  }
 
   return (
     <>
