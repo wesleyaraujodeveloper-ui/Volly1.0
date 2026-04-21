@@ -364,12 +364,33 @@ export const adminService = {
   /**
    * Cria uma nova instituição.
    */
-  createInstitution: async (name: string, slug: string, userLimit: number = 30) => {
-    return await supabase
+  createInstitution: async (name: string, slug: string, userLimit: number = 30, logoUrl?: string | null, adminEmail?: string | null) => {
+    // 1. Cria a Instituição
+    const { data: inst, error: instError } = await supabase
       .from('institutions')
-      .insert([{ name, slug, user_limit: userLimit }])
+      .insert([{ name, slug, user_limit: userLimit, logo_url: logoUrl || null }])
       .select()
       .single();
+
+    if (instError) return { data: null, error: instError };
+
+    // 2. Se houver e-mail de admin, cria o convite automático
+    if (adminEmail && inst) {
+      const { error: inviteError } = await supabase
+        .from('invitations')
+        .insert([{
+          email: adminEmail.toLowerCase().trim(),
+          role: 'ADMIN',
+          institution_id: inst.id
+        }]);
+      
+      if (inviteError) {
+        console.error('Falha ao criar convite de administrador inicial:', inviteError);
+        // Não barramos a criação da instituição se o convite falhar, mas logamos.
+      }
+    }
+
+    return { data: inst, error: null };
   },
 
   /**

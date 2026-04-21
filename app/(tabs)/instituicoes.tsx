@@ -21,6 +21,8 @@ export default function GestaoInstituicoesScreen() {
   const [userLimit, setUserLimit] = useState('30');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [isSlugManual, setIsSlugManual] = useState(false);
 
   const loadInstitutions = async (silent = false) => {
     if (!silent) setRefreshing(true);
@@ -55,9 +57,23 @@ export default function GestaoInstituicoesScreen() {
     }
   };
 
+  const handleNameChange = (text: string) => {
+    setName(text);
+    if (!editingInst && !isSlugManual) {
+      const generated = text
+        .toLowerCase()
+        .normalize('NFD') // Remove acentos
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+        .replace(/\s+/g, '-') // Espaços para hífens
+        .replace(/-+/g, '-'); // Remove hífens duplicados
+      setSlug(generated);
+    }
+  };
+
   const handleSave = async () => {
-    if (!name || !slug) {
-      Alert.alert('Erro', 'Nome e Slug são obrigatórios');
+    if (!name || !slug || (!editingInst && !adminEmail)) {
+      Alert.alert('Erro', 'Nome, Slug e E-mail do Administrador são obrigatórios para novas instituições');
       return;
     }
 
@@ -92,10 +108,13 @@ export default function GestaoInstituicoesScreen() {
         const res = await adminService.updateInstitution(editingInst.id, payload);
         error = res.error;
       } else {
-        const res = await adminService.createInstitution(payload.name, payload.slug, payload.user_limit);
-        if (!res.error && currentLogoUrl) {
-           await adminService.updateInstitution(res.data.id, { logo_url: currentLogoUrl });
-        }
+        const res = await adminService.createInstitution(
+          payload.name, 
+          payload.slug, 
+          payload.user_limit, 
+          payload.logo_url,
+          adminEmail
+        );
         error = res.error;
       }
 
@@ -118,6 +137,8 @@ export default function GestaoInstituicoesScreen() {
     setUserLimit('30');
     setLogoBase64(null);
     setLogoPreview(null);
+    setAdminEmail('');
+    setIsSlugManual(false);
   };
 
   const openEdit = (inst: any) => {
@@ -241,7 +262,7 @@ export default function GestaoInstituicoesScreen() {
               placeholder="Ex: Lagoinha Porto" 
               placeholderTextColor={theme.colors.textSecondary}
               value={name}
-              onChangeText={setName}
+              onChangeText={handleNameChange}
             />
 
             <Text style={styles.label}>Slug (URL amigável)</Text>
@@ -250,9 +271,27 @@ export default function GestaoInstituicoesScreen() {
               placeholder="ex: lagoinha-porto" 
               placeholderTextColor={theme.colors.textSecondary}
               value={slug}
-              onChangeText={setSlug}
+              onChangeText={(text) => {
+                setSlug(text);
+                setIsSlugManual(true);
+              }}
               autoCapitalize="none"
             />
+
+            {!editingInst && (
+              <>
+                <Text style={styles.label}>E-mail do Administrador Inicial</Text>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="admin@igreja.com" 
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={adminEmail}
+                  onChangeText={setAdminEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+              </>
+            )}
 
             <Text style={styles.label}>Limite de Usuários</Text>
             <TextInput 
