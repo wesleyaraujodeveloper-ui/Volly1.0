@@ -15,9 +15,22 @@ serve(async (req) => {
   }
 
   try {
+    if (!RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is missing');
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'RESEND_API_KEY não configurada no Supabase. Use "supabase secrets set RESEND_API_KEY=sua_chave"' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+
     const { email, name, inviteUrl } = await req.json()
 
     if (!email) throw new Error("Email não fornecido")
+
+    console.log(`Enviando e-mail para: ${email}`)
 
     // Realiza a chamada para o Resend via fetch
     const res = await fetch('https://api.resend.com/emails', {
@@ -27,8 +40,6 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        // Se usar Resend Gratuito sem verificar domínio, use: 'Volly <onboarding@resend.dev>'
-        // Se verificar domínio: 'Volly <contato@seudominio.com.br>'
         from: 'Volly <onboarding@resend.dev>',
         to: email, 
         subject: '✨ Convite: Junte-se à Equipe Volly!',

@@ -24,8 +24,7 @@ export interface Institution {
 export const adminService = {
   /**
    * Registra um novo voluntário na tabela de convites (invitations).
-   */
-  inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null, institutionId?: string | null) => {
+    inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null, institutionId?: string | null) => {
     const cleanEmail = email.toLowerCase().trim();
 
     // 1. Verifica se já não é um membro ativo
@@ -82,28 +81,36 @@ export const adminService = {
       .select();
 
     // 3. Dispara o envio de E-mail de convite via Edge Function
-    if (!error) {
-       // Não usamos o await aqui para não travar a UI enquanto o e-mail não "termina" de enviar. 
-       supabase.functions.invoke('invite-email', {
-         body: {
-           email: cleanEmail,
-           name: name,
-           inviteUrl: 'https://volly-app-nu.vercel.app'
-          }
-        }).then(res => {
-          if (res.error) {
-            console.error('Falha de Rede com a Edge Function:', res.error);
-          } else if (res.data && res.data.success === false) {
-            console.error('Resend processou, mas negou o envio. Erro da API:', res.data.error, res.data.details);
-          } else {
-            console.log('E-mail enviado com sucesso! Resposta do Resend:', res.data);
-          }
-        }).catch(err => {
-          console.error('Falha crítica ao chamar Edge Function:', err);
-        });
-     }
+    let emailSent = false;
+    let emailError = null;
 
-    return { data, error };
+    if (!error) {
+      try {
+        const { data: fData, error: fError } = await supabase.functions.invoke('invite-email', {
+          body: {
+            email: cleanEmail,
+            name: name,
+            inviteUrl: 'https://volly-app-nu.vercel.app'
+          }
+        });
+
+        if (fError) {
+          console.error('Falha de Rede com a Edge Function:', fError);
+          emailError = 'Falha de conexão com o servidor de e-mail.';
+        } else if (fData && fData.success === false) {
+          console.error('Resend processou, mas negou o envio:', fData.error, fData.details);
+          emailError = fData.error;
+        } else {
+          console.log('E-mail enviado com sucesso!');
+          emailSent = true;
+        }
+      } catch (err) {
+        console.error('Falha crítica ao chamar Edge Function:', err);
+        emailError = 'Erro interno ao processar e-mail.';
+      }
+    }
+
+    return { data, error, emailSent, emailError };
   },
 
   /**
