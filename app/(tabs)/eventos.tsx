@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
   },
   activeTab: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#6BC5A7',
   },
   tabText: {
     color: theme.colors.textSecondary,

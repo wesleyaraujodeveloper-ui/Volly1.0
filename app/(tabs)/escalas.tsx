@@ -790,8 +790,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeDeptChip: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: '#6BC5A7',
+    borderColor: '#6BC5A7',
     // Sombra leve para destacar o ativo
     elevation: 2,
     shadowColor: theme.colors.primary,
@@ -822,9 +822,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   activeTabButton: {
-    backgroundColor: theme.colors.surfaceHighlight,
+    backgroundColor: 'rgba(107, 197, 167, 0.1)',
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: '#6BC5A7',
   },
   tabButtonText: {
     fontSize: 12,
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',
   },
   activeTabButtonText: {
-    color: theme.colors.primary,
+    color: '#6BC5A7',
     fontWeight: 'bold',
   },
   tabContent: {
@@ -883,8 +883,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   availOptionBtnSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: '#6BC5A7',
+    borderColor: '#6BC5A7',
   },
   availOptionBtnError: {
     backgroundColor: theme.colors.error,
