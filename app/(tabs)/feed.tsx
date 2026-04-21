@@ -1077,32 +1077,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  newPostContainer: {
-    marginBottom: 20,
-  },
-  newPostCard: {
+  postInputCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: 16,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  newPostInput: {
+  postInputHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  postAvatarSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+    backgroundColor: theme.colors.border,
+  },
+  postInput: {
     flex: 1,
     color: theme.colors.text,
     fontSize: 14,
-    maxHeight: 100,
+    minHeight: 40,
     paddingTop: 8,
+    textAlignVertical: 'top',
   },
-  newPostActions: {
+  postInputFooter: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '40',
   },
-  actionButton: {
+  postActionBtn: {
     padding: 8,
-    marginRight: 4,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   moreOptionsBtn: {
     padding: 8,
