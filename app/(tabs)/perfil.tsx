@@ -120,38 +120,40 @@ export default function PerfilScreen() {
          )}
        </LinearGradient>
 
-      {/* Seção Equipes (Real time) */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Minhas Equipes</Text>
-        
-        {loadingDepts ? (
-          <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
-        ) : userDepartments.length > 0 ? (
-          <View style={styles.teamsGrid}>
-              {userDepartments.map((dept, index) => {
-                const teamIcon = getTeamIcon(dept.departments.name);
-                return (
-                  <View key={index} style={styles.teamCard}>
-                    <View style={styles.teamIconBox}>
-                      {teamIcon ? (
-                        <Image source={teamIcon} style={styles.teamIconImage} />
-                      ) : (
-                        <Ionicons name="people" size={24} color={theme.colors.primary} />
-                      )}
+      {/* Seção Equipes (Real time) - Oculta para MASTER */}
+      {user?.role !== 'MASTER' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Minhas Equipes</Text>
+          
+          {loadingDepts ? (
+            <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 20 }} />
+          ) : userDepartments.length > 0 ? (
+            <View style={styles.teamsGrid}>
+                {userDepartments.map((dept, index) => {
+                  const teamIcon = getTeamIcon(dept.departments.name);
+                  return (
+                    <View key={index} style={styles.teamCard}>
+                      <View style={styles.teamIconBox}>
+                        {teamIcon ? (
+                          <Image source={teamIcon} style={styles.teamIconImage} />
+                        ) : (
+                          <Ionicons name="people" size={24} color={theme.colors.primary} />
+                        )}
+                      </View>
+                      <Text style={styles.teamNameText} numberOfLines={1}>
+                        {dept.departments.name}
+                      </Text>
                     </View>
-                    <Text style={styles.teamNameText} numberOfLines={1}>
-                      {dept.departments.name}
-                    </Text>
-                  </View>
-                );
-              })}
-          </View>
-        ) : (
-          <View style={styles.emptyTeamsCard}>
-            <Text style={styles.emptyTeamsText}>Você ainda não faz parte de nenhuma equipe.</Text>
-          </View>
-        )}
-      </View>
+                  );
+                })}
+            </View>
+          ) : (
+            <View style={styles.emptyTeamsCard}>
+              <Text style={styles.emptyTeamsText}>Você ainda não faz parte de nenhuma equipe.</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Configurações */}
       <View style={styles.section}>

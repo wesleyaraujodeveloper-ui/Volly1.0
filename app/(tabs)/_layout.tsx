@@ -88,6 +88,7 @@ export default function TabsLayout() {
         name="escalas"
         options={{
           title: 'Escalas',
+          href: (user?.role === 'MASTER' ? null : '/(tabs)/escalas') as any,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
           ),
