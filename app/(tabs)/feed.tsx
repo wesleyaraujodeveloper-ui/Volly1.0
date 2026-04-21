@@ -538,34 +538,36 @@ export default function FeedScreen() {
       >
         {renderHeader()}
 
-        <View style={styles.modeTabs}>
-          <TouchableOpacity 
-            style={[styles.modeTab, feedMode === 'MURAL' && styles.activeModeTab]}
-            onPress={() => setFeedMode('MURAL')}
-          >
-            <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text 
-              style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
-              translate="no"
-              className="notranslate"
+        {user?.role !== 'MASTER' && (
+          <View style={styles.modeTabs}>
+            <TouchableOpacity 
+              style={[styles.modeTab, feedMode === 'MURAL' && styles.activeModeTab]}
+              onPress={() => setFeedMode('MURAL')}
             >
-              Mural
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
-            onPress={() => setFeedMode('PANORAMA')}
-          >
-            <Ionicons name="calendar" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text 
-              style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}
-              translate="no"
-              className="notranslate"
+              <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} />
+              <Text 
+                style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
+                translate="no"
+                className="notranslate"
+              >
+                Mural
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
+              onPress={() => setFeedMode('PANORAMA')}
             >
-              Panorama
-            </Text>
-          </TouchableOpacity>
-        </View>
+              <Ionicons name="calendar" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
+              <Text 
+                style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}
+                translate="no"
+                className="notranslate"
+              >
+                Panorama
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {feedMode === 'PANORAMA' ? (
           renderPanorama()
