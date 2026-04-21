@@ -432,5 +432,18 @@ export const adminService = {
       console.error('Logo upload error:', error);
       return { publicUrl: null, error };
     }
+  },
+  /**
+   * Lista todos os administradores de uma instituição específica.
+   */
+  listInstitutionAdmins: async (institutionId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('institution_id', institutionId)
+      .eq('access_level', 'ADMIN')
+      .order('full_name');
+    
+    return { data, error };
   }
 };

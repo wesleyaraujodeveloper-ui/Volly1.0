@@ -203,6 +203,16 @@ export default function GestaoInstituicoesScreen() {
             </View>
           </View>
           
+          <TouchableOpacity 
+            style={styles.editBtn} 
+            onPress={() => router.push({
+              pathname: '/admin/institution-admins',
+              params: { id: item.id, name: item.name }
+            } as any)}
+          >
+            <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          
           <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
             <Ionicons name="settings-outline" size={20} color={theme.colors.text} />
           </TouchableOpacity>
