@@ -41,6 +41,11 @@ export default function FeedScreen() {
   const [panoramaData, setPanoramaData] = useState<any[]>([]);
   const [loadingPanorama, setLoadingPanorama] = useState(false);
   
+  // Estados de Filtro para MASTER
+  const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
+  const [postVisibility, setPostVisibility] = useState<'INTERNAL' | 'GLOBAL'>('INTERNAL');
+
   // Estado de Notificações
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -77,13 +82,20 @@ export default function FeedScreen() {
       setSongs(recommendedSongs.data || []);
     });
 
-    feedService.listPosts(instId).then(socialPosts => {
+    feedService.listPosts(selectedInstitutionId || instId).then(socialPosts => {
       setPosts(socialPosts.data || []);
       // Removemos o loading global somente após o carregamento principal do feed (posts)
       setLoading(false);
       setRefreshing(false);
     });
-  }, [user]);
+
+    if (user.role === 'MASTER' && allInstitutions.length === 0) {
+      const { adminService } = require('../../src/services/adminService');
+      adminService.listInstitutions().then((res: any) => {
+        setAllInstitutions(res.data || []);
+      });
+    }
+  }, [user, selectedInstitutionId]);
 
   useEffect(() => {
     if (user) {
@@ -225,7 +237,13 @@ export default function FeedScreen() {
         imageUrl = uploadRes.publicUrl;
       }
 
-      const { error } = await feedService.createPost(user.id, newPostContent.trim(), imageUrl || undefined, user.institution_id);
+      const { error } = await feedService.createPost(
+      user.id, 
+      newPostContent.trim(), 
+      imageUrl || undefined, 
+      user.institution_id,
+      user.role === 'MASTER' ? postVisibility : 'INTERNAL'
+    );  
       
       if (!error) {
         setNewPostContent('');
@@ -531,43 +549,87 @@ export default function FeedScreen() {
               translate="no"
               className="notranslate"
             >
-              Volly Connect
+              Mural
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
             onPress={() => setFeedMode('PANORAMA')}
           >
-            <Ionicons name="grid" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
-            <Text style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}>Escala</Text>
+            <Ionicons name="calendar" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
+            <Text 
+              style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}
+              translate="no"
+              className="notranslate"
+            >
+              Panorama
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {feedMode === 'PANORAMA' ? (
-          renderPanorama()
-        ) : (
+        {feedMode === 'MURAL' && (
           <>
-            {renderNextMission()}
-            {renderRecommendedSongs()}
-        {renderNextGlobalEvent()}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>News</Text>
-          
-          <View style={styles.newPostContainer}>
-            <View style={styles.newPostCard}>
-              <TextInput
-                style={styles.newPostInput}
-                placeholder="No que você está pensando?"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={newPostContent}
-                onChangeText={setNewPostContent}
-                multiline
-              />
-              <View style={styles.newPostActions}>
-                <TouchableOpacity style={styles.actionButton} onPress={handleImagePick}>
-                  <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+            {user?.role === 'MASTER' && allInstitutions.length > 0 && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.filterScroll}
+                contentContainerStyle={styles.filterContainer}
+              >
+                <TouchableOpacity 
+                  style={[styles.filterChip, selectedInstitutionId === null && styles.filterChipActive]}
+                  onPress={() => setSelectedInstitutionId(null)}
+                >
+                  <Text style={[styles.filterText, selectedInstitutionId === null && styles.filterTextActive]}>Tudo</Text>
                 </TouchableOpacity>
+                {allInstitutions.map((inst) => (
+                  <TouchableOpacity 
+                    key={inst.id}
+                    style={[styles.filterChip, selectedInstitutionId === inst.id && styles.filterChipActive]}
+                    onPress={() => setSelectedInstitutionId(inst.id)}
+                  >
+                    <Text style={[styles.filterText, selectedInstitutionId === inst.id && styles.filterTextActive]}>{inst.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.postInputCard}>
+              <View style={styles.postInputHeader}>
+                <Image 
+                  source={{ uri: user?.avatar_url || 'https://via.placeholder.com/40' }} 
+                  style={styles.postAvatarSmall} 
+                />
+                <TextInput
+                  style={styles.postInput}
+                  placeholder="No que você está pensando?"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={newPostContent}
+                  onChangeText={setNewPostContent}
+                  multiline
+                />
+              </View>
+              
+              <View style={styles.postInputFooter}>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity style={styles.postActionBtn} onPress={handleImagePick}>
+                    <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                  
+                  {user?.role === 'MASTER' && (
+                    <TouchableOpacity 
+                      style={[styles.postActionBtn, postVisibility === 'GLOBAL' && { backgroundColor: 'rgba(107, 197, 167, 0.1)' }]} 
+                      onPress={() => setPostVisibility(v => v === 'INTERNAL' ? 'GLOBAL' : 'INTERNAL')}
+                    >
+                      <Ionicons 
+                        name={postVisibility === 'GLOBAL' ? "globe" : "globe-outline"} 
+                        size={22} 
+                        color={postVisibility === 'GLOBAL' ? theme.colors.success : theme.colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
                 <TouchableOpacity 
                   style={[styles.postButton, (!newPostContent.trim() && !selectedImage) && styles.postButtonDisabled]} 
                   onPress={handleCreatePost}
@@ -604,7 +666,19 @@ export default function FeedScreen() {
                 <View style={styles.postHeader}>
                   <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
                    <View style={styles.postAuthorInfo}>
-                    <Text style={styles.postAuthor}>{authorName}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.postAuthor}>{authorName}</Text>
+                      {user?.role === 'MASTER' && post.institutions && (
+                        <View style={styles.instBadge}>
+                          <Text style={styles.instBadgeText}>{post.institutions.name}</Text>
+                        </View>
+                      )}
+                      {post.visibility === 'GLOBAL' && (
+                        <View style={[styles.instBadge, { backgroundColor: 'rgba(107, 197, 167, 0.1)', borderColor: theme.colors.success }]}>
+                          <Text style={[styles.instBadgeText, { color: theme.colors.success }]}>GLOBAL</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.postTime}>{displayDate}</Text>
                   </View>
                   {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
@@ -1264,5 +1338,49 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  filterScroll: {
+    marginBottom: 20,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  filterContainer: {
+    paddingRight: 40,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  instBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(223, 114, 27, 0.1)',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  instBadgeText: {
+    color: theme.colors.primary,
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
 });

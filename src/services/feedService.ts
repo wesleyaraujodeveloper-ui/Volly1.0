@@ -156,7 +156,8 @@ export const feedService = {
         *,
         profiles:user_id (full_name, avatar_url),
         post_likes (user_id),
-        post_comments (id)
+        post_comments (id),
+        institutions (name)
       `);
 
     if (institutionId) {
