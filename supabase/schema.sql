@@ -123,36 +123,50 @@ CREATE TRIGGER tr_events_updated BEFORE UPDATE ON public.events FOR EACH ROW EXE
 CREATE TRIGGER tr_schedules_updated BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- Trigger robusto para criar Profile Automaticamente após Auth.Users
+-- Versão Robusta e Blindada para criar Profile Automaticamente após Auth.Users
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS trigger AS $$
 DECLARE
-  v_role user_access_level;
+  v_role_text TEXT;
+  v_role_final user_access_level;
   v_dept_id UUID;
 BEGIN
-  -- 1. Tentar buscar dados do convite (email deve bater exatamente)
-  SELECT role::user_access_level, department_id 
-  INTO v_role, v_dept_id
+  -- 1. Buscar dados do convite com normalização de e-mail (case-insensitive)
+  SELECT role::TEXT, department_id 
+  INTO v_role_text, v_dept_id
   FROM public.invitations 
-  WHERE email = new.email 
+  WHERE LOWER(email) = LOWER(new.email) 
   LIMIT 1;
 
-  -- 2. Criar o perfil vinculando os dados
+  -- 2. Tentar converter o texto para o Enum de forma segura
+  -- Se o cargo no convite for inválido ou nulo, assume 'VOLUNTÁRIO'
+  BEGIN
+    IF v_role_text IS NOT NULL THEN
+      v_role_final := v_role_text::user_access_level;
+    ELSE
+      v_role_final := 'VOLUNTÁRIO';
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    v_role_final := 'VOLUNTÁRIO';
+  END;
+
+  -- 3. Inserir no Profile (com tratamento de conflito)
   INSERT INTO public.profiles (id, email, full_name, avatar_url, access_level)
   VALUES (
     new.id, 
     new.email, 
     COALESCE(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', 'Voluntário'),
     COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'),
-    COALESCE(v_role, 'VOLUNTÁRIO')
+    v_role_final
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
     avatar_url = EXCLUDED.avatar_url,
-    access_level = COALESCE(v_role, EXCLUDED.access_level),
+    access_level = EXCLUDED.access_level,
     updated_at = NOW();
 
-  -- 3. Vincular ao departamento se houver convite específico
+  -- 4. Vincular ao departamento se houver convite específico
   IF v_dept_id IS NOT NULL THEN
     INSERT INTO public.user_departments (user_id, department_id)
     VALUES (new.id, v_dept_id)
@@ -161,7 +175,7 @@ BEGIN
 
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
