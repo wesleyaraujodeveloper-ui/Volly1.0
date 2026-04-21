@@ -482,6 +482,10 @@ export default function FeedScreen() {
     );
   };
 
+  const renderChatFAB = () => {
+    const eventId = nextEvent?.events?.id;
+    if (!eventId) return null;
+
     return (
       <TouchableOpacity 
         style={styles.chatFAB}
