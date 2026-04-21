@@ -60,7 +60,8 @@ export default function RootLayout() {
               name: profile.full_name || '',
               email: profile.email || session.user.email || '',
               role: (profile.access_level as any) || 'VOLUNTÁRIO',
-              avatar_url: profile.avatar_url
+              avatar_url: profile.avatar_url,
+              institution_id: profile.institution_id
             });
           } else {
             console.log('DEBUG: Perfil não encontrado. Iniciando sincronização ativa...');
@@ -97,7 +98,8 @@ export default function RootLayout() {
                 name: upsertedProfile.full_name || '',
                 email: upsertedProfile.email || '',
                 role: (upsertedProfile.access_level as any) || 'VOLUNTÁRIO',
-                avatar_url: upsertedProfile.avatar_url
+                avatar_url: upsertedProfile.avatar_url,
+                institution_id: upsertedProfile.institution_id
               });
             }
           }

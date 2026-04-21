@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type Role = 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
+export type Role = 'MASTER' | 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO';
 
 interface User {
   id: string;
@@ -8,6 +8,7 @@ interface User {
   email: string;
   role: Role;
   avatar_url?: string;
+  institution_id?: string | null;
 }
 
 interface AppState {
