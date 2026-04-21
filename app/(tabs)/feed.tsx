@@ -550,7 +550,7 @@ export default function FeedScreen() {
                 translate="no"
                 className="notranslate"
               >
-                Mural
+                Volly Connect
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -563,7 +563,7 @@ export default function FeedScreen() {
                 translate="no"
                 className="notranslate"
               >
-                Panorama
+                Escalas
               </Text>
             </TouchableOpacity>
           </View>
@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   },
   modeTabs: { flexDirection: 'row', backgroundColor: theme.colors.surface, padding: 4, borderRadius: 12, marginBottom: 20 },
   modeTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10 },
-  activeModeTab: { backgroundColor: theme.colors.primary },
+  activeModeTab: { backgroundColor: '#6BC5A7' },
   modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
   activeModeTabText: { color: '#FFFFFF' },
   panoramaTimelineCard: {

@@ -46,7 +46,7 @@ export default function TabsLayout() {
           paddingBottom: 5,
           paddingTop: 5,
         },
-        tabBarActiveTintColor: '#6BC5A7',
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarShowLabel: false,
       }}
