@@ -567,7 +567,9 @@ export default function FeedScreen() {
           </TouchableOpacity>
         </View>
 
-        {feedMode === 'MURAL' && (
+        {feedMode === 'PANORAMA' ? (
+          renderPanorama()
+        ) : (
           <>
             {user?.role === 'MASTER' && allInstitutions.length > 0 && (
               <ScrollView 
@@ -648,84 +650,82 @@ export default function FeedScreen() {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
 
-          {renderLoadingFeedback()}
+            {renderLoadingFeedback()}
 
-          {posts.length > 0 ? posts.map((post) => {
-            const authorName = post.profiles?.full_name || 'Usuário';
-            const authorAvatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}`;
-            let displayDate = 'Recentemente';
-            
-            try {
-              if (post.created_at) displayDate = format(new Date(post.created_at), "dd/MM 'às' HH:mm");
-            } catch (e) {}
+            {posts.length > 0 ? posts.map((post) => {
+              const authorName = post.profiles?.full_name || 'Usuário';
+              const authorAvatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}`;
+              let displayDate = 'Recentemente';
+              
+              try {
+                if (post.created_at) displayDate = format(new Date(post.created_at), "dd/MM 'às' HH:mm");
+              } catch (e) {}
 
-            return (
-              <View key={post.id} style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-                   <View style={styles.postAuthorInfo}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.postAuthor}>{authorName}</Text>
-                      {user?.role === 'MASTER' && post.institutions && (
-                        <View style={styles.instBadge}>
-                          <Text style={styles.instBadgeText}>{post.institutions.name}</Text>
-                        </View>
-                      )}
-                      {post.visibility === 'GLOBAL' && (
-                        <View style={[styles.instBadge, { backgroundColor: 'rgba(107, 197, 167, 0.1)', borderColor: theme.colors.success }]}>
-                          <Text style={[styles.instBadgeText, { color: theme.colors.success }]}>GLOBAL</Text>
-                        </View>
-                      )}
+              return (
+                <View key={post.id} style={styles.postCard}>
+                  <View style={styles.postHeader}>
+                    <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
+                    <View style={styles.postAuthorInfo}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.postAuthor}>{authorName}</Text>
+                        {user?.role === 'MASTER' && post.institutions && (
+                          <View style={styles.instBadge}>
+                            <Text style={styles.instBadgeText}>{post.institutions.name}</Text>
+                          </View>
+                        )}
+                        {post.visibility === 'GLOBAL' && (
+                          <View style={[styles.instBadge, { backgroundColor: 'rgba(107, 197, 167, 0.1)', borderColor: theme.colors.success }]}>
+                            <Text style={[styles.instBadgeText, { color: theme.colors.success }]}>GLOBAL</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.postTime}>{displayDate}</Text>
                     </View>
-                    <Text style={styles.postTime}>{displayDate}</Text>
+                    {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
+                      <TouchableOpacity 
+                        style={styles.moreOptionsBtn} 
+                        onPress={() => handleDeletePost(post.id)}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
-                    <TouchableOpacity 
-                      style={styles.moreOptionsBtn} 
-                      onPress={() => handleDeletePost(post.id)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                  <Text style={styles.postContent}>{post.content}</Text>
+                  {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
+                  <View style={styles.postFooter}>
+                    <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
+                      <Ionicons 
+                        name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
+                        size={20} 
+                        color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
+                      />
+                      <Text style={styles.interactionText}>{post.likesCount}</Text>
                     </TouchableOpacity>
-                  )}
+                    <TouchableOpacity style={styles.interactionBtn} onPress={() => openComments(post)}>
+                      <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
+                      <Text style={styles.interactionText}>{post.commentsCount}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Text style={styles.postContent}>{post.content}</Text>
-                {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
-                <View style={styles.postFooter}>
-                  <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
-                    <Ionicons 
-                      name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
-                      size={20} 
-                      color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
-                    />
-                    <Text style={styles.interactionText}>{post.likesCount}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.interactionBtn} onPress={() => openComments(post)}>
-                    <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
-                    <Text style={styles.interactionText}>{post.commentsCount}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }) : (
-            <EmptyState 
-              title={STRINGS.feed.emptyState}
-              description={STRINGS.feed.emptyStateSub}
-              image={require('../../assets/images/illustrations/empty_state.png')}
-            />
-          )}
+              );
+            }) : (
+              <EmptyState 
+                title={STRINGS.feed.emptyState}
+                description={STRINGS.feed.emptyStateSub}
+                image={require('../../assets/images/illustrations/empty_state.png')}
+              />
+            )}
 
-          <CustomModal 
-            visible={modalVisible}
-            title={STRINGS.feed.deletePostTitle}
-            message={STRINGS.feed.deletePostConfirm}
-            type="danger"
-            confirmText="Excluir"
-            onConfirm={confirmDeletePost}
-            onCancel={() => setModalVisible(false)}
-          />
-        </View>
+            <CustomModal 
+              visible={modalVisible}
+              title={STRINGS.feed.deletePostTitle}
+              message={STRINGS.feed.deletePostConfirm}
+              type="danger"
+              confirmText="Excluir"
+              onConfirm={confirmDeletePost}
+              onCancel={() => setModalVisible(false)}
+            />
           </>
         )}
         <View style={{ height: 40 }} />
