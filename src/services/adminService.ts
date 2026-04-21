@@ -98,11 +98,16 @@ export const adminService = {
   /**
    * Lista todos os voluntários cadastrados.
    */
-  listVolunteers: async () => {
-    const { data, error } = await supabase
+  listVolunteers: async (institutionId?: string | null) => {
+    let query = supabase
       .from('profiles')
-      .select('*, user_departments(departments(name))')
-      .order('created_at', { ascending: false });
+      .select('*, user_departments(departments(name))');
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     const mappedData = data?.map(p => ({
       id: p.id,
@@ -110,6 +115,7 @@ export const adminService = {
       role: p.access_level,
       name: p.full_name,
       created_at: p.created_at,
+      institution_id: p.institution_id,
       teams: p.user_departments?.map((ud: any) => ud.departments?.name).filter(Boolean) || []
     })) as (Profile & { teams: string[] })[];
 
@@ -185,11 +191,16 @@ export const adminService = {
   /**
    * Lista os departamentos, incluindo o nome do líder.
    */
-  listDepartments: async () => {
-    const { data, error } = await supabase
+  listDepartments: async (institutionId?: string | null) => {
+    let query = supabase
       .from('departments')
-      .select('*, leader:profiles!leader_id(full_name), co_leader:profiles!co_leader_id(full_name)')
-      .order('name');
+      .select('*, leader:profiles!leader_id(full_name), co_leader:profiles!co_leader_id(full_name)');
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query.order('name');
     return { data, error };
   },
 
@@ -323,23 +334,31 @@ export const adminService = {
    * Lista todas as instituições com a contagem atual de usuários.
    */
   listInstitutions: async () => {
-    const { data, error } = await supabase
-      .from('institutions')
-      .select(`
-        *,
-        profiles:profiles(count)
-      `)
-      .order('name');
+    try {
+      const { data, error } = await supabase
+        .from('institutions')
+        .select(`
+          *,
+          profiles:profiles(count)
+        `)
+        .order('name');
 
-    if (error) return { data: null, error };
+      if (error) {
+        console.error('Erro ao listar instituições (Supabase):', error);
+        return { data: null, error };
+      }
 
-    // Mapeia para incluir o total de usuários ativos
-    const mapped = data.map(inst => ({
-      ...inst,
-      userCount: inst.profiles?.[0]?.count || 0
-    }));
+      // Mapeia para incluir o total de usuários ativos
+      const mapped = data?.map(inst => ({
+        ...inst,
+        userCount: inst.profiles?.[0]?.count || 0
+      })) || [];
 
-    return { data: mapped, error: null };
+      return { data: mapped, error: null };
+    } catch (err: any) {
+      console.error('Erro crítico no adminService.listInstitutions:', err);
+      return { data: null, error: err };
+    }
   },
 
   /**

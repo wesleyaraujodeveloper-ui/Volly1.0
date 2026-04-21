@@ -51,7 +51,10 @@ export default function FeedScreen() {
     if (!user) return;
     
     // Inicia o carregamento das seções de forma não bloqueante
-    feedService.getGlobalSchedulePanorama().then(res => {
+    // Se for MASTER, o institution_id é nulo, permitindo ver tudo nas views globais
+    const instId = user.access_level === 'MASTER' ? null : user.institution_id;
+
+    feedService.getGlobalSchedulePanorama(instId).then(res => {
       setPanoramaData(res.data || []);
     });
     
@@ -66,7 +69,7 @@ export default function FeedScreen() {
       }
     });
 
-    feedService.getNextGlobalEvent().then(nextGlobalEv => {
+    feedService.getNextGlobalEvent(instId).then(nextGlobalEv => {
       setNextGlobalEvent(nextGlobalEv.data);
     });
 
@@ -74,7 +77,7 @@ export default function FeedScreen() {
       setSongs(recommendedSongs.data || []);
     });
 
-    feedService.listPosts().then(socialPosts => {
+    feedService.listPosts(instId).then(socialPosts => {
       setPosts(socialPosts.data || []);
       // Removemos o loading global somente após o carregamento principal do feed (posts)
       setLoading(false);
@@ -110,7 +113,8 @@ export default function FeedScreen() {
       // Configura o ouvinte para atualizar posts, curtidas e comentários em tempo real
       const subscription = feedService.subscribeToFeed(() => {
         // Atualiza a lista de forma silenciosa para não travar a tela
-        feedService.listPosts().then(socialPosts => {
+        const instId = user.access_level === 'MASTER' ? null : user.institution_id;
+        feedService.listPosts(instId).then(socialPosts => {
           setPosts(socialPosts.data || []);
         });
       });
@@ -221,7 +225,7 @@ export default function FeedScreen() {
         imageUrl = uploadRes.publicUrl;
       }
 
-      const { error } = await feedService.createPost(user.id, newPostContent.trim(), imageUrl || undefined);
+      const { error } = await feedService.createPost(user.id, newPostContent.trim(), imageUrl || undefined, user.institution_id);
       
       if (!error) {
         setNewPostContent('');

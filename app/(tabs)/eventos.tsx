@@ -28,15 +28,22 @@ export default function EventosScreen() {
 
   const loadEvents = async () => {
     setLoading(true);
-    // Se houver uma data selecionada pelo calendário, priorizamos ela
+    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+
     if (selectedDate) {
-      const { data } = await eventService.listUpcomingEvents({ date: selectedDate });
+      const { data } = await eventService.listUpcomingEvents({ 
+        date: selectedDate,
+        institutionId: instId
+      });
       setEvents(data || []);
     } else if (listTab === 'PROXIMOS') {
-      const { data } = await eventService.listUpcomingEvents({ name: search });
+      const { data } = await eventService.listUpcomingEvents({ 
+        name: search,
+        institutionId: instId
+      });
       setEvents(data || []);
     } else {
-      const { data } = await eventService.listPastEvents(10);
+      const { data } = await eventService.listPastEvents(10, instId);
       setEvents(data || []);
     }
     setLoading(false);

@@ -61,14 +61,14 @@ export const feedService = {
   /**
    * Busca o panorama geral da escala agrupado por evento, função e equipes.
    */
-  getGlobalSchedulePanorama: async () => {
-    // Retorna todos os eventos a partir de hoje num raio razoável, com a estrutura completa
-    const { data, error } = await supabase
+  getGlobalSchedulePanorama: async (institutionId?: string | null) => {
+    let query = supabase
       .from('events')
       .select(`
         id,
         title,
         event_date,
+        institution_id,
         schedules (
           id,
           status,
@@ -81,9 +81,13 @@ export const feedService = {
           )
         )
       `)
-      .gte('event_date', new Date().toISOString().split('T')[0] + 'T00:00:00') // Do começo do dia de hoje em diante
-      .order('event_date', { ascending: true })
-      .limit(10); // Limita para os próximos 10 eventos
+      .gte('event_date', new Date().toISOString().split('T')[0] + 'T00:00:00');
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query.order('event_date', { ascending: true }).limit(10);
 
     return { data, error };
   },
@@ -91,8 +95,8 @@ export const feedService = {
   /**
    * Busca o próximo evento geral (para todos os usuários).
    */
-  getNextGlobalEvent: async () => {
-    const { data, error } = await supabase
+  getNextGlobalEvent: async (institutionId?: string | null) => {
+    let query = supabase
       .from('events')
       .select(`
         *,
@@ -102,10 +106,13 @@ export const feedService = {
           )
         )
       `)
-      .gte('event_date', new Date().toISOString())
-      .order('event_date', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .gte('event_date', new Date().toISOString());
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query.order('event_date', { ascending: true }).limit(1).maybeSingle();
 
     return { data, error };
   },
@@ -140,19 +147,24 @@ export const feedService = {
   },
 
   /**
-   * Lista o mural social.
+   * Lista o mural social com isolamento institucional.
    */
-  listPosts: async () => {
-    const { data, error } = await supabase
+  listPosts: async (institutionId?: string | null) => {
+    let query = supabase
       .from('posts')
       .select(`
         *,
         profiles:user_id (full_name, avatar_url),
         post_likes (user_id),
         post_comments (id)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      `);
+
+    if (institutionId) {
+      // MASTER vê tudo, ADMIN/VOLUNTÁRIO vê da sua church + global
+      query = query.or(`institution_id.eq.${institutionId},visibility.eq.GLOBAL`);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(20);
 
     if (error) {
       return { data: [], error };

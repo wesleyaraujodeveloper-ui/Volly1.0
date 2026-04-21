@@ -79,20 +79,25 @@ export const eventService = {
     return await supabase.from('events').delete().eq('id', id);
   },
 
-  listHistory: async (startDate: string, endDate: string) => {
-    const { data, error } = await supabase
+  listHistory: async (startDate: string, endDate: string, institutionId?: string | null) => {
+    let query = supabase
       .from('events')
       .select('*, event_departments(departments(id, name))')
       .gte('event_date', `${startDate}T00:00:00Z`)
-      .lte('event_date', `${endDate}T23:59:59Z`)
-      .order('event_date', { ascending: false });
+      .lte('event_date', `${endDate}T23:59:59Z`);
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query.order('event_date', { ascending: false });
     return { data, error };
   },
 
   /**
-   * Lista os próximos eventos com filtros de busca.
+   * Lista os próximos eventos com filtros de busca e isolamento institucional.
    */
-  listUpcomingEvents: async (filters?: { name?: string; department_id?: string; date?: string }) => {
+  listUpcomingEvents: async (filters?: { name?: string; department_id?: string; date?: string; institutionId?: string | null }) => {
     let eventIds: string[] = [];
 
     // 1. Se filtrar por departamento, busca os IDs na tabela de junção primeiro
@@ -111,6 +116,11 @@ export const eventService = {
     let query = supabase
       .from('events')
       .select('*, event_departments(departments(id, name))');
+
+    // Filtro institucional
+    if (filters?.institutionId) {
+      query = query.eq('institution_id', filters.institutionId);
+    }
 
     // Se NÃO houver data específica, filtramos apenas os próximos
     if (!filters?.date) {
@@ -146,11 +156,17 @@ export const eventService = {
   /**
    * Histórico de eventos passados.
    */
-  listPastEvents: async (limit: number = 10) => {
-    const { data, error } = await supabase
+  listPastEvents: async (limit: number = 10, institutionId?: string | null) => {
+    let query = supabase
       .from('events')
       .select('*, event_departments(departments(id, name))')
-      .lt('event_date', new Date().toISOString())
+      .lt('event_date', new Date().toISOString());
+
+    if (institutionId) {
+      query = query.eq('institution_id', institutionId);
+    }
+
+    const { data, error } = await query
       .order('event_date', { ascending: false })
       .limit(limit);
 

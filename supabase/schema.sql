@@ -10,10 +10,23 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_access_level') THEN
         CREATE TYPE user_access_level AS ENUM ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER', 'VOLUNTÁRIO');
     ELSE
-        -- Adiciona MASTER se o enum já existir (migração)
         ALTER TYPE user_access_level ADD VALUE IF NOT EXISTS 'MASTER' BEFORE 'ADMIN';
     END IF;
 END $$;
+
+-- 0.2 TABELA: INVITATIONS (Convites pendentes)
+CREATE TABLE IF NOT EXISTS public.invitations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    institution_id UUID REFERENCES public.institutions(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    name TEXT,
+    role user_access_level DEFAULT 'VOLUNTÁRIO',
+    department_id UUID REFERENCES public.departments(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(email, institution_id)
+);
+
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
 -- 0.1 TABELA: INSTITUTIONS
 CREATE TABLE IF NOT EXISTS public.institutions (
@@ -141,10 +154,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Função para validar limites de usuários (SaaS Protection)
+CREATE OR REPLACE FUNCTION public.check_institution_user_limit()
+RETURNS trigger AS $$
+DECLARE
+    v_current_count INTEGER;
+    v_limit INTEGER;
+BEGIN
+    IF NEW.institution_id IS NULL THEN RETURN NEW; END IF;
+
+    SELECT user_limit INTO v_limit FROM public.institutions WHERE id = NEW.institution_id;
+    SELECT COUNT(*) INTO v_current_count FROM public.profiles WHERE institution_id = NEW.institution_id;
+
+    IF v_current_count >= COALESCE(v_limit, 30) THEN
+        RAISE EXCEPTION 'Limite de usuários (%) atingido para esta instituição.', COALESCE(v_limit, 30);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 CREATE TRIGGER tr_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER tr_departments_updated BEFORE UPDATE ON public.departments FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER tr_events_updated BEFORE UPDATE ON public.events FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 CREATE TRIGGER tr_schedules_updated BEFORE UPDATE ON public.schedules FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- Trigger de proteção de limite SaaS
+CREATE TRIGGER tr_check_user_limit BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.check_institution_user_limit();
 
 -- Trigger robusto para criar Profile Automaticamente após Auth.Users
 -- Versão Ultra-Resiliente para criar Profile Automaticamente após Auth.Users
@@ -223,41 +258,50 @@ CREATE INDEX idx_messages_event_id ON public.messages(event_id);
 CREATE INDEX idx_events_date ON public.events(event_date);
 CREATE INDEX idx_user_departments_user ON public.user_departments(user_id);
 
--- --- RLS (POLÍTICAS BÁSICAS) ---
+-- --- RLS (POLÍTICAS HARDENED - MULTI-TENANT) ---
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Master vê tudo" ON public.profiles FOR ALL USING (
+CREATE POLICY "Profiles: Master vê tudo" ON public.profiles FOR ALL USING (
   EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
 );
-CREATE POLICY "Membros vêem perfis da sua instituição" ON public.profiles FOR SELECT USING (
+CREATE POLICY "Profiles: Isolamento Institucional" ON public.profiles FOR SELECT USING (
   institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
 );
-CREATE POLICY "Usuários editam o próprio perfil" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Profiles: Auto-edição" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Políticas de departamentos" ON public.departments FOR ALL USING (
+CREATE POLICY "Departments: Isolamento Institucional" ON public.departments FOR ALL USING (
   EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
   OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
 );
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Políticas de eventos" ON public.events FOR ALL USING (
+CREATE POLICY "Events: Isolamento Institucional" ON public.events FOR ALL USING (
   EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
   OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
 );
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Políticas de mensagens" ON public.messages FOR SELECT USING (
+CREATE POLICY "Messages: Isolamento Institucional" ON public.messages FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
   OR EXISTS (SELECT 1 FROM public.events e JOIN public.profiles p ON e.institution_id = p.institution_id WHERE e.id = messages.event_id AND p.id = auth.uid())
 );
 
-CREATE POLICY "Participantes ou Líderes enviam mensagens" ON public.messages 
-FOR INSERT WITH CHECK (
+CREATE POLICY "Messages: Envio Permitido" ON public.messages FOR INSERT WITH CHECK (
   auth.uid() = user_id AND (
-    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER'))
-    OR
-    EXISTS (SELECT 1 FROM public.schedules WHERE event_id = messages.event_id AND user_id = auth.uid())
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND (access_level IN ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER')))
+    OR EXISTS (SELECT 1 FROM public.schedules WHERE event_id = messages.event_id AND user_id = auth.uid())
   )
+);
+
+CREATE POLICY "Invitations: Isolamento Institucional" ON public.invitations FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+  OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
+);
+
+CREATE POLICY "Posts: Isolamento Institucional" ON public.posts FOR SELECT USING (
+  EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.access_level = 'MASTER')
+  OR institution_id = (SELECT p.institution_id FROM public.profiles p WHERE p.id = auth.uid())
+  OR visibility = 'GLOBAL'
 );
 
 -- --- RPCs DE ADMINISTRAÇÃO PRIVILEGIADA ---

@@ -51,7 +51,8 @@ export default function GestaoMembrosScreen() {
 
   const loadVolunteers = async (silent: boolean = false) => {
     if (!silent) setRefreshing(true);
-    const { data, error } = await adminService.listVolunteers();
+    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+    const { data, error } = await adminService.listVolunteers(instId);
     if (error && !silent) Alert.alert('Erro Membros', error.message);
     else if (data) setVolunteers(data);
     if (!silent) setRefreshing(false);
@@ -59,10 +60,11 @@ export default function GestaoMembrosScreen() {
 
   const loadDepartments = async (silent: boolean = false) => {
     if (!silent) setRefreshing(true);
-    const { data, error } = await adminService.listDepartments();
+    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+    const { data, error } = await adminService.listDepartments(instId);
     if (error) {
       console.error('Erro Equipes:', error.message);
-      if (!silent) Alert.alert('Erro ao carregar Equipes', 'Não foi possível carregar a lista. Verifique se a coluna leader_id existe no banco.');
+      if (!silent) Alert.alert('Erro ao carregar Equipes', 'Não foi possível carregar a lista.');
     } else if (data) {
       setDepartments(data);
     }
@@ -132,7 +134,7 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.inviteVolunteer(email, name, selectedInviteDeptId);
+    const { error } = await adminService.inviteVolunteer(email, name, selectedInviteDeptId, user.institution_id);
     if (error) {
       setModalData({
         title: 'Atenção',
@@ -162,7 +164,7 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined);
+    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined, user.institution_id);
     setLoading(false);
     if (error) Alert.alert('Erro DB', error.message);
     else {

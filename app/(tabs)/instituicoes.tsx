@@ -25,8 +25,12 @@ export default function GestaoInstituicoesScreen() {
   const loadInstitutions = async (silent = false) => {
     if (!silent) setRefreshing(true);
     const { data, error } = await adminService.listInstitutions();
-    if (error) Alert.alert('Erro', 'Falha ao carregar instituições');
-    else if (data) setInstitutions(data);
+    if (error) {
+      console.error('Instituicoes Load Error:', error);
+      Alert.alert('Erro de Carregamento', error.message || 'Falha ao carregar instituições. Verifique os logs do console para detalhes técnicos.');
+    } else if (data) {
+      setInstitutions(data);
+    }
     if (!silent) setRefreshing(false);
   };
 
@@ -67,12 +71,21 @@ export default function GestaoInstituicoesScreen() {
         currentLogoUrl = publicUrl;
       }
 
+      const finalUserLimit = parseInt(userLimit);
+      if (isNaN(finalUserLimit)) {
+        Alert.alert('Erro', 'O limite de usuários deve ser um número válido.');
+        setLoading(false);
+        return;
+      }
+
       const payload = {
-        name,
-        slug: slug.toLowerCase().replace(/\s+/g, '-'),
-        user_limit: parseInt(userLimit),
+        name: name.trim(),
+        slug: slug.trim().toLowerCase().replace(/\s+/g, '-'),
+        user_limit: finalUserLimit,
         logo_url: currentLogoUrl
       };
+
+      console.log('Salvando Instituição - Payload:', payload);
 
       let error;
       if (editingInst) {
@@ -108,6 +121,7 @@ export default function GestaoInstituicoesScreen() {
   };
 
   const openEdit = (inst: any) => {
+    console.log('Abrindo edição para:', inst.name);
     setEditingInst(inst);
     setName(inst.name);
     setSlug(inst.slug);
@@ -117,10 +131,15 @@ export default function GestaoInstituicoesScreen() {
   };
 
   const toggleStatus = async (inst: any) => {
+    console.log('Alternando status de:', inst.name, 'Ativo:', inst.active);
     const newStatus = !inst.active;
     const { error } = await adminService.updateInstitution(inst.id, { active: newStatus });
-    if (error) Alert.alert('Erro', 'Falha ao mudar status');
-    else loadInstitutions(true);
+    if (error) {
+      console.error('Toggle Status Error:', error);
+      Alert.alert('Erro', 'Falha ao mudar status: ' + error.message);
+    } else {
+      loadInstitutions(true);
+    }
   };
 
   const renderInstitutionCard = ({ item }: { item: any }) => {
@@ -153,8 +172,10 @@ export default function GestaoInstituicoesScreen() {
         <View style={styles.statsRow}>
           <View style={{ flex: 1 }}>
             <View style={styles.statsLabels}>
-              <Text style={styles.statsText}>Cota de Usuários</Text>
-              <Text style={[styles.statsText, { fontWeight: 'bold' }]}>{item.userCount} / {item.user_limit}</Text>
+              <Text style={styles.statsText}>Membros (Atuais / Limite)</Text>
+              <Text style={[styles.statsText, { fontWeight: 'bold', color: isCritical ? theme.colors.error : theme.colors.primary }]}>
+                {item.userCount} / {item.user_limit}
+              </Text>
             </View>
             <View style={styles.progressBarBg}>
               <View style={[styles.progressBarFill, { width: `${Math.min(usage, 100)}%`, backgroundColor: isCritical ? theme.colors.error : theme.colors.primary }]} />
