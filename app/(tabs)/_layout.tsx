@@ -6,7 +6,7 @@ import { Image, View, Text } from 'react-native';
 
 export default function TabsLayout() {
   const { user } = useAppStore();
-  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
+  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   return (
     <Tabs

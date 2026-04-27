@@ -684,7 +684,7 @@ export default function FeedScreen() {
                       </View>
                       <Text style={styles.postTime}>{displayDate}</Text>
                     </View>
-                    {(user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
+                    {(user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
                       <TouchableOpacity 
                         style={styles.moreOptionsBtn} 
                         onPress={() => handleDeletePost(post.id)}

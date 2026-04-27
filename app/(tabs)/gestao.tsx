@@ -91,6 +91,12 @@ export default function GestaoMembrosScreen() {
         loadVolunteers(true);
         loadDepartments(true);
         loadRoles(true);
+        // Atualiza também as equipes que o usuário lidera
+        if (user?.id) {
+          adminService.getLeaderDepartments(user.id).then(({ data }) => {
+            if (data) setLeaderTeams(data.map(d => d.id));
+          });
+        }
       });
     }
     
@@ -109,8 +115,18 @@ export default function GestaoMembrosScreen() {
     };
   }, [user?.id, user?.role]);
 
+  const handleEmailChange = (text: string) => {
+    let value = text.trim().toLowerCase();
+    // Auto-preenche @gmail.com se o usuário digitar @ ao final do texto
+    if (value.endsWith('@')) {
+      value = value + 'gmail.com';
+    }
+    setEmail(value);
+  };
+
   const isGmail = email.trim().toLowerCase().endsWith('@gmail.com');
   const isDeptSelected = !!selectedInviteDeptId;
+  const isAdminOrMaster = user?.role === 'ADMIN' || user?.role === 'MASTER';
   const canInvite = isGmail && isDeptSelected && !loading;
 
   if (user?.role === 'VOLUNTÁRIO') {
@@ -124,17 +140,23 @@ export default function GestaoMembrosScreen() {
   }
 
   const handleAddVolunteer = async () => {
-    if (user?.role !== 'LÍDER' && user?.role !== 'ADMIN' && user?.role !== 'CO-LÍDER') {
+    if (!['MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER'].includes(user?.role || '')) {
       Alert.alert('Erro', 'Usuário Não Autorizado a enviar Convite!');
       return;
     }
 
-    if (!email || !email.includes('@')) {
-      Alert.alert('E-mail Inválido', 'E-mail do Google é obrigatório.');
+    let finalEmail = email.trim().toLowerCase();
+    if (!finalEmail.includes('@')) {
+      finalEmail += '@gmail.com';
+    }
+
+    if (!finalEmail.endsWith('@gmail.com')) {
+      Alert.alert('E-mail Inválido', 'Apenas contas @gmail.com são permitidas.');
       return;
     }
+
     setLoading(true);
-    const { error } = await adminService.inviteVolunteer(email, name, selectedInviteDeptId, user.institution_id);
+    const { error, emailError, emailSent } = await adminService.inviteVolunteer(finalEmail, name, selectedInviteDeptId, user.institution_id);
     if (error) {
       setModalData({
         title: 'Atenção',
@@ -144,12 +166,21 @@ export default function GestaoMembrosScreen() {
       });
       setModalVisible(true);
     } else {
-      setModalData({
-        title: 'Sucesso!',
-        message: 'O convite foi enviado para o e-mail informado.',
-        type: 'success',
-        onConfirm: () => setModalVisible(false)
-      });
+      if (emailError) {
+        setModalData({
+          title: 'Convite Registrado',
+          message: `O voluntário foi adicionado à lista, mas o e-mail de convite falhou: ${emailError}. Você pode pedir que ele se cadastre com este e-mail.`,
+          type: 'info',
+          onConfirm: () => setModalVisible(false)
+        });
+      } else {
+        setModalData({
+          title: 'Sucesso!',
+          message: emailSent ? 'O convite foi enviado para o e-mail informado.' : 'O convite foi registrado com sucesso.',
+          type: 'success',
+          onConfirm: () => setModalVisible(false)
+        });
+      }
       setModalVisible(true);
       setEmail(''); setName('');
       if (leaderTeams.length !== 1) setSelectedInviteDeptId(null);
@@ -381,13 +412,38 @@ export default function GestaoMembrosScreen() {
                   <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
                   <TextInput style={styles.searchInput} placeholder="Buscar membro..." placeholderTextColor={theme.colors.textSecondary} value={searchTerm} onChangeText={setSearchTerm} />
                 </View>
-                <TextInput style={styles.input} placeholder="E-mail do Google" placeholderTextColor={theme.colors.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" />
+                <View style={styles.inputWithIcon}>
+                  <TextInput 
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]} 
+                    placeholder="Nome do usuário ou e-mail" 
+                    placeholderTextColor={theme.colors.textSecondary} 
+                    value={email} 
+                    onChangeText={handleEmailChange} 
+                    autoCapitalize="none" 
+                    keyboardType="email-address"
+                  />
+                  {email.length > 0 && (
+                    <Ionicons 
+                      name={isGmail ? "checkmark-circle" : "alert-circle"} 
+                      size={20} 
+                      color={isGmail ? theme.colors.primary : theme.colors.error} 
+                      style={{ marginLeft: 8 }}
+                    />
+                  )}
+                </View>
+                {!isGmail && email.length > 0 && (
+                  <TouchableOpacity onPress={() => handleEmailChange(email + '@')}>
+                    <Text style={{ color: theme.colors.primary, fontSize: 12, marginBottom: 12, fontWeight: 'bold' }}>
+                      Clique para completar com @gmail.com
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 
-                {((user?.role === 'ADMIN' ? departments.length : leaderTeams.length) > 0) && (
+                {(isAdminOrMaster || leaderTeams.length > 0) && (
                   <View style={{ marginBottom: 12 }}>
                     <Text style={styles.inputLabel}>Vincular à Equipe:</Text>
                     <View style={styles.chipsContainer}>
-                      {(user?.role === 'ADMIN' ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
+                      {(isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
                         <TouchableOpacity 
                           key={dept.id} 
                           style={[
@@ -443,8 +499,8 @@ export default function GestaoMembrosScreen() {
                       <Ionicons name="people" size={18} color={theme.colors.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      style={[styles.roleBadge, user?.role === 'ADMIN' && { borderColor: theme.colors.primary, borderWidth: 1 }]}
-                      disabled={user?.role !== 'ADMIN'}
+                      style={[styles.roleBadge, isAdminOrMaster && { borderColor: theme.colors.primary, borderWidth: 1 }]}
+                      disabled={!isAdminOrMaster}
                       onPress={() => setSelectedProfile(item)}
                     >
                       <Text style={styles.roleText}>{item.role}</Text>
@@ -460,7 +516,7 @@ export default function GestaoMembrosScreen() {
             data={departments}
             keyExtractor={(item) => item.id}
             ListHeaderComponent={
-              user?.role === 'ADMIN' ? (
+              isAdminOrMaster ? (
                 <View style={styles.formCard}>
                   <TextInput style={styles.input} placeholder="Nome da Equipe" placeholderTextColor={theme.colors.textSecondary} value={newDeptName} onChangeText={setNewDeptName} />
                   <Text style={styles.inputLabel}>Selecionar Líder:</Text>
@@ -506,7 +562,7 @@ export default function GestaoMembrosScreen() {
                       <Text style={styles.memberEmail}>Co-Líder: <Text style={{ color: theme.colors.primary }}>{item.co_leader?.full_name}</Text></Text>
                     )}
                   </View>
-                  {user?.role === 'ADMIN' && (
+                  {isAdminOrMaster && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '' })}>
                         <Ionicons name="pencil-outline" size={20} color={theme.colors.primary} />
@@ -541,7 +597,7 @@ export default function GestaoMembrosScreen() {
                       {departments.length === 0 ? (
                          <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', padding: 10 }}>Nenhum departamento disponível.</Text>
                       ) : (
-                        (user?.role === 'ADMIN' ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
+                        (isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
                           <TouchableOpacity 
                             key={dept.id} 
                             style={[styles.leaderPickerItem, selectedDeptIdForRule === dept.id && styles.leaderPickerItemSelected]} 
@@ -633,7 +689,7 @@ export default function GestaoMembrosScreen() {
             <ScrollView>
               {departments.map(dept => {
                 const isMember = userDepts.includes(dept.id);
-                const canManage = user?.role === 'ADMIN' || leaderTeams.includes(dept.id);
+                const canManage = isAdminOrMaster || leaderTeams.includes(dept.id);
                 return (
                   <TouchableOpacity 
                     key={dept.id} 
@@ -669,7 +725,7 @@ export default function GestaoMembrosScreen() {
               {roles.map(role => {
                 const isAssigned = userAssignedRoles.includes(role.id);
                 // Só pode alterar de funções dentro de um departamento que ele é LÍDER (ou ADMIN)
-                const canManage = user?.role === 'ADMIN' || leaderTeams.includes(role.department_id);
+                const canManage = isAdminOrMaster || leaderTeams.includes(role.department_id);
                 return (
                   <TouchableOpacity 
                     key={role.id} 
@@ -815,7 +871,9 @@ const styles = StyleSheet.create({
   memberInfo: { flex: 1 },
   memberName: { color: theme.colors.text, fontWeight: 'bold', fontSize: 16 },
   memberEmail: { color: theme.colors.textSecondary, fontSize: 12 },
+  roleBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(107, 197, 167, 0.1)' },
   roleText: { color: theme.colors.primary, fontSize: 10, fontWeight: 'bold' },
+  inputWithIcon: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   inviteInstruction: {
     color: theme.colors.primary,
     fontSize: 11,

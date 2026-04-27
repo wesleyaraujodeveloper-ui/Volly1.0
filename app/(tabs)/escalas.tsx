@@ -53,7 +53,7 @@ export default function EscalasTabsScreen() {
   const [swapReason, setSwapReason] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
-  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
+  const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   useEffect(() => {
     loadInitialData();

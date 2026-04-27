@@ -319,10 +319,10 @@ DECLARE
     v_new_dept public.departments;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level = 'ADMIN';
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem criar departamentos.';
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e MASTER podem criar departamentos.';
     END IF;
 
     INSERT INTO public.departments (name, description, leader_id) 
@@ -337,8 +337,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION update_department_leader(p_dept_id UUID, p_leader_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level = 'ADMIN') THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem alterar líderes de departamentos.';
+    IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN')) THEN
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e MASTER podem alterar líderes de departamentos.';
     END IF;
 
     UPDATE public.departments 
@@ -356,7 +356,7 @@ DECLARE
     v_admin_count INT;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
         RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem gerenciar membros.';
@@ -383,15 +383,15 @@ DECLARE
 BEGIN
     -- Verifica se quem chama é ADMIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level = 'ADMIN';
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS podem alterar restrições de cargo.';
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e MASTER podem alterar restrições de cargo.';
     END IF;
 
     -- Prevenção para não deixar o sistema sem nenhum ADMIN caso ele esteja demitindo a si mesmo único
-    IF p_new_role != 'ADMIN' AND p_user_id = auth.uid() THEN
-        SELECT COUNT(*) INTO v_admin_count FROM public.profiles WHERE access_level = 'ADMIN';
+    IF p_new_role != 'ADMIN' AND p_new_role != 'MASTER' AND p_user_id = auth.uid() THEN
+        SELECT COUNT(*) INTO v_admin_count FROM public.profiles WHERE access_level IN ('MASTER', 'ADMIN');
         IF v_admin_count <= 1 THEN
             RAISE EXCEPTION 'Não é possível remover o único administrador restante do sistema.';
         END IF;
@@ -428,10 +428,10 @@ DECLARE
     v_new_role public.roles;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem criar funções departamentais.';
+        RAISE EXCEPTION 'Acesso negado. Apenas MASTER, ADMINS, LÍDERES e CO-LÍDERES podem criar funções departamentais.';
     END IF;
 
     INSERT INTO public.roles (name, department_id) 
@@ -449,10 +449,10 @@ DECLARE
     v_admin_count INT;
 BEGIN
     SELECT COUNT(*) INTO v_admin_count FROM public.profiles 
-    WHERE id = auth.uid() AND access_level IN ('ADMIN', 'LÍDER', 'CO-LÍDER');
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER');
 
     IF v_admin_count = 0 THEN
-        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS, LÍDERES e CO-LÍDERES podem alterar o vínculo de voluntários.';
+        RAISE EXCEPTION 'Acesso negado. Apenas MASTER, ADMINS, LÍDERES e CO-LÍDERES podem alterar o vínculo de voluntários.';
     END IF;
 
     IF p_action = 'ADD' THEN
