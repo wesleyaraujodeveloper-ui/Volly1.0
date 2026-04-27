@@ -7,6 +7,7 @@ interface User {
   name: string;
   email: string;
   role: Role;
+  access_level?: Role; // Adicionado para compatibilidade com partes do código que usam este campo
   avatar_url?: string;
   institution_id?: string | null;
 }

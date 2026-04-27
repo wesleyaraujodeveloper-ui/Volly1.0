@@ -7,6 +7,7 @@ export interface Event {
   description?: string;
   event_date: string;
   end_date?: string; // Novo campo para horário de término
+  institution_id?: string | null;
   department_id?: string;
   department_ids?: string[];
   chat_window_hours?: number;
@@ -206,6 +207,7 @@ export const eventService = {
         title: original.title,
         description: original.description,
         department_id: original.department_id,
+        institution_id: original.institution_id,
         event_date: newDate,
         chat_window_hours: original.chat_window_hours
       }])
@@ -251,6 +253,7 @@ export const eventService = {
         title: baseEvent.title,
         description: baseEvent.description,
         department_id: baseEvent.department_id,
+        institution_id: baseEvent.institution_id,
         event_date: nextDate.toISOString(),
         chat_window_hours: baseEvent.chat_window_hours
       });

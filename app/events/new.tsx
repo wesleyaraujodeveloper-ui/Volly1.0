@@ -8,6 +8,7 @@ import { supabase } from '../../src/services/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { format, differenceInHours, parseISO } from 'date-fns';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { useAppStore } from '../../src/store/useAppStore';
 
 // Configuração do calendário para PT-BR
 LocaleConfig.locales['pt-br'] = {
@@ -20,6 +21,7 @@ LocaleConfig.defaultLocale = 'pt-br';
 
 export default function EventsScreen() {
   const router = useRouter();
+  const { user } = useAppStore();
   const [activeMode, setActiveMode] = useState<'NOVO' | 'GERENCIAR'>('NOVO');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,7 +55,7 @@ export default function EventsScreen() {
     }
 
     if (activeMode === 'GERENCIAR') {
-      const { data, error: evErr } = await eventService.listUpcomingEvents();
+      const { data, error: evErr } = await eventService.listUpcomingEvents({ institutionId: user?.institution_id });
       if (evErr) {
         console.error('Erro ao carregar eventos:', evErr);
         Alert.alert('Erro de Banco', 'Não foi possível carregar os eventos. Verifique se a tabela event_departments foi criada no Supabase.');
@@ -144,6 +146,7 @@ export default function EventsScreen() {
           description,
           event_date: startISO,
           end_date: endISO,
+          institution_id: user?.institution_id,
           department_ids: selectedDeptIds,
           chat_window_hours: chatWindowTotal
         };
@@ -176,7 +179,7 @@ export default function EventsScreen() {
       setActiveMode('GERENCIAR');
       
       // 2. Fetch the new list immediately to ensure it's updated when the tab renders
-      const { data: reloaded } = await eventService.listUpcomingEvents();
+      const { data: reloaded } = await eventService.listUpcomingEvents({ institutionId: user?.institution_id });
       if (reloaded) {
         setFutureEvents(reloaded);
       }

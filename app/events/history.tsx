@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO, subDays } from 'date-fns';
+import { useAppStore } from '../../src/store/useAppStore';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { user } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   
@@ -28,7 +30,8 @@ export default function HistoryScreen() {
   const loadHistory = async () => {
     if (!startDate || !endDate) return; // Aguarda as datas serem definidas no client
     setLoading(true);
-    const { data } = await eventService.listHistory(startDate, endDate);
+    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+    const { data } = await eventService.listHistory(startDate, endDate, instId);
     setEvents(data || []);
     setLoading(false);
   };

@@ -60,6 +60,7 @@ export default function RootLayout() {
               name: profile.full_name || '',
               email: profile.email || session.user.email || '',
               role: (profile.access_level as any) || 'VOLUNTÁRIO',
+              access_level: (profile.access_level as any) || 'VOLUNTÁRIO',
               avatar_url: profile.avatar_url,
               institution_id: profile.institution_id
             });
@@ -89,6 +90,7 @@ export default function RootLayout() {
                 name: newProfile.full_name,
                 email: session.user.email || '',
                 role: 'VOLUNTÁRIO',
+                access_level: 'VOLUNTÁRIO',
                 avatar_url: newProfile.avatar_url
               });
             } else {
@@ -98,6 +100,7 @@ export default function RootLayout() {
                 name: upsertedProfile.full_name || '',
                 email: upsertedProfile.email || '',
                 role: (upsertedProfile.access_level as any) || 'VOLUNTÁRIO',
+                access_level: (upsertedProfile.access_level as any) || 'VOLUNTÁRIO',
                 avatar_url: upsertedProfile.avatar_url,
                 institution_id: upsertedProfile.institution_id
               });
