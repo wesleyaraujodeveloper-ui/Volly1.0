@@ -459,7 +459,10 @@ export default function EscalasTabsScreen() {
         )}
 
         <View style={styles.absenceHeader}>
-          <Text style={styles.sectionTitle}>Bloqueio de data</Text>
+          <View>
+            <Text style={styles.sectionTitle}>Bloqueio de data</Text>
+            <Text style={[styles.sectionSubtitle, { marginTop: 4 }]}>Informe o período que deseja estar fora da Escala</Text>
+          </View>
           <TouchableOpacity onPress={() => setShowAbsenceModal(true)}>
             <Ionicons name="add-circle" size={32} color={theme.colors.primary} />
           </TouchableOpacity>
