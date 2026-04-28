@@ -24,7 +24,8 @@ export interface Institution {
 export const adminService = {
   /**
    * Registra um novo voluntário na tabela de convites (invitations).
-    inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null, institutionId?: string | null) => {
+   */
+  inviteVolunteer: async (email: string, name: string = '', departmentId?: string | null, institutionId?: string | null) => {
     const cleanEmail = email.toLowerCase().trim();
 
     // 1. Verifica se já não é um membro ativo
