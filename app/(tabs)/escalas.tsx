@@ -67,7 +67,7 @@ export default function EscalasTabsScreen() {
 
   // Adiciona a assinatura de tempo real para atualizações de disponibilidade
   useEffect(() => {
-    if (activeTab === 'DISPONIBILIDADE' && selectedDeptId && isAdminOrLeader) {
+    if (activeTab === 'DISPONIBILIDADE' && selectedDeptId) {
       const subscription = availabilityService.subscribeToAvailabilities(() => {
         // Quando alguém atualizar a disponibilidade, recarregamos sutilmente os dados da equipe
         if (monthEvents.length > 0) {
@@ -82,7 +82,7 @@ export default function EscalasTabsScreen() {
         subscription.unsubscribe();
       };
     }
-  }, [activeTab, selectedDeptId, monthEvents, isAdminOrLeader]);
+  }, [activeTab, selectedDeptId, monthEvents]);
 
   useEffect(() => {
     if (selectedEventId) {
@@ -140,11 +140,9 @@ export default function EscalasTabsScreen() {
         const { data: avail } = await availabilityService.getEventAvailability(eventIds);
         setEventAvailabilities(avail || []);
 
-        // Se for Gestor, busca da Equipe inteira
-        if (isAdminOrLeader) {
-          const { data: tAvail } = await availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds);
-          setTeamAvailabilities(tAvail || []);
-        }
+        // Busca da Equipe inteira
+        const { data: tAvail } = await availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds);
+        setTeamAvailabilities(tAvail || []);
         
         // Seleciona o primeiro evento por padrão para a aba de Escalas
         setSelectedEventId(eventList[0].id!);
@@ -430,33 +428,31 @@ export default function EscalasTabsScreen() {
                   </View>
                 </View>
 
-                {isAdminOrLeader && (
-                  <View style={styles.teamAvailList}>
-                    <Text style={styles.teamAvailTitle}>Disponibilidade da Equipe:</Text>
-                    {teamAvailabilities.filter(ta => ta.event_id === event.id).length > 0 ? (
-                      teamAvailabilities
-                        .filter(ta => ta.event_id === event.id)
-                        .map((ta, idx) => (
-                          <View key={idx} style={styles.memberStatusRow}>
-                            <View style={styles.memberInfo}>
-                              <Image 
-                                source={{ uri: ta.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ta.profiles?.full_name}` }} 
-                                style={styles.memberAvatar} 
-                              />
-                              <Text style={styles.memberName}>{ta.profiles?.full_name}</Text>
-                            </View>
-                            <View style={[styles.statusBadge, { backgroundColor: ta.is_available ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
-                              <Text style={[styles.statusBadgeText, { color: ta.is_available ? theme.colors.success : theme.colors.error }]}>
-                                {ta.is_available ? 'Disponível' : 'Indisponível'}
-                              </Text>
-                            </View>
+                <View style={styles.teamAvailList}>
+                  <Text style={styles.teamAvailTitle}>Disponibilidade da Equipe:</Text>
+                  {teamAvailabilities.filter(ta => ta.event_id === event.id).length > 0 ? (
+                    teamAvailabilities
+                      .filter(ta => ta.event_id === event.id)
+                      .map((ta, idx) => (
+                        <View key={idx} style={styles.memberStatusRow}>
+                          <View style={styles.memberInfo}>
+                            <Image 
+                              source={{ uri: ta.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ta.profiles?.full_name}` }} 
+                              style={styles.memberAvatar} 
+                            />
+                            <Text style={styles.memberName}>{ta.profiles?.full_name}</Text>
                           </View>
-                        ))
-                    ) : (
-                      <Text style={styles.emptyTeamText}>Nenhum voluntário marcou disponibilidade ainda.</Text>
-                    )}
-                  </View>
-                )}
+                          <View style={[styles.statusBadge, { backgroundColor: ta.is_available ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)' }]}>
+                            <Text style={[styles.statusBadgeText, { color: ta.is_available ? theme.colors.success : theme.colors.error }]}>
+                              {ta.is_available ? 'Disponível' : 'Indisponível'}
+                            </Text>
+                          </View>
+                        </View>
+                      ))
+                  ) : (
+                    <Text style={styles.emptyTeamText}>Nenhum voluntário marcou disponibilidade ainda.</Text>
+                  )}
+                </View>
               </View>
             );
           })
