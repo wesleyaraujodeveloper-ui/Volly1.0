@@ -116,7 +116,7 @@ export const eventService = {
     // 2. Monta a query principal
     let query = supabase
       .from('events')
-      .select('*, event_departments(departments(id, name)), schedules(id)');
+      .select('*, event_departments(departments(id, name)), schedules(id, roles(department_id))');
 
     // Filtro institucional
     if (filters?.institutionId) {

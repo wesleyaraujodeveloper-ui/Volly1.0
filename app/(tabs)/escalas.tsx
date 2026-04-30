@@ -44,7 +44,11 @@ export default function EscalasTabsScreen() {
   // Consultas
   const { data: userAbsences = [] } = useUserAbsences();
   const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
-  const pendingEvents = upcomingEvents.filter((e: any) => !e.schedules || e.schedules.length === 0);
+  const pendingEvents = upcomingEvents.filter((e: any) => {
+    if (!e.schedules || e.schedules.length === 0) return true;
+    // Verifica se há alguma escala para o departamento selecionado
+    return !e.schedules.some((s: any) => s.roles?.department_id === selectedDeptId);
+  });
   const monthEvents = pendingEvents;
 
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
