@@ -44,18 +44,19 @@ export default function EscalasTabsScreen() {
   // Consultas
   const { data: userAbsences = [] } = useUserAbsences();
   const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
-  const monthEvents = upcomingEvents;
+  const pendingEvents = upcomingEvents.filter((e: any) => !e.schedules || e.schedules.length === 0);
+  const monthEvents = pendingEvents;
 
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (upcomingEvents.length > 0 && !expandedEventId) {
-      setExpandedEventId(upcomingEvents[0].id!);
-    } else if (upcomingEvents.length === 0) {
+    if (pendingEvents.length > 0 && !expandedEventId) {
+      setExpandedEventId(pendingEvents[0].id!);
+    } else if (pendingEvents.length === 0) {
       setExpandedEventId(null);
     }
-  }, [upcomingEvents]);
+  }, [pendingEvents]);
 
   const toggleEventSelection = (id: string) => {
     setSelectedEventIds(prev => 
@@ -63,7 +64,7 @@ export default function EscalasTabsScreen() {
     );
   };
 
-  const eventIds = upcomingEvents.map((e: any) => e.id!);
+  const eventIds = pendingEvents.map((e: any) => e.id!);
   
   const { data: serverAvailabilities = [] } = useEventAvailability(eventIds);
   const { data: teamAvailabilities = [] } = useTeamAvailability(selectedDeptId, eventIds);
@@ -462,20 +463,20 @@ export default function EscalasTabsScreen() {
         </View>
       )}
 
-      {isAdminOrLeader && upcomingEvents.length > 0 && (
+      {isAdminOrLeader && pendingEvents.length > 0 && (
         <View style={styles.selectAllRow}>
           <TouchableOpacity 
             style={styles.checkboxContainer}
             onPress={() => {
-              if (selectedEventIds.length === upcomingEvents.length) {
+              if (selectedEventIds.length === pendingEvents.length) {
                 setSelectedEventIds([]);
               } else {
-                setSelectedEventIds(upcomingEvents.map(e => e.id!));
+                setSelectedEventIds(pendingEvents.map(e => e.id!));
               }
             }}
           >
             <Ionicons 
-              name={selectedEventIds.length === upcomingEvents.length ? "checkbox" : "square-outline"} 
+              name={selectedEventIds.length === pendingEvents.length ? "checkbox" : "square-outline"} 
               size={24} 
               color={theme.colors.primary} 
             />
@@ -484,8 +485,8 @@ export default function EscalasTabsScreen() {
         </View>
       )}
 
-      {upcomingEvents.length > 0 ? (
-        upcomingEvents.map((event) => {
+      {pendingEvents.length > 0 ? (
+        pendingEvents.map((event) => {
           const isExpanded = expandedEventId === event.id;
           const isSelected = selectedEventIds.includes(event.id!);
           const eventDate = parseISO(event.event_date);
