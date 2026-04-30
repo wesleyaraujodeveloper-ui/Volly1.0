@@ -28,7 +28,7 @@ export default function RootLayout() {
     setIsMounted(true);
   }, []);
 
-  // useNotifications(); // Desativado temporariamente para evitar crash no Expo Go SDK 53
+  useNotifications();
   
   const { user, setUser, isLoadingData, setIsLoadingData, setProviderToken } = useAppStore();
   const segments = useSegments();

@@ -35,7 +35,7 @@ export const notificationService = {
       const tokens = Array.from(new Set(
         profiles
           ?.map((p: any) => p.profiles?.expo_push_token)
-          .filter((t: string) => t && (t.startsWith('ExporterPushToken') || t?.startsWith('ExponentPushToken')))
+          .filter((t: string) => t && (t.startsWith('ExpoPushToken') || t?.startsWith('ExponentPushToken')))
       ));
 
       // 3. Salvar as notificações na tabela do banco de dados para a Central de Notificações
@@ -102,7 +102,7 @@ export const notificationService = {
       const userIds = profiles.map(p => p.id);
       const tokens = profiles
         .map(p => p.expo_push_token)
-        .filter(t => t && (t.startsWith('ExporterPushToken') || t?.startsWith('ExponentPushToken')));
+        .filter(t => t && (t.startsWith('ExpoPushToken') || t?.startsWith('ExponentPushToken')));
 
       // Salva no banco
       const dbNotifications = userIds.map(userId => ({
@@ -169,7 +169,7 @@ export const notificationService = {
 
       // Envia Push se tiver token
       const token = profile.expo_push_token;
-      if (token && (token.startsWith('ExporterPushToken') || token?.startsWith('ExponentPushToken'))) {
+      if (token && (token.startsWith('ExpoPushToken') || token?.startsWith('ExponentPushToken'))) {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
           headers: {

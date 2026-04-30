@@ -25,17 +25,16 @@ export function useNotifications() {
   const { user } = useAppStore();
 
   useEffect(() => {
-    // PROTEÇÃO: O sistema de notificações causa crash no Expo Go SDK 53
-    // Só tentamos registrar se NÃO estivermos no Expo Go ou se for um build real
-    if (Constants.appOwnership === 'expo') {
-      console.log('Notificações desativadas no Expo Go para evitar crash (SDK 53).');
-      return;
+    // No Expo Go (dispositivos móveis), o sistema de notificações pode causar crash no SDK 53
+    // Permitimos no Web e em builds nativos reais.
+    if (Constants.appOwnership === 'expo' && Platform.OS !== 'web') {
+      console.log('Notificações desativadas no Expo Go para evitar crash (SDK 53). No Web está liberado.');
     }
 
     if (user?.id) {
       registerForPushNotificationsAsync().then(token => {
-        setExpoPushToken(token);
         if (token) {
+          setExpoPushToken(token);
           // Salva o token no perfil do usuário no Supabase
           supabase
             .from('profiles')
@@ -52,12 +51,12 @@ export function useNotifications() {
       });
 
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log(response);
+        console.log('User interacted with notification:', response);
       });
 
       return () => {
-        notificationListener.current?.remove();
-        responseListener.current?.remove();
+        if (notificationListener.current) notificationListener.current.remove();
+        if (responseListener.current) responseListener.current.remove();
       };
     }
   }, [user?.id]);
@@ -68,33 +67,42 @@ export function useNotifications() {
 async function registerForPushNotificationsAsync() {
   let token;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
 
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+    // No Web ou em Dispositivo Físico
+    if (Device.isDevice || Platform.OS === 'web') {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Falha ao obter permissão para notificações push!');
+        return;
+      }
+      
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+      
+      token = (await Notifications.getExpoPushTokenAsync({ 
+        projectId,
+        // Caso queira adicionar suporte total a Chrome/Safari no futuro, 
+        // adicione sua VAPID Key aqui:
+        // vapidKey: 'SUA_VAPID_KEY'
+      })).data;
+    } else {
+      console.log('Notificações Push exigem um dispositivo físico ou ambiente Web.');
     }
-    if (finalStatus !== 'granted') {
-      console.log('Falha ao obter permissão para notificações push!');
-      return;
-    }
-    
-    // Project ID do Expo é necessário para a SDK 51+
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
-    
-    token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-  } else {
-    console.log('Notificações Push exigem um dispositivo físico.');
+  } catch (err) {
+    console.error('Erro ao registrar notificações:', err);
   }
 
   return token;
