@@ -46,15 +46,22 @@ export default function EscalasTabsScreen() {
   const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
   const monthEvents = upcomingEvents;
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
 
   useEffect(() => {
-    if (upcomingEvents.length > 0 && !selectedEventId) {
-      setSelectedEventId(upcomingEvents[0].id!);
+    if (upcomingEvents.length > 0 && !expandedEventId) {
+      setExpandedEventId(upcomingEvents[0].id!);
     } else if (upcomingEvents.length === 0) {
-      setSelectedEventId(null);
+      setExpandedEventId(null);
     }
   }, [upcomingEvents]);
+
+  const toggleEventSelection = (id: string) => {
+    setSelectedEventIds(prev => 
+      prev.includes(id) ? prev.filter(eid => eid !== id) : [...prev, id]
+    );
+  };
 
   const eventIds = upcomingEvents.map((e: any) => e.id!);
   
@@ -66,7 +73,7 @@ export default function EscalasTabsScreen() {
     setEventAvailabilities(serverAvailabilities);
   }, [serverAvailabilities]);
 
-  const { data: eventSchedules = [] } = useEventSchedules(selectedEventId);
+  const { data: eventSchedules = [] } = useEventSchedules(expandedEventId);
 
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyData(selectedDeptId, selectedMonth);
@@ -176,26 +183,48 @@ export default function EscalasTabsScreen() {
   };
 
   const handleAutoGenerateScale = async () => {
-    if (!selectedEventId || !selectedDeptId) return;
+    if (selectedEventIds.length === 0 || !selectedDeptId) {
+      showAlert('Atenção', 'Selecione ao menos um evento.', 'info');
+      return;
+    }
     setSaving(true);
     try {
-      const data = await autoGenerateScheduleMutation.mutateAsync({ eventId: selectedEventId, deptId: selectedDeptId, token: providerToken });
-      showAlert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`, 'success');
+      let totalAlocados = 0;
+      for (const eventId of selectedEventIds) {
+        try {
+          const data = await autoGenerateScheduleMutation.mutateAsync({ eventId, deptId: selectedDeptId, token: providerToken });
+          if (data && data.length > 0) totalAlocados += data.length;
+        } catch (error: any) {
+          console.log(`Erro ao gerar para o evento ${eventId}:`, error.message);
+        }
+      }
+      showAlert('Sucesso', `Processamento em lote finalizado! ${totalAlocados} voluntários alocados no total.`, 'success');
+      setSelectedEventIds([]);
     } catch (error: any) {
-      showAlert('Atenção', error.message, 'info');
+      showAlert('Atenção', 'Ocorreu um erro durante o processamento em lote.', 'danger');
     } finally {
       setSaving(false);
     }
   };
 
   const handleCompleteScale = async () => {
-    if (!selectedEventId) return;
+    if (selectedEventIds.length === 0) {
+      showAlert('Atenção', 'Selecione ao menos um evento.', 'info');
+      return;
+    }
     setSaving(true);
     try {
-      await completeScheduleMutation.mutateAsync(selectedEventId);
-      showAlert('Sucesso', 'Escalas concluídas e voluntários notificados!', 'success');
+      for (const eventId of selectedEventIds) {
+        try {
+          await completeScheduleMutation.mutateAsync(eventId);
+        } catch (err) {
+          console.log(`Erro ao concluir evento ${eventId}`, err);
+        }
+      }
+      showAlert('Sucesso', 'Escalas concluídas e voluntários notificados para os eventos selecionados!', 'success');
+      setSelectedEventIds([]);
     } catch (error) {
-      showAlert('Erro', 'Erro ao concluir escalas.', 'danger');
+      showAlert('Erro', 'Erro ao concluir escalas em lote.', 'danger');
     } finally {
       setSaving(false);
     }
@@ -213,124 +242,6 @@ export default function EscalasTabsScreen() {
       showAlert('Erro', 'Não foi possível enviar a solicitação: ' + error.message, 'danger');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const setAvailabilityStatus = (eventId: string, status: boolean) => {
-    const existing = eventAvailabilities.find(a => a.event_id === eventId);
-    if (existing) {
-      setEventAvailabilities(prev => prev.map(a => 
-        a.event_id === eventId ? { ...a, is_available: status } : a
-      ));
-    } else {
-      setEventAvailabilities(prev => [...prev, { 
-        user_id: user?.id!, 
-        event_id: eventId, 
-        periods: [], 
-        is_available: status 
-      }]);
-    }
-  };
-
-  const handleSaveAvailability = async () => {
-    setSaving(true);
-    try {
-      await updateAvailabilityMutation.mutateAsync({ eventAvailabilities });
-      showAlert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!', 'success');
-    } catch (error) {
-      showAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const parseBrazilianDate = (ptStr: string) => {
-    const parts = ptStr.split('/');
-    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    return ptStr;
-  };
-
-  const handleAddAbsence = async () => {
-    const startDb = parseBrazilianDate(newAbsence.start_date);
-    const endDb = parseBrazilianDate(newAbsence.end_date);
-
-    if (!startDb || !endDb || startDb.length < 10) {
-      showAlert('Erro', 'Por favor, preencha as datas completamente (DD/MM/AAAA).', 'danger');
-      return;
-    }
-    try {
-      const { error } = await availabilityService.addAbsence(
-        startDb, 
-        endDb, 
-        newAbsence.description
-      );
-      if (error) throw error;
-      setShowAbsenceModal(false);
-      setNewAbsence({ start_date: '', end_date: '', description: '' });
-      loadInitialData();
-    } catch (error) {
-      showAlert('Erro', 'Erro ao adicionar ausência.', 'danger');
-    }
-  };
-
-  const handleDateMask = (text: string) => {
-    let cleaned = ('' + text).replace(/\D/g, '');
-    let match = cleaned.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
-    if (!match) return cleaned.substring(0, 8);
-    let formatted = match[1];
-    if (match[2]) formatted += '/' + match[2];
-    if (match[3]) formatted += '/' + match[3];
-    return formatted;
-  };
-  
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
-
-  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'danger' = 'info') => {
-    setModalData({ title, message, type });
-    setModalVisible(true);
-  };
-
-  const handleAutoGenerateScale = async () => {
-    if (!selectedEventId || !selectedDeptId) return;
-    setSaving(true);
-    const { error, data } = await scheduleService.autoGenerateSchedule(selectedEventId, selectedDeptId, providerToken);
-    
-    if (error) {
-      showAlert('Atenção', error, 'info');
-    } else {
-      showAlert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`, 'success');
-      loadEventSchedules();
-    }
-    setSaving(false);
-  };
-
-  const handleCompleteScale = async () => {
-    if (!selectedEventId) return;
-    setSaving(true);
-    const { error } = await scheduleService.completeAndNotify(selectedEventId);
-    if (error) {
-      showAlert('Erro', 'Erro ao concluir escalas.', 'danger');
-    } else {
-      showAlert('Sucesso', 'Escalas concluídas e voluntários notificados!', 'success');
-      loadEventSchedules();
-    }
-    setSaving(false);
-  };
-
-  const handleRequestSwap = async () => {
-    if (!selectedScheduleId) return;
-    setSaving(true);
-    const result = await scheduleService.requestSwap(selectedScheduleId, swapReason);
-    setSaving(false);
-    
-    if (result.success) {
-      showAlert('Solicitação Enviada', 'Seu líder foi notificado sobre a sua necessidade de troca.', 'success');
-      setSwapModalVisible(false);
-      setSwapReason('');
-      loadEventSchedules();
-    } else {
-      showAlert('Erro', 'Não foi possível enviar a solicitação: ' + result.error, 'danger');
     }
   };
 
@@ -533,45 +444,81 @@ export default function EscalasTabsScreen() {
       {isAdminOrLeader && (
         <View style={styles.adminActions}>
           <TouchableOpacity 
-            style={[styles.primaryButton, { backgroundColor: '#333' }]} 
+            style={[styles.primaryButton, { backgroundColor: '#333', opacity: selectedEventIds.length === 0 ? 0.5 : 1 }]} 
             onPress={handleAutoGenerateScale}
-            disabled={saving}
+            disabled={saving || selectedEventIds.length === 0}
           >
-            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>Gerar escalas automáticamente</Text>
+            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+              Gerar escalas ({selectedEventIds.length})
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.primaryButton, { marginTop: 10 }]} 
+            style={[styles.primaryButton, { marginTop: 10, opacity: selectedEventIds.length === 0 ? 0.5 : 1 }]} 
             onPress={handleCompleteScale} 
-            disabled={saving}
+            disabled={saving || selectedEventIds.length === 0}
           >
-            <Text style={styles.buttonText}>Concluir escala e Notificar</Text>
+            <Text style={styles.buttonText}>Concluir e Notificar ({selectedEventIds.length})</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isAdminOrLeader && upcomingEvents.length > 0 && (
+        <View style={styles.selectAllRow}>
+          <TouchableOpacity 
+            style={styles.checkboxContainer}
+            onPress={() => {
+              if (selectedEventIds.length === upcomingEvents.length) {
+                setSelectedEventIds([]);
+              } else {
+                setSelectedEventIds(upcomingEvents.map(e => e.id!));
+              }
+            }}
+          >
+            <Ionicons 
+              name={selectedEventIds.length === upcomingEvents.length ? "checkbox" : "square-outline"} 
+              size={24} 
+              color={theme.colors.primary} 
+            />
+            <Text style={styles.selectAllText}>Selecionar Todos os Eventos</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {upcomingEvents.length > 0 ? (
         upcomingEvents.map((event) => {
-          const isSelected = selectedEventId === event.id;
+          const isExpanded = expandedEventId === event.id;
+          const isSelected = selectedEventIds.includes(event.id!);
           const eventDate = parseISO(event.event_date);
           
           return (
             <View key={event.id} style={styles.eventGroup}>
-              <TouchableOpacity 
-                style={[styles.eventHeaderRow, isSelected && styles.activeEventHeader]}
-                onPress={() => setSelectedEventId(event.id!)}
-              >
-                <View style={styles.eventDateGroup}>
-                  <Text style={styles.eventDayName}>{format(eventDate, 'eee', { locale: ptBR })}</Text>
-                  <Text style={styles.eventDayNumber}>{format(eventDate, 'dd', { locale: ptBR })}</Text>
-                </View>
-                <View style={styles.eventTitleGroup}>
-                  <Text style={styles.eventTimeText}>{format(eventDate, 'HH:mm', { locale: ptBR })}</Text>
-                  <Text style={styles.eventTitleText}>{event.title}</Text>
-                </View>
-                <Ionicons name={isSelected ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              <View style={[styles.eventHeaderRow, isExpanded && styles.activeEventHeader]}>
+                {isAdminOrLeader && (
+                  <TouchableOpacity 
+                    style={styles.eventCheckbox}
+                    onPress={() => toggleEventSelection(event.id!)}
+                  >
+                    <Ionicons name={isSelected ? "checkbox" : "square-outline"} size={24} color={theme.colors.primary} />
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity 
+                  style={styles.eventHeaderClickable}
+                  onPress={() => setExpandedEventId(event.id!)}
+                >
+                  <View style={styles.eventDateGroup}>
+                    <Text style={styles.eventDayName}>{format(eventDate, 'eee', { locale: ptBR })}</Text>
+                    <Text style={styles.eventDayNumber}>{format(eventDate, 'dd', { locale: ptBR })}</Text>
+                  </View>
+                  <View style={styles.eventTitleGroup}>
+                    <Text style={styles.eventTimeText}>{format(eventDate, 'HH:mm', { locale: ptBR })}</Text>
+                    <Text style={styles.eventTitleText}>{event.title}</Text>
+                  </View>
+                  <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-              {isSelected && (
+              {isExpanded && (
                 <View style={styles.scheduleTable}>
                   <View style={styles.tableHeader}>
                     <Text style={[styles.columnHeader, { width: 120 }]}>Função</Text>
@@ -976,7 +923,37 @@ const styles = StyleSheet.create({
   eventHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  eventCheckbox: {
     padding: 15,
+    paddingRight: 5,
+  },
+  eventHeaderClickable: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+  },
+  selectAllRow: {
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  selectAllText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: theme.colors.text,
+    fontWeight: 'bold',
   },
   activeEventHeader: {
     borderBottomWidth: 1,
