@@ -617,6 +617,9 @@ export default function EscalasTabsScreen() {
                     <Text style={styles.dayHeaderText}>
                       {format(evDate, 'eee', { locale: ptBR }).replace('.', '').substring(0, 3)}
                     </Text>
+                    <Text style={[styles.dayHeaderText, { color: theme.colors.primary, fontWeight: 'bold' }]}>
+                      {format(evDate, 'HH:mm')}
+                    </Text>
                   </View>
                 </View>
               );
