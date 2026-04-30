@@ -46,6 +46,10 @@
       "themeColor": "#121212",
       "backgroundColor": "#121212"
     },
+    "notification": {
+      "icon": "./assets/images/icons/icone-volly-logo.png",
+      "color": "#121212"
+    },
     "plugins": [
       "expo-router",
       [

@@ -94,15 +94,16 @@ async function registerForPushNotificationsAsync() {
       
       token = (await Notifications.getExpoPushTokenAsync({ 
         projectId,
-        // Caso queira adicionar suporte total a Chrome/Safari no futuro, 
-        // adicione sua VAPID Key aqui:
-        // vapidKey: 'SUA_VAPID_KEY'
       })).data;
     } else {
-      console.log('Notificações Push exigem um dispositivo físico ou ambiente Web.');
+      console.log('Notificações Push exigem um dispositivo físico ou configuração VAPID no Web.');
     }
-  } catch (err) {
-    console.error('Erro ao registrar notificações:', err);
+  } catch (err: any) {
+    if (Platform.OS === 'web' && err.message?.includes('vapidPublicKey')) {
+      console.warn('Configuração de Notificações Web Pendente: Para habilitar push no browser, você precisa gerar uma VAPID Key no painel da Expo e adicionar no app.json.');
+    } else {
+      console.error('Erro ao registrar notificações:', err);
+    }
   }
 
   return token;
