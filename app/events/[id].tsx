@@ -378,7 +378,7 @@ export default function EventDetailScreen() {
                         {assigned ? (
                           <View style={[
                             styles.assignedUserCard, 
-                            assigned.status === 'TROCA_SOLICITADA' && { borderColor: theme.colors.error, borderWeight: 1.5, backgroundColor: 'rgba(244, 67, 54, 0.05)' }
+                            assigned.status === 'TROCA_SOLICITADA' && { borderColor: theme.colors.error, borderWidth: 1.5, backgroundColor: 'rgba(244, 67, 54, 0.05)' }
                           ]}>
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>

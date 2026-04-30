@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme, globalStyles } from '../../src/theme';
 import { adminService, Institution } from '../../src/services/adminService';
+import { useAllInstitutions, useCreateInstitution, useUpdateInstitution } from '../../src/hooks/queries/useInstitutions';
 import { CustomModal } from '../../src/components/CustomModal';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useRouter } from 'expo-router';
@@ -11,9 +12,11 @@ import { useRouter } from 'expo-router';
 export default function GestaoInstituicoesScreen() {
   const { user } = useAppStore();
   const router = useRouter();
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  
+  const { data: institutions = [], isLoading, refetch } = useAllInstitutions();
+  const createMutation = useCreateInstitution();
+  const updateMutation = useUpdateInstitution();
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -26,23 +29,7 @@ export default function GestaoInstituicoesScreen() {
   const [adminEmail, setAdminEmail] = useState('');
   const [isSlugManual, setIsSlugManual] = useState(false);
 
-  const loadInstitutions = useCallback(async (silent = false) => {
-    if (!silent) setRefreshing(true);
-    const { data, error } = await adminService.listInstitutions();
-    if (error) {
-      console.error('Instituicoes Load Error:', error);
-      Alert.alert('Erro de Carregamento', error.message || 'Falha ao carregar instituições.');
-    } else if (data) {
-      setInstitutions(data);
-    }
-    if (!silent) setRefreshing(false);
-  }, []);
-
-  useEffect(() => {
-    if (user?.role === 'MASTER') {
-      loadInstitutions();
-    }
-  }, [user, loadInstitutions]);
+  // O React Query cuida do fetch quando user.role === 'MASTER' através das invalidations ou navegação, mas aqui apenas usamos o hook.
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -103,26 +90,20 @@ export default function GestaoInstituicoesScreen() {
         logo_url: currentLogoUrl
       };
 
-      let error;
       if (editingInst) {
-        const res = await adminService.updateInstitution(editingInst.id, payload);
-        error = res.error;
+        await updateMutation.mutateAsync({ id: editingInst.id, updates: payload });
       } else {
-        const res = await adminService.createInstitution(
-          payload.name, 
-          payload.slug, 
-          payload.user_limit, 
-          payload.logo_url,
-          adminEmail.trim()
-        );
-        error = res.error;
+        await createMutation.mutateAsync({ 
+          name: payload.name, 
+          slug: payload.slug, 
+          userLimit: payload.user_limit, 
+          logoUrl: payload.logo_url, 
+          adminEmail: adminEmail.trim() 
+        });
       }
-
-      if (error) throw error;
 
       setModalVisible(false);
       resetForm();
-      loadInstitutions();
     } catch (err: any) {
       Alert.alert('Erro ao Salvar', err.message);
     } finally {
@@ -152,11 +133,10 @@ export default function GestaoInstituicoesScreen() {
 
   const toggleStatus = async (inst: Institution) => {
     const newStatus = !inst.active;
-    const { error } = await adminService.updateInstitution(inst.id, { active: newStatus });
-    if (error) {
+    try {
+      await updateMutation.mutateAsync({ id: inst.id, updates: { active: newStatus } });
+    } catch (error: any) {
       Alert.alert('Erro', 'Falha ao mudar status: ' + error.message);
-    } else {
-      loadInstitutions(true);
     }
   };
 
@@ -275,8 +255,8 @@ export default function GestaoInstituicoesScreen() {
         data={institutions}
         keyExtractor={(item) => item.id}
         renderItem={renderInstitutionCard}
-        refreshing={refreshing}
-        onRefresh={loadInstitutions}
+        refreshing={isLoading}
+        onRefresh={() => refetch()}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
           <View style={globalStyles.center}>

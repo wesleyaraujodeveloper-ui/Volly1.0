@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
-import { useState, useEffect } from 'react';
-import { eventService, Event } from '../../src/services/eventService';
+import { useState } from 'react';
+import { Event } from '../../src/services/eventService';
+import { useUpcomingEventsList, usePastEventsList } from '../../src/hooks/queries/useEvents';
 import { Calendar } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,39 +20,25 @@ export default function EventosScreen() {
   const { user } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('LISTA');
   const [listTab, setListTab] = useState<ListTab>('PROXIMOS');
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   
   const isLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
+  const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
 
-  const loadEvents = async () => {
-    setLoading(true);
-    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+  const isPast = listTab === 'HISTORICO' && !selectedDate;
 
-    if (selectedDate) {
-      const { data } = await eventService.listUpcomingEvents({ 
-        date: selectedDate,
-        institutionId: instId
-      });
-      setEvents(data || []);
-    } else if (listTab === 'PROXIMOS') {
-      const { data } = await eventService.listUpcomingEvents({ 
-        name: search,
-        institutionId: instId
-      });
-      setEvents(data || []);
-    } else {
-      const { data } = await eventService.listPastEvents(10, instId);
-      setEvents(data || []);
-    }
-    setLoading(false);
-  };
+  // React Query Hooks
+  const { data: upcomingEvents = [], isLoading: loadingUpcoming } = useUpcomingEventsList({
+    date: selectedDate || undefined,
+    name: search || undefined,
+    institutionId: instId
+  });
 
-  useEffect(() => {
-    loadEvents();
-  }, [listTab, search, selectedDate]);
+  const { data: pastEvents = [], isLoading: loadingPast } = usePastEventsList(10, instId);
+
+  const events = isPast ? pastEvents : upcomingEvents;
+  const loading = isPast ? loadingPast : loadingUpcoming;
 
   const renderEventItem = ({ item }: { item: any }) => (
     <TouchableOpacity 

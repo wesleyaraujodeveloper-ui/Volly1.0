@@ -20,13 +20,13 @@ export default function TermsScreen() {
         <Text style={styles.updatedText}>Última atualização: 15 de Abril de 2026</Text>
 
         <Text style={styles.paragraph}>
-          Bem-vindo ao <Text style={styles.bold} translate="no" className="notranslate">Volly</Text>. Ao acessar ou usar nosso aplicativo, você concorda em ficar vinculado a estes Termos de Uso. 
+          Bem-vindo ao <Text style={styles.bold}>Volly</Text>. Ao acessar ou usar nosso aplicativo, você concorda em ficar vinculado a estes Termos de Uso. 
           Se você não concordar com alguma parte destes termos, você não poderá acessar o serviço.
         </Text>
 
         <Text style={styles.sectionTitle}>1. Aceitação e Escopo</Text>
         <Text style={styles.paragraph}>
-          Estes Termos de Uso constituem um acordo legalmente vinculativo entre o voluntário (você) e a plataforma <Text translate="no" className="notranslate">Volly</Text>. Destinam-se a regular o uso das ferramentas de agendamento, comunicação e gestão de voluntariado oferecidas pelo aplicativo.
+          Estes Termos de Uso constituem um acordo legalmente vinculativo entre o voluntário (você) e a plataforma <Text>Volly</Text>. Destinam-se a regular o uso das ferramentas de agendamento, comunicação e gestão de voluntariado oferecidas pelo aplicativo.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Uso do Aplicativo</Text>
@@ -36,7 +36,7 @@ export default function TermsScreen() {
         <View style={styles.bulletList}>
           <Text style={styles.bulletItem}>• Fornecer informações precisas durante o seu registro de conta.</Text>
           <Text style={styles.bulletItem}>• Não utilizar a plataforma para fins ilegais, difamatórios ou maliciosos.</Text>
-          <Text style={styles.bulletItem}>• Manter as interações na aba &quot;<Text translate="no" className="notranslate">Volly Connect</Text>&quot; (Mural Social) e nas abas de chat respeitosas com todos os demais voluntários.</Text>
+          <Text style={styles.bulletItem}>• Manter as interações na aba &quot;<Text>Volly Connect</Text>&quot; (Mural Social) e nas abas de chat respeitosas com todos os demais voluntários.</Text>
           <Text style={styles.bulletItem}>• Honrar, na medida do possível, com a disponibilidade e compromissos marcados através das nossas escalas integradas.</Text>
         </View>
 
@@ -47,12 +47,12 @@ export default function TermsScreen() {
 
         <Text style={styles.sectionTitle}>4. Conteúdo Gerado pelo Usuário</Text>
         <Text style={styles.paragraph}>
-          Qualquer texto, foto ou vídeo compartilhado no <Text translate="no" className="notranslate">Volly Connect</Text> ou no ambiente de Chat é considerado &quot;Conteúdo Gerado pelo Usuário&quot;. Nós da equipe do <Text translate="no" className="notranslate">Volly App</Text> não nos responsabilizamos pelo teor desse conteúdo..., garantindo o direito aos administradores e líderes da sua própria equipe apagarem ou moderarem o conteúdo inapto à plataforma.
+          Qualquer texto, foto ou vídeo compartilhado no <Text>Volly Connect</Text> ou no ambiente de Chat é considerado &quot;Conteúdo Gerado pelo Usuário&quot;. Nós da equipe do <Text translate="no" className="notranslate">Volly App</Text> não nos responsabilizamos pelo teor desse conteúdo..., garantindo o direito aos administradores e líderes da sua própria equipe apagarem ou moderarem o conteúdo inapto à plataforma.
         </Text>
 
         <Text style={styles.sectionTitle}>5. Propriedade Intelectual</Text>
         <Text style={styles.paragraph}>
-          Todos os direitos de design, logotipos, arquitetura do software, banco de dados e layout gráfico são propriedade exclusiva do <Text translate="no" className="notranslate">Volly</Text> e não podem ser replicados ou usados de forma comercial sem autorização direta e explícita dos criadores do sistema.
+          Todos os direitos de design, logotipos, arquitetura do software, banco de dados e layout gráfico são propriedade exclusiva do <Text>Volly</Text> e não podem ser replicados ou usados de forma comercial sem autorização direta e explícita dos criadores do sistema.
         </Text>
 
         <Text style={styles.sectionTitle}>6. Disponibilidade de Serviço e Bugs</Text>

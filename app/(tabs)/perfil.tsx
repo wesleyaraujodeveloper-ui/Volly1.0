@@ -4,7 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
-import { availabilityService, UserDepartment } from '../../src/services/availabilityService';
+import { useUserDepartmentsProfile, useUserInstitution } from '../../src/hooks/queries/useProfile';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STRINGS } from '../../src/constants/strings';
@@ -15,11 +15,8 @@ export default function PerfilScreen() {
   const router = useRouter();
   const { user, clearSession, setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
-  const [userDepartments, setUserDepartments] = useState<UserDepartment[]>([]);
-  const [loadingDepts, setLoadingDepts] = useState(true);
-  const [institution, setInstitution] = useState<{ name: string; logo_url: string | null } | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
+  const [modalData, setModalData] = useState<{ title: string; message: string; type: 'info' | 'success' | 'danger'; onConfirm?: () => void }>({ title: '', message: '', type: 'info' });
 
   const showAlert = (title: string, message: string, type: 'info' | 'success' | 'danger' = 'info') => {
     setModalData({ title, message, type });
@@ -35,31 +32,8 @@ export default function PerfilScreen() {
     return null;
   };
 
-  useEffect(() => {
-    loadDepartments();
-    loadInstitution();
-  }, []);
-
-  const loadInstitution = async () => {
-    if (!user?.institution_id) return;
-    const { data } = await supabase
-      .from('institutions')
-      .select('name, logo_url')
-      .eq('id', user.institution_id)
-      .single();
-    if (data) setInstitution(data);
-  };
-
-  const loadDepartments = async () => {
-    try {
-      const { data } = await availabilityService.getUserDepartments();
-      setUserDepartments(data || []);
-    } catch (error) {
-      console.error('Error loading depts:', error);
-    } finally {
-      setLoadingDepts(false);
-    }
-  };
+  const { data: userDepartments = [], isLoading: loadingDepts } = useUserDepartmentsProfile();
+  const { data: institution } = useUserInstitution(user?.institution_id);
 
   const handleLogout = () => {
     setModalData({

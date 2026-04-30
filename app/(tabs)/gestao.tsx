@@ -3,6 +3,8 @@ import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
+import { useVolunteers, useDepartments, useRoles, useLeaderDepartments } from '../../src/hooks/queries/useAdmin';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -13,8 +15,6 @@ export default function GestaoMembrosScreen() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [volunteers, setVolunteers] = useState<Profile[]>([]);
   
   const [activeTab, setActiveTab] = useState<'MEMBROS' | 'EQUIPES' | 'FUNÇÕES'>('MEMBROS');
   const [modalVisible, setModalVisible] = useState(false);
@@ -25,15 +25,22 @@ export default function GestaoMembrosScreen() {
     type: 'info'
   });
 
-  const [departments, setDepartments] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+
+  const { data: volunteers = [], isLoading: loadingVolunteers } = useVolunteers(instId);
+  const { data: departments = [], isLoading: loadingDepts } = useDepartments(instId);
+  const { data: roles = [], isLoading: loadingRoles } = useRoles();
+  const { data: leaderTeamsData = [] } = useLeaderDepartments(user?.id);
+  const leaderTeams = leaderTeamsData.map(d => d.id);
+
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptDesc, setNewDeptDesc] = useState('');
   const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
   const [selectedCoLeaderId, setSelectedCoLeaderId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [leaderTeams, setLeaderTeams] = useState<string[]>([]); 
+  const [searchTerm, setSearchTerm] = useState(''); 
   const [selectedInviteDeptId, setSelectedInviteDeptId] = useState<string | null>(null);
   const [managingTeamProfile, setManagingTeamProfile] = useState<Profile | null>(null);
   const [userDepts, setUserDepts] = useState<string[]>([]);
@@ -42,78 +49,40 @@ export default function GestaoMembrosScreen() {
   const [editingDept, setEditingDept] = useState<any | null>(null);
   const [deptToDelete, setDeptToDelete] = useState<any | null>(null);
 
-  const [roles, setRoles] = useState<any[]>([]);
+
   const [newRoleName, setNewRoleName] = useState('');
   const [selectedDeptIdForRule, setSelectedDeptIdForRule] = useState<string>('');
   
   const [managingRoleProfile, setManagingRoleProfile] = useState<Profile | null>(null);
   const [userAssignedRoles, setUserAssignedRoles] = useState<string[]>([]);
 
-  const loadVolunteers = async (silent: boolean = false) => {
-    if (!silent) setRefreshing(true);
-    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
-    const { data, error } = await adminService.listVolunteers(instId);
-    if (error && !silent) Alert.alert('Erro Membros', error.message);
-    else if (data) setVolunteers(data);
-    if (!silent) setRefreshing(false);
-  };
-
-  const loadDepartments = async (silent: boolean = false) => {
-    if (!silent) setRefreshing(true);
-    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
-    const { data, error } = await adminService.listDepartments(instId);
-    if (error) {
-      console.error('Erro Equipes:', error.message);
-      if (!silent) Alert.alert('Erro ao carregar Equipes', 'Não foi possível carregar a lista.');
-    } else if (data) {
-      setDepartments(data);
-    }
-    if (!silent) setRefreshing(false);
-  };
-
-  const loadRoles = async (silent: boolean = false) => {
-    if (!silent) setRefreshing(true);
-    const { data } = await adminService.listAllRoles();
-    if (data) setRoles(data);
-    if (!silent) setRefreshing(false);
-  };
-
   useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
 
     if (user?.role !== 'VOLUNTÁRIO') {
-      loadVolunteers();
-      loadDepartments();
-      loadRoles();
-
       // Assina múltiplas tabelas para atualização em tempo real
       subscription = adminService.subscribeToAdminChanges(() => {
-        loadVolunteers(true);
-        loadDepartments(true);
-        loadRoles(true);
-        // Atualiza também as equipes que o usuário lidera
-        if (user?.id) {
-          adminService.getLeaderDepartments(user.id).then(({ data }) => {
-            if (data) setLeaderTeams(data.map(d => d.id));
-          });
-        }
+        queryClient.invalidateQueries({ queryKey: ['volunteers'] });
+        queryClient.invalidateQueries({ queryKey: ['departments'] });
+        queryClient.invalidateQueries({ queryKey: ['roles'] });
+        queryClient.invalidateQueries({ queryKey: ['leaderDepartments'] });
       });
     }
     
-    if (user?.id && user?.role !== 'VOLUNTÁRIO') {
-       adminService.getLeaderDepartments(user.id).then(({ data }) => {
-         if (data) {
-           const ids = data.map(d => d.id);
-           setLeaderTeams(ids);
-           if (ids.length === 1) setSelectedInviteDeptId(ids[0]);
-         }
-       });
+    if (user?.id && user?.role !== 'VOLUNTÁRIO' && leaderTeams.length === 1) {
+       setSelectedInviteDeptId(leaderTeams[0]);
     }
 
     return () => {
       if (subscription) subscription.unsubscribe();
     };
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.role, leaderTeams.length, queryClient]);
+
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['volunteers'] });
+    queryClient.invalidateQueries({ queryKey: ['departments'] });
+    queryClient.invalidateQueries({ queryKey: ['roles'] });
+  };
 
   const handleEmailChange = (text: string) => {
     let value = text.trim().toLowerCase();
@@ -184,7 +153,7 @@ export default function GestaoMembrosScreen() {
       setModalVisible(true);
       setEmail(''); setName('');
       if (leaderTeams.length !== 1) setSelectedInviteDeptId(null);
-      loadVolunteers();
+      refreshAll();
     }
     setLoading(false);
   };
@@ -200,7 +169,7 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro DB', error.message);
     else {
       setNewDeptName(''); setNewDeptDesc(''); setSelectedLeaderId(null); setSelectedCoLeaderId(null);
-      loadDepartments();
+      refreshAll();
     }
   };
 
@@ -215,7 +184,7 @@ export default function GestaoMembrosScreen() {
         setLoading(false);
         if (error) Alert.alert('Erro', error.message);
         else {
-          loadDepartments();
+          refreshAll();
           setModalVisible(false);
         }
       }
@@ -233,7 +202,7 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
     else {
       setDeptChangingLeader(null);
-      loadDepartments();
+      refreshAll();
     }
   };
   
@@ -247,7 +216,7 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
     else {
       setDeptChangingCoLeader(null);
-      loadDepartments();
+      refreshAll();
     }
   };
 
@@ -260,7 +229,7 @@ export default function GestaoMembrosScreen() {
         Alert.alert('Erro ao Excluir', error.message);
       } else {
         setDeptToDelete(null);
-        loadDepartments();
+        refreshAll();
       }
     } catch (err: any) {
       Alert.alert('Erro', err.message);
@@ -277,7 +246,7 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
     else {
       setEditingDept(null);
-      loadDepartments();
+      refreshAll();
     }
   };
 
@@ -315,7 +284,7 @@ export default function GestaoMembrosScreen() {
       await Promise.all(promises);
       
       setManagingTeamProfile(null);
-      loadVolunteers();
+      refreshAll();
     } catch (error) {
       console.error('Save teams error:', error);
       Alert.alert('Erro', 'Não foi possível salvar todos os vínculos.');
@@ -347,7 +316,7 @@ export default function GestaoMembrosScreen() {
       Alert.alert('Erro ao criar Função', error.message);
     } else {
       setNewRoleName('');
-      loadRoles();
+      refreshAll();
     }
   };
 
@@ -361,7 +330,7 @@ export default function GestaoMembrosScreen() {
       Alert.alert('Erro', error.message || 'Falha ao alterar cargo.');
     } else {
       setSelectedProfile(null);
-      loadVolunteers();
+      refreshAll();
     }
   };
 
