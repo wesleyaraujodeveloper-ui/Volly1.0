@@ -9,6 +9,14 @@ import { CustomModal } from '../../src/components/CustomModal';
 import { availabilityService, Availability, Absence, UserDepartment } from '../../src/services/availabilityService';
 import { eventService, Event } from '../../src/services/eventService';
 import { scheduleService } from '../../src/services/scheduleService';
+import { useQueryClient } from '@tanstack/react-query';
+import { 
+  useUserDepartments, useUserAbsences, useUpcomingEventsByDept, 
+  useEventAvailability, useTeamAvailability, useEventSchedules, 
+  useMonthlyData, useUpdateAvailability, useAddAbsence, 
+  useRemoveAbsence, useAutoGenerateSchedule, useCompleteSchedule, 
+  useRequestSwap 
+} from '../../src/hooks/queries/useSchedules';
 import { supabase } from '../../src/services/supabase';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,191 +28,77 @@ const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', '
 export default function EscalasTabsScreen() {
   const { user, providerToken } = useAppStore();
   const [activeTab, setActiveTab] = useState<subTab>('DISPONIBILIDADE');
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
-  // Estados para Contexto (Departamentos)
-  const [departments, setDepartments] = useState<UserDepartment[]>([]);
+  const queryClient = useQueryClient();
+
+  // Contexto
+  const { data: departments = [], isLoading: loadingDepts } = useUserDepartments();
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
 
-  // Estados para Disponibilidade
-  const [monthEvents, setMonthEvents] = useState<Event[]>([]);
-  const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
-  const [teamAvailabilities, setTeamAvailabilities] = useState<any[]>([]);
-  const [userAbsences, setUserAbsences] = useState<Absence[]>([]);
+  useEffect(() => {
+    if (departments.length > 0 && !selectedDeptId) {
+      setSelectedDeptId(departments[0].department_id);
+    }
+  }, [departments]);
 
-  // Estados para Escalas (Aba 2)
-  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  // Consultas
+  const { data: userAbsences = [] } = useUserAbsences();
+  const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
+  const monthEvents = upcomingEvents;
+
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [eventSchedules, setEventSchedules] = useState<any[]>([]);
 
-  // Estados para Escala Mensal (Aba 3)
-  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
-  const [monthlyEvents, setMonthlyEvents] = useState<Event[]>([]);
-  const [allMonthlySchedules, setAllMonthlySchedules] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
+  useEffect(() => {
+    if (upcomingEvents.length > 0 && !selectedEventId) {
+      setSelectedEventId(upcomingEvents[0].id!);
+    } else if (upcomingEvents.length === 0) {
+      setSelectedEventId(null);
+    }
+  }, [upcomingEvents]);
 
-  // Estado para Modal de Ausência
+  const eventIds = upcomingEvents.map((e: any) => e.id!);
+  
+  const { data: serverAvailabilities = [] } = useEventAvailability(eventIds);
+  const { data: teamAvailabilities = [] } = useTeamAvailability(selectedDeptId, eventIds);
+  const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
+
+  useEffect(() => {
+    setEventAvailabilities(serverAvailabilities);
+  }, [serverAvailabilities]);
+
+  const { data: eventSchedules = [] } = useEventSchedules(selectedEventId);
+
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const { data: monthlyData, isLoading: loadingMonthly } = useMonthlyData(selectedDeptId, selectedMonth);
+  const monthlyEvents = monthlyData?.events || [];
+  const allMonthlySchedules = monthlyData?.schedules || [];
+  const roles = monthlyData?.roles || [];
+
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [newAbsence, setNewAbsence] = useState({ start_date: '', end_date: '', description: '' });
 
-  // Estados para Solicitação de Troca
   const [swapModalVisible, setSwapModalVisible] = useState(false);
   const [swapReason, setSwapReason] = useState('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
+  const loading = loadingDepts || loadingEvents;
   const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
+  const updateAvailabilityMutation = useUpdateAvailability();
+  const addAbsenceMutation = useAddAbsence();
+  const removeAbsenceMutation = useRemoveAbsence();
+  const autoGenerateScheduleMutation = useAutoGenerateSchedule();
+  const completeScheduleMutation = useCompleteSchedule();
+  const requestSwapMutation = useRequestSwap();
 
-  useEffect(() => {
-    if (selectedDeptId) {
-      loadUpcomingEvents();
-    }
-  }, [selectedDeptId]);
-
-  // Adiciona a assinatura de tempo real para atualizações de disponibilidade
   useEffect(() => {
     if (activeTab === 'DISPONIBILIDADE' && selectedDeptId) {
       const subscription = availabilityService.subscribeToAvailabilities(() => {
-        // Quando alguém atualizar a disponibilidade, recarregamos sutilmente os dados da equipe
-        if (monthEvents.length > 0) {
-          const eventIds = monthEvents.map(e => e.id!);
-          availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds).then(res => {
-            if (res.data) setTeamAvailabilities(res.data);
-          });
-        }
+        queryClient.invalidateQueries({ queryKey: ['teamAvailability'] });
       });
-
-      return () => {
-        subscription.unsubscribe();
-      };
+      return () => subscription.unsubscribe();
     }
-  }, [activeTab, selectedDeptId, monthEvents]);
-
-  useEffect(() => {
-    if (selectedEventId) {
-      loadEventSchedules();
-    }
-  }, [selectedEventId]);
-
-  useEffect(() => {
-    if (activeTab === 'MENSAL' && selectedDeptId && selectedMonth) {
-      loadMonthlyData();
-    }
-  }, [activeTab, selectedMonth, selectedDeptId]);
-
-  useEffect(() => {
-    setSelectedMonth(new Date());
-  }, []);
-
-  const loadInitialData = async () => {
-    setLoading(true);
-    try {
-      const { data: depts } = await availabilityService.getUserDepartments();
-      if (depts && depts.length > 0) {
-        setDepartments(depts);
-        const initialDeptId = depts[0].department_id;
-        setSelectedDeptId(initialDeptId);
-      }
-      
-      const { data: abs } = await availabilityService.getAbsences();
-      setUserAbsences(abs || []);
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUpcomingEvents = async () => {
-    if (!selectedDeptId) return;
-    
-    try {
-      // 1. Busca os próximos eventos do departamento
-      const { data: events } = await eventService.listUpcomingEvents({ 
-        department_id: selectedDeptId 
-      });
-      
-      const eventList = events || [];
-      setUpcomingEvents(eventList);
-      setMonthEvents(eventList); // Sincroniza a aba de disponibilidade
-
-      // 2. Se houver eventos, busca as disponibilidades
-      if (eventList.length > 0) {
-        const eventIds = eventList.map(e => e.id!);
-        
-        // Disponibilidade Própria
-        const { data: avail } = await availabilityService.getEventAvailability(eventIds);
-        setEventAvailabilities(avail || []);
-
-        // Busca da Equipe inteira
-        const { data: tAvail } = await availabilityService.getEventAvailabilitiesForTeam(selectedDeptId, eventIds);
-        setTeamAvailabilities(tAvail || []);
-        
-        // Seleciona o primeiro evento por padrão para a aba de Escalas
-        setSelectedEventId(eventList[0].id!);
-      } else {
-        setEventAvailabilities([]);
-        setTeamAvailabilities([]);
-        setSelectedEventId(null);
-      }
-    } catch (error) {
-      console.error('Error loading events:', error);
-    }
-  };
-
-  const loadEventSchedules = async () => {
-    try {
-      const { data } = await scheduleService.listSchedulesByEvent(selectedEventId!);
-      setEventSchedules(data || []);
-    } catch (error) {
-      console.error('Error loading schedules:', error);
-    }
-  };
-
-  const loadMonthlyData = async () => {
-    if (!selectedDeptId || !selectedMonth) return;
-    setLoading(true);
-    try {
-      const start = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).toISOString().split('T')[0];
-      const end = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).toISOString().split('T')[0];
-
-      // 1. Buscar roles do depto
-      const { data: deptRoles } = await supabase.from('roles').select('*').eq('department_id', selectedDeptId);
-      setRoles(deptRoles || []);
-
-      // 2. Buscar eventos no intervalo
-      const { data: events } = await eventService.listUpcomingEvents({ date: undefined }); // Limpa o "upcoming" e usa range?
-      // Melhor usar filtro de data customizado
-      const { data: mEvents } = await supabase
-        .from('events')
-        .select('*, event_departments!inner(*)')
-        .eq('event_departments.department_id', selectedDeptId)
-        .gte('event_date', `${start}T00:00:00Z`)
-        .lte('event_date', `${end}T23:59:59Z`)
-        .order('event_date', { ascending: true });
-      
-      setMonthlyEvents(mEvents || []);
-
-      // 3. Buscar TODAS as escalas desses eventos
-      if (mEvents && mEvents.length > 0) {
-        const { data: mSchedules } = await supabase
-          .from('schedules')
-          .select('*, profiles(full_name), roles(id, name)')
-          .in('event_id', mEvents.map((e: any) => e.id));
-        setAllMonthlySchedules(mSchedules || []);
-      } else {
-        setAllMonthlySchedules([]);
-      }
-    } catch (error) {
-      console.error('Error monthly data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [activeTab, selectedDeptId]);
 
   const changeMonth = (offset: number) => {
     if (!selectedMonth) return;
@@ -231,10 +125,117 @@ export default function EscalasTabsScreen() {
   const handleSaveAvailability = async () => {
     setSaving(true);
     try {
-      const promises = eventAvailabilities.map(a => 
-        availabilityService.updateEventAvailability(a.event_id, a.periods, a.is_available)
-      );
-      await Promise.all(promises);
+      await updateAvailabilityMutation.mutateAsync({ eventAvailabilities });
+      showAlert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!', 'success');
+    } catch (error) {
+      showAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const parseBrazilianDate = (ptStr: string) => {
+    const parts = ptStr.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return ptStr;
+  };
+
+  const handleAddAbsence = async () => {
+    const startDb = parseBrazilianDate(newAbsence.start_date);
+    const endDb = parseBrazilianDate(newAbsence.end_date);
+
+    if (!startDb || !endDb || startDb.length < 10) {
+      showAlert('Erro', 'Por favor, preencha as datas completamente (DD/MM/AAAA).', 'danger');
+      return;
+    }
+    try {
+      await addAbsenceMutation.mutateAsync({ startDb, endDb, description: newAbsence.description });
+      setShowAbsenceModal(false);
+      setNewAbsence({ start_date: '', end_date: '', description: '' });
+    } catch (error) {
+      showAlert('Erro', 'Erro ao adicionar ausência.', 'danger');
+    }
+  };
+
+  const handleDateMask = (text: string) => {
+    let cleaned = ('' + text).replace(/\D/g, '');
+    let match = cleaned.match(/^(\d{0,2})(\d{0,2})(\d{0,4})$/);
+    if (!match) return cleaned.substring(0, 8);
+    let formatted = match[1];
+    if (match[2]) formatted += '/' + match[2];
+    if (match[3]) formatted += '/' + match[3];
+    return formatted;
+  };
+  
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalData, setModalData] = useState({ title: '', message: '', type: 'info' as 'info' | 'success' | 'danger' });
+
+  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'danger' = 'info') => {
+    setModalData({ title, message, type });
+    setModalVisible(true);
+  };
+
+  const handleAutoGenerateScale = async () => {
+    if (!selectedEventId || !selectedDeptId) return;
+    setSaving(true);
+    try {
+      const data = await autoGenerateScheduleMutation.mutateAsync({ eventId: selectedEventId, deptId: selectedDeptId, token: providerToken });
+      showAlert('Sucesso', `Escalas sugeridas com sucesso! ${data?.length || 0} voluntários alocados.`, 'success');
+    } catch (error: any) {
+      showAlert('Atenção', error.message, 'info');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompleteScale = async () => {
+    if (!selectedEventId) return;
+    setSaving(true);
+    try {
+      await completeScheduleMutation.mutateAsync(selectedEventId);
+      showAlert('Sucesso', 'Escalas concluídas e voluntários notificados!', 'success');
+    } catch (error) {
+      showAlert('Erro', 'Erro ao concluir escalas.', 'danger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRequestSwap = async () => {
+    if (!selectedScheduleId) return;
+    setSaving(true);
+    try {
+      await requestSwapMutation.mutateAsync({ scheduleId: selectedScheduleId, reason: swapReason });
+      showAlert('Solicitação Enviada', 'Seu líder foi notificado sobre a sua necessidade de troca.', 'success');
+      setSwapModalVisible(false);
+      setSwapReason('');
+    } catch (error: any) {
+      showAlert('Erro', 'Não foi possível enviar a solicitação: ' + error.message, 'danger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setAvailabilityStatus = (eventId: string, status: boolean) => {
+    const existing = eventAvailabilities.find(a => a.event_id === eventId);
+    if (existing) {
+      setEventAvailabilities(prev => prev.map(a => 
+        a.event_id === eventId ? { ...a, is_available: status } : a
+      ));
+    } else {
+      setEventAvailabilities(prev => [...prev, { 
+        user_id: user?.id!, 
+        event_id: eventId, 
+        periods: [], 
+        is_available: status 
+      }]);
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    setSaving(true);
+    try {
+      await updateAvailabilityMutation.mutateAsync({ eventAvailabilities });
       showAlert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!', 'success');
     } catch (error) {
       showAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');
@@ -474,7 +475,7 @@ export default function EscalasTabsScreen() {
               <Text style={styles.labelSmall}>{absence.description || 'Período de ausência'}</Text>
               <Text style={styles.dateText}>{new Date(absence.start_date).toLocaleDateString(undefined, { timeZone: 'UTC' })} - {new Date(absence.end_date).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
             </View>
-            <TouchableOpacity onPress={() => availabilityService.removeAbsence(absence.id!).then(loadInitialData)}>
+            <TouchableOpacity onPress={() => removeAbsenceMutation.mutate(absence.id!)}>
               <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
             </TouchableOpacity>
           </View>

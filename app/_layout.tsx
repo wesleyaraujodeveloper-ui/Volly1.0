@@ -7,6 +7,16 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/services/supabase';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useFonts } from 'expo-font';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutos de cache
+      retry: 2,
+    },
+  },
+});
 
 export default function RootLayout() {
   const [isMounted, setIsMounted] = useState(false);
@@ -165,10 +175,12 @@ export default function RootLayout() {
         </Head>
       )}
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </QueryClientProvider>
     </>
   );
 }

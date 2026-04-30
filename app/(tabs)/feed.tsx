@@ -14,17 +14,13 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
 import { notificationService } from '../../src/services/notificationService';
 import { supabase } from '../../src/services/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { useFeedPosts, useGlobalSchedulePanorama, useNextUserEvent, useNextGlobalEvent, useRecommendedSongs, useCreatePost, useDeletePost, useToggleLike } from '../../src/hooks/queries/useFeed';
 
 export default function FeedScreen() {
   const { user } = useAppStore();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [nextEvent, setNextEvent] = useState<any>(null);
-  const [nextGlobalEvent, setNextGlobalEvent] = useState<any>(null);
   const [isChatActive, setIsChatActive] = useState(false);
-  const [songs, setSongs] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<{uri: string, base64: string} | null>(null);
   const [isPosting, setIsPosting] = useState(false);
@@ -38,8 +34,6 @@ export default function FeedScreen() {
 
   // Estados do Panorama
   const [feedMode, setFeedMode] = useState<'MURAL' | 'PANORAMA'>('MURAL');
-  const [panoramaData, setPanoramaData] = useState<any[]>([]);
-  const [loadingPanorama, setLoadingPanorama] = useState(false);
   
   // Estados de Filtro para MASTER
   const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
@@ -52,83 +46,54 @@ export default function FeedScreen() {
   // Controle de Hidratação
   const [isMounted, setIsMounted] = useState(false);
 
-  const loadData = useCallback(() => {
-    if (!user) return;
-    
-    // Inicia o carregamento das seções de forma não bloqueante
-    // Se for MASTER, o institution_id é nulo, permitindo ver tudo nas views globais
-    const instId = user.access_level === 'MASTER' ? null : user.institution_id;
+  const queryClient = useQueryClient();
+  const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+  const feedInstId = selectedInstitutionId || instId;
 
-    feedService.getGlobalSchedulePanorama(instId).then(res => {
-      setPanoramaData(res.data || []);
-    });
-    
-    // Inicia o carregamento das seções de forma não bloqueante
-    feedService.getNextUserEvent(user.id).then(nextEv => {
-      setNextEvent(nextEv.data);
-      const eventData = nextEv.data?.events as any;
-      if (eventData) {
-        setIsChatActive(chatService.isChatActive(eventData.event_date, eventData.end_date));
-      } else {
-        setIsChatActive(false);
-      }
-    });
+  const { data: posts = [], isLoading: loadingPosts, isFetching: isFetchingPosts, refetch: refetchPosts } = useFeedPosts(feedInstId ?? null);
+  const { data: panoramaData = [], isLoading: loadingPanorama } = useGlobalSchedulePanorama(instId ?? null);
+  const { data: nextEvent } = useNextUserEvent(user?.id);
+  const { data: nextGlobalEvent } = useNextGlobalEvent(instId ?? null);
+  const { data: songs = [] } = useRecommendedSongs(10);
 
-    feedService.getNextGlobalEvent(instId).then(nextGlobalEv => {
-      setNextGlobalEvent(nextGlobalEv.data);
-    });
+  const createPostMutation = useCreatePost();
+  const deletePostMutation = useDeletePost();
+  const toggleLikeMutation = useToggleLike();
 
-    feedService.getRecommendedSongs(10).then(recommendedSongs => {
-      setSongs(recommendedSongs.data || []);
-    });
+  const loading = loadingPosts;
+  const refreshing = isFetchingPosts;
 
-    feedService.listPosts(selectedInstitutionId || instId).then(socialPosts => {
-      setPosts(socialPosts.data || []);
-      // Removemos o loading global somente após o carregamento principal do feed (posts)
-      setLoading(false);
-      setRefreshing(false);
-    });
-
-    if (user.role === 'MASTER' && allInstitutions.length === 0) {
+  useEffect(() => {
+    setIsMounted(true);
+    if (user?.role === 'MASTER' && allInstitutions.length === 0) {
       const { adminService } = require('../../src/services/adminService');
       adminService.listInstitutions().then((res: any) => {
         setAllInstitutions(res.data || []);
       });
     }
-  }, [user, selectedInstitutionId]);
+  }, [user]);
+
+  useEffect(() => {
+    if (nextEvent?.events) {
+      const eventData = nextEvent.events as any;
+      setIsChatActive(chatService.isChatActive(eventData.event_date, eventData.end_date));
+    } else {
+      setIsChatActive(false);
+    }
+  }, [nextEvent]);
 
   useEffect(() => {
     if (user) {
-      setLoading(true);
-      loadData();
+      notificationService.getUnreadCount(user.id).then(res => setUnreadCount(res.count || 0));
 
-      // Busca contagem inicial de notificações
-      notificationService.getUnreadCount(user.id).then(res => {
-        setUnreadCount(res.count || 0);
-      });
-
-      // Ouvinte para notificações em tempo real
       const notifSubscription = supabase
         .channel('unread_count')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'notifications', 
-          filter: `user_id=eq.${user.id}` 
-        }, () => {
-          notificationService.getUnreadCount(user.id).then(res => {
-            setUnreadCount(res.count || 0);
-          });
-        })
-        .subscribe();
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+          notificationService.getUnreadCount(user.id).then(res => setUnreadCount(res.count || 0));
+        }).subscribe();
 
-      // Configura o ouvinte para atualizar posts, curtidas e comentários em tempo real
       const subscription = feedService.subscribeToFeed(() => {
-        // Atualiza a lista de forma silenciosa para não travar a tela
-        const instId = user.access_level === 'MASTER' ? null : user.institution_id;
-        feedService.listPosts(instId).then(socialPosts => {
-          setPosts(socialPosts.data || []);
-        });
+        queryClient.invalidateQueries({ queryKey: ['feedPosts'] });
       });
 
       return () => {
@@ -136,26 +101,20 @@ export default function FeedScreen() {
         notifSubscription.unsubscribe();
       };
     }
-  }, [loadData, user]);
+  }, [user]);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    // Sincroniza os comentários do modal com o tempo real disparado nas atualizações do feed
     if (activeCommentPost) {
-      feedService.getComments(activeCommentPost.id).then(res => {
-        setPostComments(res.data || []);
-      });
+      feedService.getComments(activeCommentPost.id).then(res => setPostComments(res.data || []));
     }
   }, [posts, activeCommentPost]);
 
-
-
   const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+    refetchPosts();
+    queryClient.invalidateQueries({ queryKey: ['panorama'] });
+    queryClient.invalidateQueries({ queryKey: ['nextUserEvent'] });
+    queryClient.invalidateQueries({ queryKey: ['nextGlobalEvent'] });
+    queryClient.invalidateQueries({ queryKey: ['recommendedSongs'] });
   };
 
   const handleImagePick = async () => {
@@ -237,21 +196,16 @@ export default function FeedScreen() {
         imageUrl = uploadRes.publicUrl;
       }
 
-      const { error } = await feedService.createPost(
-      user.id, 
-      newPostContent.trim(), 
-      imageUrl || undefined, 
-      user.institution_id,
-      user.role === 'MASTER' ? postVisibility : 'INTERNAL'
-    );  
+      await createPostMutation.mutateAsync({
+        userId: user.id, 
+        content: newPostContent.trim(), 
+        imageUrl: imageUrl || undefined, 
+        institutionId: user.institution_id,
+        visibility: user.role === 'MASTER' ? postVisibility : 'INTERNAL'
+      });
       
-      if (!error) {
-        setNewPostContent('');
-        setSelectedImage(null);
-        loadData();
-      } else {
-        throw error;
-      }
+      setNewPostContent('');
+      setSelectedImage(null);
     } catch (error: any) {
       console.error('Error creating post:', error);
       Alert.alert('Erro', error.message || 'Falha ao criar postagem.');
@@ -262,8 +216,7 @@ export default function FeedScreen() {
 
   const handleLike = async (postId: string) => {
     if (!user) return;
-    await feedService.toggleLike(postId, user.id);
-    loadData();
+    toggleLikeMutation.mutate({ postId, userId: user.id });
   };
 
   const openComments = async (post: any) => {
@@ -289,7 +242,7 @@ export default function FeedScreen() {
       const res = await feedService.getComments(activeCommentPost.id);
       setPostComments(res.data || []);
       setNewCommentText('');
-      loadData(); // To update the comment count on the feed background
+      queryClient.invalidateQueries({ queryKey: ['feedPosts'] }); // To update the comment count on the feed background
     } else {
       Alert.alert('Erro', 'Falha ao enviar comentário.');
     }
@@ -305,9 +258,7 @@ export default function FeedScreen() {
   const confirmDeletePost = async () => {
     if (!postToDelete) return;
     try {
-      const { error } = await feedService.deletePost(postToDelete);
-      if (error) throw error;
-      loadData();
+      await deletePostMutation.mutateAsync(postToDelete);
     } catch (error: any) {
       Alert.alert(STRINGS.common.error, 'Não foi possível excluir a postagem.');
       console.error('Delete post error:', error);

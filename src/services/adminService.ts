@@ -91,7 +91,7 @@ export const adminService = {
           body: {
             email: cleanEmail,
             name: name,
-            inviteUrl: 'https://volly-app-nu.vercel.app'
+            inviteUrl: 'https://vollyconnect.com'
           }
         });
 
