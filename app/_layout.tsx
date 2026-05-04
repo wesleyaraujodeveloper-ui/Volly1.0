@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const [isMounted, setIsMounted] = useState(false);
   const [fontsLoaded] = useFonts({
-    'CreamCake': require('../assets/fonts/Cream Cake.otf'),
+    'CreamCake': require('../assets/fonts/CreamCake.otf'),
   });
 
   useEffect(() => {

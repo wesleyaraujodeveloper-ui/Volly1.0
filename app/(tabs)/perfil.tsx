@@ -25,10 +25,10 @@ export default function PerfilScreen() {
 
   const getTeamIcon = (name: string) => {
     const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (normalized.includes('streaming')) return require('../../assets/images/icons/Streaming.png');
-    if (normalized.includes('iluminacao')) return require('../../assets/images/icons/Iluminação.png');
-    if (normalized.includes('projecao')) return require('../../assets/images/icons/Projeção.png');
-    if (normalized.includes('audio')) return require('../../assets/images/icons/Tecnica de Audio.png');
+    if (normalized.includes('streaming')) return require('../../assets/images/icons/streaming.png');
+    if (normalized.includes('iluminacao')) return require('../../assets/images/icons/iluminacao.png');
+    if (normalized.includes('projecao')) return require('../../assets/images/icons/projecao.png');
+    if (normalized.includes('audio')) return require('../../assets/images/icons/audio.png');
     return null;
   };
 
