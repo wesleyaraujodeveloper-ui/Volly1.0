@@ -579,6 +579,10 @@ export default function FeedScreen() {
               </ScrollView>
             )}
 
+            {renderNextMission()}
+            {renderNextGlobalEvent()}
+            {renderRecommendedSongs()}
+
             <View style={styles.postInputCard}>
               <View style={styles.postInputHeader}>
                 <Image 
