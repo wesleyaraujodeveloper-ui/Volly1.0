@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 import { supabase } from '../services/supabase';
 import { useAppStore } from '../store/useAppStore';
 
+import { useRouter } from 'expo-router';
+
 // Configuração do comportamento das notificações quando o app está aberto
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -21,16 +23,11 @@ export function useNotifications() {
   const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
   const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
   const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const router = useRouter();
   
   const { user } = useAppStore();
 
   useEffect(() => {
-    // No Expo Go (dispositivos móveis), o sistema de notificações pode causar crash no SDK 53
-    // Permitimos no Web e em builds nativos reais.
-    if (Constants.appOwnership === 'expo' && Platform.OS !== 'web') {
-      console.log('Notificações desativadas no Expo Go para evitar crash (SDK 53). No Web está liberado.');
-    }
-
     if (user?.id) {
       registerForPushNotificationsAsync().then(token => {
         if (token) {
@@ -51,7 +48,14 @@ export function useNotifications() {
       });
 
       responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('User interacted with notification:', response);
+        const data = response.notification.request.content.data;
+        
+        // Deep Linking: Navegar para a tela correta baseada no dado da notificação
+        if (data?.screen && data?.related_id) {
+          if (data.screen === 'Escalas' || data.screen === 'Eventos') {
+            router.push(`/events/${data.related_id}`);
+          }
+        }
       });
 
       return () => {
