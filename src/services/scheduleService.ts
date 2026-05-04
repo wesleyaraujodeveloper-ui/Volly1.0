@@ -131,13 +131,19 @@ export const scheduleService = {
     const start = startOfMonth(new Date(targetDate)).toISOString();
     const end = endOfMonth(new Date(targetDate)).toISOString();
 
-    // 1. Buscar todos os voluntários do departamento
-    const { data: volunteers, error: volErr } = await supabase
+    // 1. Buscar todos os voluntários do departamento (incluindo cargo)
+    const { data: rawVolunteers, error: volErr } = await supabase
       .from('user_departments')
-      .select('user_id, profiles(full_name, email)')
+      .select('user_id, profiles(full_name, email, role)')
       .eq('department_id', departmentId);
 
     if (volErr) return { error: volErr };
+
+    // Bloqueio: Admin e Master não são escalados
+    const volunteers = rawVolunteers.filter(v => {
+      const role = (v.profiles as any)?.role;
+      return role !== 'ADMIN' && role !== 'MASTER';
+    });
 
     // 2. Contar as escalas de cada voluntário no mês alvo
     const { data: monthlySchedules, error: schErr } = await supabase
