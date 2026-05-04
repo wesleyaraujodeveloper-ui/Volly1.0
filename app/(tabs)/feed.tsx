@@ -700,7 +700,7 @@ export default function FeedScreen() {
               <EmptyState 
                 title={STRINGS.feed.emptyState}
                 description={STRINGS.feed.emptyStateSub}
-                image={require('../../assets/images/illustrations/empty_illustration_v4.png')}
+                image={require('../../assets/empty.png')}
               />
             )}
 
