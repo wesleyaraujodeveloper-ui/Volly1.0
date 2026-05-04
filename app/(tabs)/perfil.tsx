@@ -5,7 +5,7 @@ import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
 import { useUserDepartmentsProfile, useUserInstitution } from '../../src/hooks/queries/useProfile';
-import { Ionicons } from '@expo/vector-icons';
+import { User, Users, Bell, ShieldCheck, FileText, SignOut, CaretRight } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STRINGS } from '../../src/constants/strings';
 import { CustomModal } from '../../src/components/CustomModal';
@@ -74,7 +74,7 @@ export default function PerfilScreen() {
               {user?.avatar_url ? (
                 <Image source={{ uri: user.avatar_url }} style={styles.avatarImage} />
               ) : (
-                <Ionicons name="person" size={50} color={theme.colors.primary} />
+                <User size={50} color={theme.colors.primary} weight="fill" />
               )}
            </View>
            <View style={styles.roleBadge}>
@@ -111,7 +111,7 @@ export default function PerfilScreen() {
                         {teamIcon ? (
                           <Image source={teamIcon} style={styles.teamIconImage} />
                         ) : (
-                          <Ionicons name="people" size={24} color={theme.colors.primary} />
+                          <Users size={24} color={theme.colors.primary} weight="regular" />
                         )}
                       </View>
                       <Text style={styles.teamNameText} numberOfLines={1}>
@@ -134,25 +134,25 @@ export default function PerfilScreen() {
         <Text style={styles.sectionTitle}>Configurações</Text>
         
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
-          <Ionicons name="notifications-outline" size={24} color={theme.colors.text} />
+          <Bell size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Notificações</Text>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+          <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
-          <Ionicons name="shield-checkmark-outline" size={24} color={theme.colors.text} />
+          <ShieldCheck size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Privacidade</Text>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+          <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
-          <Ionicons name="document-text-outline" size={24} color={theme.colors.text} />
+          <FileText size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Termos de Uso</Text>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+          <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#F44336" />
+          <SignOut size={24} color="#F44336" weight="bold" />
           <Text style={[styles.menuItemText, { color: '#F44336' }]}>Sair da Conta</Text>
         </TouchableOpacity>
       </View>

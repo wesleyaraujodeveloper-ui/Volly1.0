@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { supabase } from '../../src/services/supabase';
-import { Ionicons } from '@expo/vector-icons';
+import { GoogleLogo } from 'phosphor-react-native';
 
 // Inicia o browser para os provedores de Auth
 WebBrowser.maybeCompleteAuthSession();
@@ -164,7 +164,7 @@ export default function LoginScreen() {
              </View>
           ) : (
             <>
-              <Ionicons name="logo-google" size={20} color="#FFFFFF" style={styles.icon} />
+              <GoogleLogo size={20} color="#FFFFFF" weight="bold" style={styles.icon} />
               <Text style={styles.buttonText}>Entrar com Google</Text>
             </>
           )}

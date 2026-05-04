@@ -1,7 +1,25 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform, Modal, KeyboardAvoidingView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { globalStyles, theme } from '../../src/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { 
+  Bell, 
+  ChatTeardropDots, 
+  House, 
+  CalendarBlank, 
+  Camera, 
+  Globe, 
+  PaperPlaneTilt, 
+  Heart, 
+  ChatCircleText, 
+  Trash, 
+  CaretRight, 
+  Users, 
+  MusicNotes, 
+  YoutubeLogo, 
+  User,
+  XCircle,
+  X
+} from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useState, useEffect, useCallback } from 'react';
 import { feedService } from '../../src/services/feedService';
@@ -298,7 +316,7 @@ export default function FeedScreen() {
           onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications-outline" size={26} color={theme.colors.text} />
+          <Bell size={26} color={theme.colors.text} weight="regular" />
           {unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -311,7 +329,7 @@ export default function FeedScreen() {
             <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
+              <User size={20} color={theme.colors.textSecondary} />
             </View>
           )}
         </View>
@@ -340,12 +358,12 @@ export default function FeedScreen() {
           
           <View style={styles.missionFooter}>
             <View style={styles.deptInfo}>
-              <Ionicons name="people-outline" size={14} color={theme.colors.textSecondary} />
+              <Users size={14} color={theme.colors.textSecondary} weight="regular" />
               <Text style={styles.deptName}>
                 {event.event_departments?.[0]?.departments?.name || 'Equipe Principal'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
+            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
           </View>
         </TouchableOpacity>
       </View>
@@ -363,7 +381,11 @@ export default function FeedScreen() {
             onPress={() => song.youtube ? Linking.openURL(song.youtube) : song.spotify ? Linking.openURL(song.spotify) : null}
           >
             <View style={styles.songIconBox}>
-              <Ionicons name={song.youtube ? "logo-youtube" : "musical-notes"} size={24} color={song.youtube ? '#FF0000' : theme.colors.primary} />
+              {song.youtube ? (
+                <YoutubeLogo size={24} color="#FF0000" weight="fill" />
+              ) : (
+                <MusicNotes size={24} color={theme.colors.primary} weight="regular" />
+              )}
             </View>
             <View style={styles.songDetails}>
               <Text style={styles.songName} numberOfLines={1}>{song.name}</Text>
@@ -475,7 +497,7 @@ export default function FeedScreen() {
         style={styles.chatFAB}
         onPress={() => router.push(`/events/${eventId}?tab=CHAT`)}
       >
-        <Ionicons name="chatbubbles" size={26} color="#FFFFFF" />
+        <ChatTeardropDots size={26} color="#FFFFFF" weight="fill" />
         <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />
       </TouchableOpacity>
     );
@@ -495,7 +517,7 @@ export default function FeedScreen() {
               style={[styles.modeTab, feedMode === 'MURAL' && styles.activeModeTab]}
               onPress={() => setFeedMode('MURAL')}
             >
-              <Ionicons name="home" size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} />
+              <House size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} weight={feedMode === 'MURAL' ? 'fill' : 'regular'} />
               <Text 
                 style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
                 translate="no"
@@ -508,7 +530,7 @@ export default function FeedScreen() {
               style={[styles.modeTab, feedMode === 'PANORAMA' && styles.activeModeTab]}
               onPress={() => setFeedMode('PANORAMA')}
             >
-              <Ionicons name="calendar" size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} />
+              <CalendarBlank size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} weight={feedMode === 'PANORAMA' ? 'fill' : 'regular'} />
               <Text 
                 style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}
                 translate="no"
@@ -568,7 +590,7 @@ export default function FeedScreen() {
               <View style={styles.postInputFooter}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity style={styles.postActionBtn} onPress={handleImagePick}>
-                    <Ionicons name="camera-outline" size={22} color={theme.colors.primary} />
+                    <Camera size={22} color={theme.colors.primary} weight="regular" />
                   </TouchableOpacity>
                   
                   {user?.role === 'MASTER' && (
@@ -576,10 +598,10 @@ export default function FeedScreen() {
                       style={[styles.postActionBtn, postVisibility === 'GLOBAL' && { backgroundColor: 'rgba(107, 197, 167, 0.1)' }]} 
                       onPress={() => setPostVisibility(v => v === 'INTERNAL' ? 'GLOBAL' : 'INTERNAL')}
                     >
-                      <Ionicons 
-                        name={postVisibility === 'GLOBAL' ? "globe" : "globe-outline"} 
+                      <Globe 
                         size={22} 
                         color={postVisibility === 'GLOBAL' ? theme.colors.success : theme.colors.textSecondary} 
+                        weight={postVisibility === 'GLOBAL' ? 'fill' : 'regular'}
                       />
                     </TouchableOpacity>
                   )}
@@ -590,7 +612,7 @@ export default function FeedScreen() {
                   onPress={handleCreatePost}
                   disabled={isPosting || (!newPostContent.trim() && !selectedImage)}
                 >
-                  {isPosting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="send" size={18} color="#FFFFFF" />}
+                  {isPosting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <PaperPlaneTilt size={18} color="#FFFFFF" weight="fill" />}
                 </TouchableOpacity>
               </View>
             </View>
@@ -599,7 +621,7 @@ export default function FeedScreen() {
               <View style={styles.previewContainer}>
                 <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} />
                 <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
-                  <Ionicons name="close-circle" size={24} color={theme.colors.error} />
+                  <XCircle size={24} color={theme.colors.error} weight="fill" />
                 </TouchableOpacity>
               </View>
             )}
@@ -640,7 +662,7 @@ export default function FeedScreen() {
                         style={styles.moreOptionsBtn} 
                         onPress={() => handleDeletePost(post.id)}
                       >
-                        <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                        <Trash size={18} color={theme.colors.error} weight="regular" />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -648,15 +670,15 @@ export default function FeedScreen() {
                   {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
                   <View style={styles.postFooter}>
                     <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
-                      <Ionicons 
-                        name={post.post_likes?.some((l: any) => l.user_id === user?.id) ? "heart" : "heart-outline"} 
+                      <Heart 
                         size={20} 
                         color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
+                        weight={post.post_likes?.some((l: any) => l.user_id === user?.id) ? 'fill' : 'regular'}
                       />
                       <Text style={styles.interactionText}>{post.likesCount}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.interactionBtn} onPress={() => openComments(post)}>
-                      <Ionicons name="chatbubble-outline" size={18} color={theme.colors.textSecondary} />
+                      <ChatCircleText size={18} color={theme.colors.textSecondary} weight="regular" />
                       <Text style={styles.interactionText}>{post.commentsCount}</Text>
                     </TouchableOpacity>
                   </View>
@@ -697,7 +719,7 @@ export default function FeedScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 10 }}>
                 <Text style={styles.modalTitle}>Comentários</Text>
                 <TouchableOpacity onPress={closeComments} style={{ padding: 5 }}>
-                  <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+                  <X size={24} color={theme.colors.textSecondary} weight="bold" />
                 </TouchableOpacity>
               </View>
               {activeCommentPost && (
@@ -751,7 +773,7 @@ export default function FeedScreen() {
                 {isCommenting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Ionicons name="send" size={18} color="#fff" />
+                  <PaperPlaneTilt size={18} color="#fff" weight="fill" />
                 )}
               </TouchableOpacity>
             </View>

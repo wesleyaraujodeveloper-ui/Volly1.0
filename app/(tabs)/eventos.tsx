@@ -6,7 +6,7 @@ import { useUpcomingEventsList, usePastEventsList } from '../../src/hooks/querie
 import { Calendar } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Ionicons } from '@expo/vector-icons';
+import { MagnifyingGlass, XCircle, CalendarBlank, List, Plus, CaretRight } from 'phosphor-react-native';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '../../src/store/useAppStore';
 import { STRINGS } from '../../src/constants/strings';
@@ -55,7 +55,7 @@ export default function EventosScreen() {
           {item.event_departments?.map((ed: any) => ed.departments?.name).join(', ') || 'Sem departamento'} • {format(parseISO(item.event_date), 'HH:mm')}{item.end_date ? ` - ${format(parseISO(item.end_date), 'HH:mm')}` : ''}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={theme.colors.border} />
+      <CaretRight size={20} color={theme.colors.border} weight="bold" />
     </TouchableOpacity>
   );
 
@@ -63,7 +63,7 @@ export default function EventosScreen() {
     <View style={globalStyles.container}>
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
+          <MagnifyingGlass size={18} color={theme.colors.textSecondary} weight="bold" />
           <TextInput
             style={styles.searchInput}
             placeholder={selectedDate ? `Filtrando: ${format(parseISO(selectedDate), 'dd/MM/yyyy')}` : "Buscar eventos..."}
@@ -76,7 +76,7 @@ export default function EventosScreen() {
           />
           {(search !== '' || selectedDate !== null) && (
             <TouchableOpacity onPress={() => { setSearch(''); setSelectedDate(null); }}>
-              <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
+              <XCircle size={20} color={theme.colors.textSecondary} weight="fill" />
             </TouchableOpacity>
           )}
         </View>
@@ -84,7 +84,11 @@ export default function EventosScreen() {
           style={styles.modeToggle}
           onPress={() => setViewMode(viewMode === 'LISTA' ? 'CALENDARIO' : 'LISTA')}
         >
-          <Ionicons name={viewMode === 'LISTA' ? 'calendar' : 'list'} size={24} color={theme.colors.primary} />
+          {viewMode === 'LISTA' ? (
+            <CalendarBlank size={24} color={theme.colors.primary} weight="regular" />
+          ) : (
+            <List size={24} color={theme.colors.primary} weight="regular" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -157,7 +161,7 @@ export default function EventosScreen() {
           style={styles.fab}
           onPress={() => router.push('/events/new' as any)}
         >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
+          <Plus size={32} color="#FFFFFF" weight="bold" />
         </TouchableOpacity>
       )}
     </View>

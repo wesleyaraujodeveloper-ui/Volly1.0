@@ -5,7 +5,26 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
 import { useVolunteers, useDepartments, useRoles, useLeaderDepartments } from '../../src/hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
-import { Ionicons } from '@expo/vector-icons';
+import { 
+  LockSimple, 
+  MagnifyingGlass, 
+  CheckCircle, 
+  WarningCircle, 
+  HandWrench, 
+  Users, 
+  PencilSimple, 
+  UserPlus, 
+  Trash, 
+  X, 
+  ShieldCheck, 
+  Star, 
+  User, 
+  CheckSquare, 
+  Square, 
+  UserCircle, 
+  XCircle,
+  RadioButton
+} from 'phosphor-react-native';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
@@ -101,7 +120,7 @@ export default function GestaoMembrosScreen() {
   if (user?.role === 'VOLUNTÁRIO') {
     return (
       <View style={[globalStyles.container, globalStyles.center]}>
-        <Ionicons name="lock-closed" size={64} color={theme.colors.primary} />
+        <LockSimple size={64} color={theme.colors.primary} weight="fill" />
         <Text style={[globalStyles.textTitle, { marginTop: 20 }]}>Acesso Restrito</Text>
         <Text style={globalStyles.textBody}>Apenas Líderes e Admins podem acessar esta área.</Text>
       </View>
@@ -378,7 +397,7 @@ export default function GestaoMembrosScreen() {
             ListHeaderComponent={
               <View style={styles.formCard}>
                 <View style={styles.searchArea}>
-                  <Ionicons name="search-outline" size={20} color={theme.colors.textSecondary} />
+                  <MagnifyingGlass size={20} color={theme.colors.textSecondary} weight="bold" />
                   <TextInput style={styles.searchInput} placeholder="Buscar membro..." placeholderTextColor={theme.colors.textSecondary} value={searchTerm} onChangeText={setSearchTerm} />
                 </View>
                 <View style={styles.inputWithIcon}>
@@ -392,13 +411,12 @@ export default function GestaoMembrosScreen() {
                     keyboardType="email-address"
                   />
                   {email.length > 0 && (
-                    <Ionicons 
-                      name={isGmail ? "checkmark-circle" : "alert-circle"} 
-                      size={20} 
-                      color={isGmail ? theme.colors.primary : theme.colors.error} 
-                      style={{ marginLeft: 8 }}
-                    />
-                  )}
+                     isGmail ? (
+                       <CheckCircle size={20} color={theme.colors.primary} weight="fill" style={{ marginLeft: 8 }} />
+                     ) : (
+                       <WarningCircle size={20} color={theme.colors.error} weight="fill" style={{ marginLeft: 8 }} />
+                     )
+                   )}
                 </View>
                 {!isGmail && email.length > 0 && (
                   <TouchableOpacity onPress={() => handleEmailChange(email + '@')}>
@@ -462,10 +480,10 @@ export default function GestaoMembrosScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserRoles(item)}>
-                      <Ionicons name="construct-outline" size={18} color={theme.colors.primary} />
+                      <HandWrench size={18} color={theme.colors.primary} weight="regular" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserTeams(item)}>
-                      <Ionicons name="people" size={18} color={theme.colors.primary} />
+                      <Users size={18} color={theme.colors.primary} weight="regular" />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={[styles.roleBadge, isAdminOrMaster && { borderColor: theme.colors.primary, borderWidth: 1 }]}
@@ -493,7 +511,11 @@ export default function GestaoMembrosScreen() {
                     <ScrollView nestedScrollEnabled>
                       {volunteers.filter(v => v.role === 'LÍDER').map(l => (
                         <TouchableOpacity key={l.id} style={[styles.leaderPickerItem, selectedLeaderId === l.id && styles.leaderPickerItemSelected]} onPress={() => setSelectedLeaderId(l.id || null)}>
-                          <Ionicons name={selectedLeaderId === l.id ? "radio-button-on" : "radio-button-off"} size={16} color={selectedLeaderId === l.id ? theme.colors.primary : theme.colors.textSecondary} />
+                          {selectedLeaderId === l.id ? (
+                             <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                           ) : (
+                             <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                           )}
                           <Text style={[styles.leaderPickerLabel, selectedLeaderId === l.id && { color: theme.colors.primary }]}>{l.name || l.email.split('@')[0]}</Text>
                         </TouchableOpacity>
                       ))}
@@ -503,12 +525,20 @@ export default function GestaoMembrosScreen() {
                   <View style={[styles.leaderPickerGrid, { maxHeight: 150 }]}>
                     <ScrollView nestedScrollEnabled>
                       <TouchableOpacity style={[styles.leaderPickerItem, !selectedCoLeaderId && styles.leaderPickerItemSelected]} onPress={() => setSelectedCoLeaderId(null)}>
-                        <Ionicons name={!selectedCoLeaderId ? "radio-button-on" : "radio-button-off"} size={16} color={!selectedCoLeaderId ? theme.colors.primary : theme.colors.textSecondary} />
+                        {!selectedCoLeaderId ? (
+                           <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                         ) : (
+                           <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                         )}
                         <Text style={[styles.leaderPickerLabel, !selectedCoLeaderId && { color: theme.colors.primary }]}>Nenhum</Text>
                       </TouchableOpacity>
                       {volunteers.filter(v => v.role === 'LÍDER' || v.role === 'CO-LÍDER').map(l => (
                         <TouchableOpacity key={l.id} style={[styles.leaderPickerItem, selectedCoLeaderId === l.id && styles.leaderPickerItemSelected]} onPress={() => setSelectedCoLeaderId(l.id || null)} disabled={selectedLeaderId === l.id}>
-                          <Ionicons name={selectedCoLeaderId === l.id ? "radio-button-on" : "radio-button-off"} size={16} color={selectedCoLeaderId === l.id ? theme.colors.primary : theme.colors.textSecondary} />
+                          {selectedCoLeaderId === l.id ? (
+                             <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                           ) : (
+                             <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                           )}
                           <Text style={[styles.leaderPickerLabel, selectedCoLeaderId === l.id && { color: theme.colors.primary }, selectedLeaderId === l.id && { opacity: 0.5 }]}>
                             {l.name || l.email.split('@')[0]}
                           </Text>
@@ -534,16 +564,16 @@ export default function GestaoMembrosScreen() {
                   {isAdminOrMaster && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '' })}>
-                        <Ionicons name="pencil-outline" size={20} color={theme.colors.primary} />
+                        <PencilSimple size={20} color={theme.colors.primary} weight="regular" />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateLeader(item.id)}>
-                        <Ionicons name="person-add-outline" size={20} color={theme.colors.primary} />
+                        <UserPlus size={20} color={theme.colors.primary} weight="regular" />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateCoLeader(item.id)}>
-                        <Ionicons name="people-outline" size={20} color={theme.colors.primary} />
+                        <Users size={20} color={theme.colors.primary} weight="regular" />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteDepartment(item)}>
-                        <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                        <Trash size={20} color={theme.colors.error} weight="regular" />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -572,11 +602,11 @@ export default function GestaoMembrosScreen() {
                             style={[styles.leaderPickerItem, selectedDeptIdForRule === dept.id && styles.leaderPickerItemSelected]} 
                             onPress={() => setSelectedDeptIdForRule(dept.id)}
                           >
-                            <Ionicons 
-                              name={selectedDeptIdForRule === dept.id ? "radio-button-on" : "radio-button-off"} 
-                              size={16} 
-                              color={selectedDeptIdForRule === dept.id ? theme.colors.primary : theme.colors.textSecondary} 
-                            />
+                            {selectedDeptIdForRule === dept.id ? (
+                               <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                             ) : (
+                               <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                             )}
                             <Text style={[styles.leaderPickerLabel, selectedDeptIdForRule === dept.id && { color: theme.colors.primary }]}>
                               {dept.name}
                             </Text>
@@ -611,33 +641,33 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Alterar Acesso</Text>
-              <TouchableOpacity onPress={() => setSelectedProfile(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedProfile(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <ScrollView>
               <Text style={{ color: theme.colors.text, marginBottom: 16 }}>Novo cargo para <Text style={{fontWeight: 'bold'}}>{selectedProfile.name || selectedProfile.email}</Text>:</Text>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('ADMIN')}>
-                <Ionicons name="shield-checkmark" size={20} color={theme.colors.error} />
+                <ShieldCheck size={20} color={theme.colors.error} weight="fill" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>ADMIN</Text>
                   <Text style={styles.roleOptionDesc}>Acesso total do sistema.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('LÍDER')}>
-                <Ionicons name="star" size={20} color={theme.colors.primary} />
+                <Star size={20} color={theme.colors.primary} weight="fill" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>LÍDER</Text>
                   <Text style={styles.roleOptionDesc}>Gestão das próprias equipes.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('CO-LÍDER')}>
-                <Ionicons name="star-outline" size={20} color={theme.colors.primary} />
+                <Star size={20} color={theme.colors.primary} weight="regular" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>CO-LÍDER</Text>
                   <Text style={styles.roleOptionDesc}>Mesmos direitos do Líder.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('VOLUNTÁRIO')}>
-                <Ionicons name="person" size={20} color={theme.colors.textSecondary} />
+                <User size={20} color={theme.colors.textSecondary} weight="fill" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>VOLUNTÁRIO</Text>
                   <Text style={styles.roleOptionDesc}>Padrão. Visão operacional.</Text>
@@ -653,7 +683,7 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Vincular Equipes</Text>
-              <TouchableOpacity onPress={() => setManagingTeamProfile(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setManagingTeamProfile(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <ScrollView>
               {departments.map(dept => {
@@ -666,7 +696,11 @@ export default function GestaoMembrosScreen() {
                     onPress={() => canManage && toggleUserDept(dept.id)}
                     disabled={!canManage}
                   >
-                    <Ionicons name={isMember ? "checkbox" : "square-outline"} size={24} color={isMember ? theme.colors.primary : theme.colors.textSecondary} />
+                    {isMember ? (
+                       <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
+                     ) : (
+                       <Square size={24} color={theme.colors.textSecondary} weight="regular" />
+                     )}
                     <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{dept.name}</Text>
                   </TouchableOpacity>
                 );
@@ -688,7 +722,7 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Vincular Funções (Skills)</Text>
-              <TouchableOpacity onPress={() => setManagingRoleProfile(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setManagingRoleProfile(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <ScrollView>
               {roles.map(role => {
@@ -702,7 +736,11 @@ export default function GestaoMembrosScreen() {
                     onPress={() => canManage && toggleUserRoleAction(role.id)}
                     disabled={!canManage}
                   >
-                    <Ionicons name={isAssigned ? "checkbox" : "square-outline"} size={24} color={isAssigned ? theme.colors.primary : theme.colors.textSecondary} />
+                    {isAssigned ? (
+                       <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
+                     ) : (
+                       <Square size={24} color={theme.colors.textSecondary} weight="regular" />
+                     )}
                     <View style={{ marginLeft: 12 }}>
                       <Text style={styles.roleOptionTitle}>{role.name}</Text>
                       <Text style={styles.roleOptionDesc}>{role.departments?.name}</Text>
@@ -726,7 +764,7 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Trocar Líder</Text>
-              <TouchableOpacity onPress={() => setDeptChangingLeader(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setDeptChangingLeader(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <ScrollView>
               {volunteers.filter(v => v.role === 'LÍDER').map(l => (
@@ -735,7 +773,7 @@ export default function GestaoMembrosScreen() {
                   style={styles.roleOptionRow} 
                   onPress={() => confirmUpdateLeader(l.id!)}
                 >
-                  <Ionicons name="person-circle-outline" size={24} color={theme.colors.primary} />
+                  <UserCircle size={24} color={theme.colors.primary} weight="regular" />
                   <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
                 </TouchableOpacity>
               ))}
@@ -749,14 +787,14 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Trocar Co-Líder</Text>
-              <TouchableOpacity onPress={() => setDeptChangingCoLeader(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setDeptChangingCoLeader(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <ScrollView>
               <TouchableOpacity 
                 style={styles.roleOptionRow} 
                 onPress={() => confirmUpdateCoLeader(null)}
               >
-                <Ionicons name="close-circle-outline" size={24} color={theme.colors.textSecondary} />
+                <XCircle size={24} color={theme.colors.textSecondary} weight="regular" />
                 <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>Remover Co-Líder</Text>
               </TouchableOpacity>
               {volunteers.filter(v => v.role === 'LÍDER' || v.role === 'CO-LÍDER').map(l => (
@@ -765,7 +803,7 @@ export default function GestaoMembrosScreen() {
                   style={styles.roleOptionRow} 
                   onPress={() => confirmUpdateCoLeader(l.id!)}
                 >
-                  <Ionicons name="person-circle-outline" size={24} color={theme.colors.primary} />
+                  <UserCircle size={24} color={theme.colors.primary} weight="regular" />
                   <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
                 </TouchableOpacity>
               ))}
@@ -780,7 +818,7 @@ export default function GestaoMembrosScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Editar Equipe</Text>
-              <TouchableOpacity onPress={() => setEditingDept(null)}><Ionicons name="close" size={24} color={theme.colors.text} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingDept(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <View style={styles.formCard}>
               <TextInput 

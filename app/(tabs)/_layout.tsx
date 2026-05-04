@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { theme } from '../../src/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { House, Users, Calendar, ClipboardText, User, Buildings } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { Image, View, Text } from 'react-native';
 
@@ -55,8 +55,8 @@ export default function TabsLayout() {
         name="feed"
         options={{
           title: 'Início',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <House size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />
@@ -67,8 +67,8 @@ export default function TabsLayout() {
         options={{
           title: 'Equipe',
           href: (isAdminOrLeader ? '/(tabs)/gestao' : null) as any,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Users size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />
@@ -78,8 +78,8 @@ export default function TabsLayout() {
         options={{
           title: 'Eventos',
           href: (isAdminOrLeader ? '/(tabs)/eventos' : null) as any,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Calendar size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />
@@ -89,8 +89,8 @@ export default function TabsLayout() {
         options={{
           title: 'Escalas',
           href: (user?.role === 'MASTER' ? null : '/(tabs)/escalas') as any,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="list-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <ClipboardText size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />
@@ -98,8 +98,8 @@ export default function TabsLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <User size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />
@@ -110,8 +110,8 @@ export default function TabsLayout() {
         options={{
           title: 'Instituições',
           href: (user?.role === 'MASTER' ? '/(tabs)/instituicoes' : null) as any,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business-outline" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Buildings size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />

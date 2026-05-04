@@ -1,7 +1,21 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { 
+  CheckCircle, 
+  XCircle, 
+  PlusCircle, 
+  Trash, 
+  CheckSquare, 
+  Square, 
+  CaretUp, 
+  CaretDown, 
+  WarningCircle, 
+  ArrowsLeftRight, 
+  CaretLeft, 
+  CaretRight, 
+  DownloadSimple 
+} from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -331,7 +345,7 @@ export default function EscalasTabsScreen() {
                       style={[styles.availOptionBtn, avail?.is_available === true && styles.availOptionBtnSelected]} 
                       onPress={() => setAvailabilityStatus(event.id!, true)}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={18} color={avail?.is_available === true ? '#000' : theme.colors.textSecondary} />
+                      <CheckCircle size={18} color={avail?.is_available === true ? '#000' : theme.colors.textSecondary} weight={avail?.is_available === true ? 'fill' : 'regular'} />
                       <Text style={[styles.availOptionText, avail?.is_available === true && { color: '#000', fontWeight: 'bold' }]}>Vou</Text>
                     </TouchableOpacity>
                     
@@ -339,7 +353,7 @@ export default function EscalasTabsScreen() {
                       style={[styles.availOptionBtn, avail?.is_available === false && styles.availOptionBtnError]} 
                       onPress={() => setAvailabilityStatus(event.id!, false)}
                     >
-                      <Ionicons name="close-circle-outline" size={18} color={avail?.is_available === false ? '#fff' : theme.colors.textSecondary} />
+                      <XCircle size={18} color={avail?.is_available === false ? '#fff' : theme.colors.textSecondary} weight={avail?.is_available === false ? 'fill' : 'regular'} />
                       <Text style={[styles.availOptionText, avail?.is_available === false && { color: '#fff', fontWeight: 'bold' }]}>Não vou</Text>
                     </TouchableOpacity>
                   </View>
@@ -381,7 +395,7 @@ export default function EscalasTabsScreen() {
             <Text style={[styles.sectionSubtitle, { marginTop: 4 }]}>Informe o período que deseja estar fora da Escala</Text>
           </View>
           <TouchableOpacity onPress={() => setShowAbsenceModal(true)}>
-            <Ionicons name="add-circle" size={32} color={theme.colors.primary} />
+            <PlusCircle size={32} color={theme.colors.primary} weight="fill" />
           </TouchableOpacity>
         </View>
 
@@ -392,7 +406,7 @@ export default function EscalasTabsScreen() {
               <Text style={styles.dateText}>{new Date(absence.start_date).toLocaleDateString(undefined, { timeZone: 'UTC' })} - {new Date(absence.end_date).toLocaleDateString(undefined, { timeZone: 'UTC' })}</Text>
             </View>
             <TouchableOpacity onPress={() => removeAbsenceMutation.mutate(absence.id!)}>
-              <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+              <Trash size={20} color={theme.colors.error} weight="regular" />
             </TouchableOpacity>
           </View>
         ))}
@@ -479,11 +493,11 @@ export default function EscalasTabsScreen() {
               }
             }}
           >
-            <Ionicons 
-              name={selectedEventIds.length === pendingEvents.length ? "checkbox" : "square-outline"} 
-              size={24} 
-              color={theme.colors.primary} 
-            />
+            {selectedEventIds.length === pendingEvents.length ? (
+              <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
+            ) : (
+              <Square size={24} color={theme.colors.primary} weight="regular" />
+            )}
             <Text style={styles.selectAllText}>Selecionar Todos os Eventos</Text>
           </TouchableOpacity>
         </View>
@@ -503,7 +517,11 @@ export default function EscalasTabsScreen() {
                     style={styles.eventCheckbox}
                     onPress={() => toggleEventSelection(event.id!)}
                   >
-                    <Ionicons name={isSelected ? "checkbox" : "square-outline"} size={24} color={theme.colors.primary} />
+                    {isSelected ? (
+                      <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
+                    ) : (
+                      <Square size={24} color={theme.colors.primary} weight="regular" />
+                    )}
                   </TouchableOpacity>
                 )}
                 
@@ -519,7 +537,11 @@ export default function EscalasTabsScreen() {
                     <Text style={styles.eventTimeText}>{format(eventDate, 'HH:mm', { locale: ptBR })}</Text>
                     <Text style={styles.eventTitleText}>{event.title}</Text>
                   </View>
-                  <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textSecondary} />
+                  {isExpanded ? (
+                    <CaretUp size={20} color={theme.colors.textSecondary} weight="bold" />
+                  ) : (
+                    <CaretDown size={20} color={theme.colors.textSecondary} weight="bold" />
+                  )}
                 </TouchableOpacity>
               </View>
 
@@ -541,7 +563,7 @@ export default function EscalasTabsScreen() {
                           
                           {sch.status === 'TROCA_SOLICITADA' ? (
                             <View style={styles.swapRequestedBadge}>
-                              <Ionicons name="alert-circle" size={12} color="#fff" />
+                              <WarningCircle size={12} color="#fff" weight="fill" />
                               <Text style={styles.swapRequestedText}>Troca Pedida</Text>
                             </View>
                           ) : (
@@ -556,7 +578,7 @@ export default function EscalasTabsScreen() {
                                 setSwapModalVisible(true);
                               }}
                             >
-                              <Ionicons name="swap-horizontal" size={14} color={theme.colors.primary} />
+                              <ArrowsLeftRight size={14} color={theme.colors.primary} weight="bold" />
                               <Text style={styles.requestSwapBtnText}>Trocar</Text>
                             </TouchableOpacity>
                           )}
@@ -587,17 +609,17 @@ export default function EscalasTabsScreen() {
         <View style={styles.mensalControls}>
           <View style={styles.dateControl}>
             <TouchableOpacity onPress={() => changeMonth(-1)}>
-              <Ionicons name="chevron-back" size={20} color={theme.colors.primary} />
+              <CaretLeft size={20} color={theme.colors.primary} weight="bold" />
             </TouchableOpacity>
             <Text style={styles.dateRangeText}>
               {selectedMonth ? format(selectedMonth, 'MMMM / yyyy', { locale: ptBR }) : '...'}
             </Text>
             <TouchableOpacity onPress={() => changeMonth(1)}>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+              <CaretRight size={20} color={theme.colors.primary} weight="bold" />
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.exportButton}>
-            <Ionicons name="download-outline" size={18} color="#000" />
+            <DownloadSimple size={18} color="#000" weight="bold" />
           </TouchableOpacity>
         </View>
       </View>
