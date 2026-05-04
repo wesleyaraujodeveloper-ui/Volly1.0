@@ -204,3 +204,16 @@ export const useRequestSwap = () => {
     },
   });
 };
+export const useSyncCalendar = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ scheduleId, token }: { scheduleId: string; token: string }) => {
+      const result = await scheduleService.syncCalendar(scheduleId, token);
+      if (!result.success) throw new Error(result.error as any);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nextUserEvent'] });
+    },
+  });
+};

@@ -34,9 +34,10 @@ import { notificationService } from '../../src/services/notificationService';
 import { supabase } from '../../src/services/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFeedPosts, useGlobalSchedulePanorama, useNextUserEvent, useNextGlobalEvent, useRecommendedSongs, useCreatePost, useDeletePost, useToggleLike } from '../../src/hooks/queries/useFeed';
+import { useSyncCalendar } from '../../src/hooks/queries/useSchedules';
 
 export default function FeedScreen() {
-  const { user } = useAppStore();
+  const { user, providerToken } = useAppStore();
   const router = useRouter();
   const [isChatActive, setIsChatActive] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -77,6 +78,7 @@ export default function FeedScreen() {
   const createPostMutation = useCreatePost();
   const deletePostMutation = useDeletePost();
   const toggleLikeMutation = useToggleLike();
+  const syncCalendarMutation = useSyncCalendar();
 
   const loading = loadingPosts;
   const refreshing = isFetchingPosts;
@@ -99,6 +101,12 @@ export default function FeedScreen() {
       setIsChatActive(false);
     }
   }, [nextEvent]);
+
+  useEffect(() => {
+    if (nextEvent && !nextEvent.google_event_id && providerToken) {
+      syncCalendarMutation.mutate({ scheduleId: nextEvent.id, token: providerToken });
+    }
+  }, [nextEvent, providerToken]);
 
   useEffect(() => {
     if (user) {

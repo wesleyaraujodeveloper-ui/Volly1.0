@@ -22,29 +22,6 @@ export const scheduleService = {
   assignVolunteer: async (schedule: Schedule, providerToken?: string | null) => {
     let google_event_id = schedule.google_event_id;
 
-    if (providerToken && !google_event_id) {
-      try {
-        const { data: ev } = await supabase.from('events').select('*').eq('id', schedule.event_id).single();
-        if (ev) {
-          const startTime = new Date(ev.event_date);
-          const endTime = new Date(startTime.getTime() + (ev.chat_window_hours * 60 * 60 * 1000));
-          
-          const gEvent = await calendarService.addEventToCalendar(
-            providerToken,
-            ev.title,
-            ev.description || '',
-            startTime.toISOString(),
-            endTime.toISOString()
-          );
-          if (gEvent && gEvent.id) {
-            google_event_id = gEvent.id;
-          }
-        }
-      } catch (err) {
-        console.error('Google Calendar Add Error:', err);
-      }
-    }
-
     const { data, error } = await supabase
       .from('schedules')
       .upsert([{ ...schedule, google_event_id, swap_reason: null }], { onConflict: 'event_id, user_id' })
@@ -328,5 +305,49 @@ export const scheduleService = {
 
     // Aqui no futuro dispararíamos push/email via Edge Function
     return { data, error };
+  },
+
+  /**
+   * Sincroniza uma escala específica com o Google Calendar do usuário logado.
+   */
+  syncCalendar: async (scheduleId: string, providerToken: string) => {
+    try {
+      const { data: sch, error: schErr } = await supabase
+        .from('schedules')
+        .select('*, events(*)')
+        .eq('id', scheduleId)
+        .single();
+
+      if (schErr || !sch) throw new Error('Escala não encontrada');
+      if (sch.google_event_id) return { success: true, google_event_id: sch.google_event_id };
+
+      const ev = sch.events;
+      const startTime = new Date(ev.event_date);
+      const endTime = ev.end_date 
+        ? new Date(ev.end_date)
+        : new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+
+      const gEvent = await calendarService.addEventToCalendar(
+        providerToken,
+        ev.title,
+        ev.description || '',
+        startTime.toISOString(),
+        endTime.toISOString()
+      );
+
+      if (gEvent && gEvent.id) {
+        await supabase
+          .from('schedules')
+          .update({ google_event_id: gEvent.id })
+          .eq('id', scheduleId);
+        
+        return { success: true, google_event_id: gEvent.id };
+      }
+      
+      return { success: false };
+    } catch (err) {
+      console.error('Sync Calendar Error:', err);
+      return { success: false, error: err };
+    }
   }
 };

@@ -15,7 +15,11 @@ export const calendarService = {
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
       },
       reminders: {
-        useDefault: true,
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 1440 }, // 24 horas antes
+          { method: 'popup', minutes: 120 },  // 2 horas antes
+        ],
       },
     };
 
