@@ -98,6 +98,7 @@ async function registerForPushNotificationsAsync() {
       
       token = (await Notifications.getExpoPushTokenAsync({ 
         projectId,
+        applicationId: 'com.wesleydeveloper.volly'
       })).data;
     } else {
       console.log('Notificações Push exigem um dispositivo físico ou configuração VAPID no Web.');
