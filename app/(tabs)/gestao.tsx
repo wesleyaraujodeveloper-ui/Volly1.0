@@ -391,7 +391,7 @@ export default function GestaoMembrosScreen() {
               <EmptyState 
                 title={STRINGS.gestao.emptyState} 
                 description={STRINGS.gestao.emptyStateSub} 
-                image={require('../../assets/images/illustrations/empty_illustration.png')} 
+                image={require('../../assets/images/illustrations/empty_illustration_v4.png')} 
               />
             }
             ListHeaderComponent={
