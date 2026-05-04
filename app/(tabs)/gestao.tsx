@@ -10,7 +10,7 @@ import {
   MagnifyingGlass, 
   CheckCircle, 
   WarningCircle, 
-  HandWrench, 
+  Wrench, 
   Users, 
   PencilSimple, 
   UserPlus, 
@@ -480,7 +480,7 @@ export default function GestaoMembrosScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserRoles(item)}>
-                      <HandWrench size={18} color={theme.colors.primary} weight="regular" />
+                      <Wrench size={18} color={theme.colors.primary} weight="regular" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserTeams(item)}>
                       <Users size={18} color={theme.colors.primary} weight="regular" />
