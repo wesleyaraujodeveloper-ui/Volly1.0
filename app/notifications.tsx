@@ -133,7 +133,7 @@ export default function NotificationsScreen() {
       ) : (
         <View style={styles.emptyContainer}>
           <Image 
-            source={require('../assets/images/illustrations/empty_state.png')} 
+            source={require('../assets/images/illustrations/empty_illustration.png')} 
             style={styles.emptyImage}
             resizeMode="contain"
           />
