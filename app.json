@@ -51,7 +51,8 @@
     "notification": {
       "icon": "./assets/images/icons/icone-volly-logo.png",
       "color": "#121212",
-      "vapidPublicKey": "BMzKLdhLcF5qAzLy9BIIDC5miXslc1udM_NchdeH40TxHc7z5KEOzE7AFRCpW_SmEoBn_QF9BjewK5ARMweVXrQ"
+      "vapidPublicKey": "BMzKLdhLcF5qAzLy9BIIDC5miXslc1udM_NchdeH40TxHc7z5KEOzE7AFRCpW_SmEoBn_QF9BjewK5ARMweVXrQ",
+      "serviceWorkerPath": "/expo-service-worker.js"
     },
     "plugins": [
       "expo-router",
