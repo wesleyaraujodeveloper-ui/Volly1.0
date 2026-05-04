@@ -15,8 +15,10 @@
         "NSMicrophoneUsageDescription": "O Volly precisa de acesso ao microfone para recursos de áudio.",
         "NSContactsUsageDescription": "O Volly precisa de acesso aos contatos para facilitar o convite de voluntários.",
         "NSLocationWhenInUseUsageDescription": "O Volly usa sua localização para sugerir eventos próximos.",
-        "NSPhotoLibraryUsageDescription": "O Volly precisa de acesso às suas fotos para você compartilhar no mural."
-      }
+        "NSPhotoLibraryUsageDescription": "O Volly precisa de acesso às suas fotos para você compartilhar no mural.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.wesleydeveloper.volly"
     },
     "android": {
       "adaptiveIcon": {
@@ -48,7 +50,8 @@
     },
     "notification": {
       "icon": "./assets/images/icons/icone-volly-logo.png",
-      "color": "#121212"
+      "color": "#121212",
+      "vapidPublicKey": "BMzKLdhLcF5qAzLy9BIIDC5miXslc1udM_NchdeH40TxHc7z5KEOzE7AFRCpW_SmEoBn_QF9BjewK5ARMweVXrQ"
     },
     "plugins": [
       "expo-router",
