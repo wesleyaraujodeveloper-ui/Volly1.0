@@ -5,14 +5,14 @@ export const theme = {
     primary: '#DF721B', // Novo Laranja vibrante - Identidade Volly
     primaryDark: '#BB5013',
     primaryLight: '#F28B3C',
-    background: '#000000', // Fundo OLED Black - Moderno e econômico
-    surface: '#121212',   // Fundo de cards e modais
-    surfaceHighlight: '#1A1A1A',
+    background: '#121212', // Cinza Chumbo - Moderno e elegante
+    surface: '#1A1A1A',   // Fundo de cards e modais
+    surfaceHighlight: '#242424',
     text: '#FFFFFF', // Texto claro
     textSecondary: '#A0A0A0', // Texto secundário acinzentado
     error: '#FF5252',
     success: '#6BC5A7', // Verde menta sugerido
-    border: '#222222',
+    border: '#333333',
   },
   spacing: {
     xs: 4,
