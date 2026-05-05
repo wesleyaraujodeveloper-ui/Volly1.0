@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image, Platform } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { 
@@ -34,6 +34,8 @@ import {
 import { supabase } from '../../src/services/supabase';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 
@@ -259,6 +261,57 @@ export default function EscalasTabsScreen() {
       setSwapReason('');
     } catch (error: any) {
       showAlert('Erro', 'Não foi possível enviar a solicitação: ' + error.message, 'danger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDownloadMonthlyScale = async () => {
+    if (monthlyEvents.length === 0 || roles.length === 0) {
+      showAlert('Atenção', 'Não há dados para exportar neste mês.', 'info');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Cabeçalho: Funções, Data1, Data2...
+      const header = ['Funções', ...monthlyEvents.map(ev => format(parseISO(ev.event_date), 'dd/MM HH:mm'))];
+      
+      const rows = roles.map(role => {
+        const rowData = [role.name];
+        monthlyEvents.forEach(ev => {
+          const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+          // Limpa vírgulas para não quebrar o CSV
+          const name = sch?.profiles?.full_name ? sch.profiles.full_name.replace(/,/g, '') : '--';
+          rowData.push(name);
+        });
+        return rowData;
+      });
+
+      const csvContent = [header, ...rows].map(r => r.join(',')).join('\n');
+      const filename = `Escala_Mensal_${format(selectedMonth, 'MMMM_yyyy', { locale: ptBR })}.csv`;
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const fileUri = FileSystem.cacheDirectory + filename;
+        await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/csv',
+          dialogTitle: 'Exportar Escala Mensal',
+          UTI: 'public.comma-separated-values-text'
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      showAlert('Erro', 'Ocorreu um erro ao gerar o arquivo da escala.', 'danger');
     } finally {
       setSaving(false);
     }
@@ -618,8 +671,16 @@ export default function EscalasTabsScreen() {
               <CaretRight size={20} color={theme.colors.primary} weight="bold" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.exportButton}>
-            <DownloadSimple size={18} color="#000" weight="bold" />
+          <TouchableOpacity 
+            style={styles.exportButton}
+            onPress={handleDownloadMonthlyScale}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#000" />
+            ) : (
+              <DownloadSimple size={18} color="#000" weight="bold" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
