@@ -131,12 +131,7 @@ export default function LoginScreen() {
             style={styles.logoImage}
             resizeMode="contain"
           />
-            <Text 
-            style={{ fontFamily: 'CreamCake', color: '#FFFFFF', fontSize: 64, marginLeft: 10 }}
-            // @ts-ignore - Propriedades para evitar tradução automática no navegador
-            translate="no"
-            className="notranslate"
-          >
+          <Text style={{ fontFamily: 'CreamCake', color: '#FFFFFF', fontSize: 64, marginLeft: 10 }}>
             {lastBranding?.name || 'Volly'}
           </Text>
         </View>

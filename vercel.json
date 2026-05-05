@@ -4,6 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/$1.html" }
+    {
+      "source": "/((?!_expo|assets|.*\\.).*)",
+      "destination": "/$1.html"
+    }
   ]
 }

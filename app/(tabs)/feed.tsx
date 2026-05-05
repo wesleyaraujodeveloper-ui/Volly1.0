@@ -528,8 +528,6 @@ export default function FeedScreen() {
               <House size={16} color={feedMode === 'MURAL' ? '#FFFFFF' : theme.colors.textSecondary} weight={feedMode === 'MURAL' ? 'fill' : 'regular'} />
               <Text 
                 style={[styles.modeTabText, feedMode === 'MURAL' && styles.activeModeTabText]}
-                translate="no"
-                className="notranslate"
               >
                 Volly Connect
               </Text>
@@ -541,8 +539,6 @@ export default function FeedScreen() {
               <CalendarBlank size={16} color={feedMode === 'PANORAMA' ? '#FFFFFF' : theme.colors.textSecondary} weight={feedMode === 'PANORAMA' ? 'fill' : 'regular'} />
               <Text 
                 style={[styles.modeTabText, feedMode === 'PANORAMA' && styles.activeModeTabText]}
-                translate="no"
-                className="notranslate"
               >
                 Escalas
               </Text>
