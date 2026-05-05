@@ -278,6 +278,9 @@ export default function EscalasTabsScreen() {
 
     setSaving(true);
     try {
+      // Pequeno delay para garantir que o template renderizou com os dados atuais
+      await new Promise(resolve => setTimeout(resolve, 600));
+
       if (Platform.OS === 'web') {
         // PNG para Web usando html-to-image
         const node = document.getElementById('export-template');
@@ -335,16 +338,16 @@ export default function EscalasTabsScreen() {
 
             <View style={styles.exportTable}>
               <View style={styles.exportTableHeader}>
-                <View style={[styles.exportCell, { width: 180, backgroundColor: '#1A1A1A' }]}>
-                  <Text style={[styles.exportHeaderText, { fontSize: 14 }]}>FUNÇÃO</Text>
+                <View style={[styles.exportCell, { width: 180, backgroundColor: '#F0F0F0' }]}>
+                  <Text style={[styles.exportHeaderText, { fontSize: 14, color: '#333' }]}>FUNÇÃO</Text>
                 </View>
                 {monthlyEvents.map(ev => {
                   const evDate = parseISO(ev.event_date);
                   return (
                     <View key={ev.id} style={styles.exportDayHeader}>
-                      <Text style={styles.exportDayNum}>{format(evDate, 'dd')}</Text>
+                      <Text style={[styles.exportDayNum, { color: '#000' }]}>{format(evDate, 'dd')}</Text>
                       <Text style={styles.exportDayName}>{format(evDate, 'eee', { locale: ptBR }).toUpperCase()}</Text>
-                      <Text style={[styles.exportDayName, { color: '#6BC5A7' }]}>{format(evDate, 'HH:mm')}</Text>
+                      <Text style={[styles.exportDayName, { color: '#6BC5A7', fontWeight: 'bold' }]}>{format(evDate, 'HH:mm')}</Text>
                     </View>
                   );
                 })}
@@ -352,18 +355,18 @@ export default function EscalasTabsScreen() {
 
               {roles.map((role) => (
                 <View key={role.id} style={styles.exportTableRow}>
-                  <View style={[styles.exportCell, { width: 180 }]}>
-                    <Text style={styles.exportRoleText}>{role.name}</Text>
+                  <View style={[styles.exportCell, { width: 180, backgroundColor: '#FFF' }]}>
+                    <Text style={[styles.exportRoleText, { color: '#000' }]}>{role.name}</Text>
                   </View>
                   {monthlyEvents.map(ev => {
                     const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
                     return (
                       <View key={ev.id} style={styles.exportNameCell}>
-                        <Text style={[styles.exportNameText, !sch && { color: '#333' }]}>
+                        <Text style={[styles.exportNameText, { color: '#000' }, !sch && { color: '#CCC' }]}>
                           {sch ? sch.profiles?.full_name?.split(' ')[0] : '--'}
                         </Text>
                         {sch && sch.profiles?.full_name?.split(' ').length > 1 && (
-                          <Text style={[styles.exportNameText, { fontSize: 10, opacity: 0.7 }]}>
+                          <Text style={[styles.exportNameText, { fontSize: 10, color: '#666', fontWeight: 'normal' }]}>
                             {sch.profiles.full_name.split(' ')[1]}
                           </Text>
                         )}
@@ -1502,10 +1505,13 @@ const styles = StyleSheet.create({
   // Estilos para Exportação PNG
   exportTemplateContainer: {
     position: 'absolute',
-    left: -5000, // Bem longe para não interferir na UI
+    top: 0,
+    left: 0,
+    zIndex: -1000,
+    opacity: 0.01, 
   },
   exportContent: {
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFFFF',
     padding: 60,
     borderRadius: 0,
   },
@@ -1525,58 +1531,58 @@ const styles = StyleSheet.create({
   exportTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
     letterSpacing: 4,
   },
   exportSubtitle: {
     fontSize: 18,
-    color: '#888',
+    color: '#666',
     marginTop: 10,
   },
   exportTable: {
     borderWidth: 2,
-    borderColor: '#333',
+    borderColor: '#DDD',
   },
   exportTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#F9F9F9',
   },
   exportDayHeader: {
     flex: 1,
     padding: 15,
     alignItems: 'center',
     borderLeftWidth: 1,
-    borderLeftColor: '#333',
+    borderLeftColor: '#DDD',
     minWidth: 100,
   },
   exportDayNum: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   exportDayName: {
     fontSize: 12,
-    color: '#888',
+    color: '#999',
     fontWeight: 'bold',
   },
   exportTableRow: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: '#DDD',
   },
   exportCell: {
     padding: 15,
     justifyContent: 'center',
-    backgroundColor: '#0A0A0A',
+    backgroundColor: '#FFFFFF',
   },
   exportRoleText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   exportHeaderText: {
     fontWeight: 'bold',
-    color: '#888',
+    color: '#666',
     textAlign: 'center',
   },
   exportNameCell: {
@@ -1585,12 +1591,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderLeftWidth: 1,
-    borderLeftColor: '#333',
+    borderLeftColor: '#DDD',
     minWidth: 100,
+    backgroundColor: '#FFF',
   },
   exportNameText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -1600,7 +1607,7 @@ const styles = StyleSheet.create({
   },
   exportFooterText: {
     fontSize: 14,
-    color: '#555',
+    color: '#999',
     fontStyle: 'italic',
   }
 });
