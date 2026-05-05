@@ -289,7 +289,7 @@ export default function EscalasTabsScreen() {
           const dataUrl = await htmlToImage.toPng(node, {
             quality: 1,
             pixelRatio: 2,
-            backgroundColor: '#000000'
+            backgroundColor: '#FFFFFF'
           });
           
           const link = document.createElement('a');
