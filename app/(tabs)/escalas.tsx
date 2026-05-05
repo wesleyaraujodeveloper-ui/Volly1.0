@@ -38,6 +38,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useRef } from 'react';
+import * as htmlToImage from 'html-to-image';
 
 type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 
@@ -278,24 +279,23 @@ export default function EscalasTabsScreen() {
     setSaving(true);
     try {
       if (Platform.OS === 'web') {
-        // Fallback para CSV no Web pois ViewShot tem suporte limitado
-        const header = ['Funções', ...monthlyEvents.map(ev => format(parseISO(ev.event_date), 'dd/MM HH:mm'))];
-        const rows = roles.map(role => {
-          const rowData = [role.name];
-          monthlyEvents.forEach(ev => {
-            const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
-            const name = sch?.profiles?.full_name ? sch.profiles.full_name.replace(/,/g, '') : '--';
-            rowData.push(name);
+        // PNG para Web usando html-to-image
+        const node = document.getElementById('export-template');
+        if (node) {
+          // Aumentar a escala para melhor qualidade
+          const dataUrl = await htmlToImage.toPng(node, {
+            quality: 1,
+            pixelRatio: 2,
+            backgroundColor: '#000000'
           });
-          return rowData;
-        });
-        const csvContent = [header, ...rows].map(r => r.join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `Escala_${format(selectedMonth, 'MMMM_yyyy', { locale: ptBR })}.csv`);
-        link.click();
+          
+          const link = document.createElement('a');
+          link.download = `Escala_${format(selectedMonth, 'MMMM_yyyy', { locale: ptBR })}.png`;
+          link.href = dataUrl;
+          link.click();
+        } else {
+          throw new Error('Template de exportação não encontrado');
+        }
       } else {
         // PNG para Mobile usando ViewShot
         const uri = await captureRef(viewShotRef, {
@@ -318,7 +318,7 @@ export default function EscalasTabsScreen() {
   };
 
   const renderExportTemplate = () => (
-    <View style={styles.exportTemplateContainer}>
+    <View style={styles.exportTemplateContainer} nativeID="export-template">
       <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
         <View style={styles.exportContent}>
           <View style={styles.exportHeader}>
