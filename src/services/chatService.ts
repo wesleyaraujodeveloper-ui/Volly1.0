@@ -42,7 +42,7 @@ export const chatService = {
 
   async canUserPost(eventId: string, userId: string, role: string): Promise<boolean> {
     // Admins and Leaders can always post
-    if (['ADMIN', 'LÍDER', 'CO-LÍDER'].includes(role)) return true;
+    if (['MASTER', 'ADMIN', 'LÍDER', 'CO-LÍDER'].includes(role)) return true;
 
     // Others must be scheduled
     const { data } = await supabase

@@ -134,14 +134,14 @@ export const scheduleService = {
     // 1. Buscar todos os voluntários do departamento (incluindo cargo)
     const { data: rawVolunteers, error: volErr } = await supabase
       .from('user_departments')
-      .select('user_id, profiles(full_name, email, role)')
+      .select('user_id, profiles(full_name, email, access_level)')
       .eq('department_id', departmentId);
 
     if (volErr) return { error: volErr };
 
     // Bloqueio: Admin e Master não são escalados
     const volunteers = rawVolunteers.filter(v => {
-      const role = (v.profiles as any)?.role;
+      const role = (v.profiles as any)?.access_level;
       return role !== 'ADMIN' && role !== 'MASTER';
     });
 

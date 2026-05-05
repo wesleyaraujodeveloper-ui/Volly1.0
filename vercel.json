@@ -1,7 +1,9 @@
 {
+  "cleanUrls": true,
+  "trailingSlash": false,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
-  "framework": null,
-  "trailingSlash": false
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1.html" }
+  ]
 }

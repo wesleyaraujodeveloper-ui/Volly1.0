@@ -193,7 +193,7 @@ export const availabilityService = {
     // 2. Busca disponibilidades desses usuários para os eventos
     const { data, error } = await supabase
       .from('user_event_availabilities')
-      .select('*, profiles:user_id(full_name, avatar_url, role)')
+      .select('*, profiles:user_id(full_name, avatar_url, access_level)')
       .in('user_id', userIds)
       .in('event_id', eventIds);
 
@@ -201,7 +201,7 @@ export const availabilityService = {
 
     // Bloqueio: Admin e Master não aparecem na lista de disponibilidade da equipe
     const filteredData = (data || []).filter(item => {
-      const role = (item.profiles as any)?.role;
+      const role = (item.profiles as any)?.access_level;
       return role !== 'ADMIN' && role !== 'MASTER';
     });
 
