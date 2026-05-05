@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import Head from 'expo-router/head';
@@ -24,6 +24,8 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'CreamCake': require('../assets/fonts/CreamCake.otf'),
   });
+
+  const lastUserId = useRef<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -54,9 +56,17 @@ export default function RootLayout() {
     if (!navigationState?.key) return;
 
     const handleSession = async (session: any) => {
-      console.log('DEBUG: handleSession iniciado. Evento:', !!session ? 'SESSÃO_ATIVA' : 'SEM_SESSÃO');
+      const currentId = session?.user?.id || null;
       
-      // Sempre marcar como carregando ao processar uma possível mudança de estado
+      // EVITA LOOP: Se o ID for o mesmo e já temos usuário, não processa novamente
+      if (currentId === lastUserId.current && user && !isLoadingData) {
+        return;
+      }
+
+      console.log('DEBUG: handleSession iniciado. Evento:', !!session ? 'SESSÃO_ATIVA' : 'SEM_SESSÃO');
+      lastUserId.current = currentId;
+      
+      // Só marca como carregando se houver mudança real
       setIsLoadingData(true);
 
       try {
