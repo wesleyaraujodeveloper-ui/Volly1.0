@@ -36,6 +36,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import { useRef } from 'react';
 
 type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 
@@ -43,9 +45,11 @@ const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', '
 
 export default function EscalasTabsScreen() {
   const { user, providerToken } = useAppStore();
-  const [activeTab, setActiveTab] = useState<subTab>('DISPONIBILIDADE');
+  const activeTab = useState<subTab>('DISPONIBILIDADE')[0];
+  const setActiveTab = useState<subTab>('DISPONIBILIDADE')[1];
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
+  const viewShotRef = useRef<any>(null);
 
   // Contexto
   const { data: departments = [], isLoading: loadingDepts } = useUserDepartments();
@@ -274,48 +278,100 @@ export default function EscalasTabsScreen() {
 
     setSaving(true);
     try {
-      // Cabeçalho: Funções, Data1, Data2...
-      const header = ['Funções', ...monthlyEvents.map(ev => format(parseISO(ev.event_date), 'dd/MM HH:mm'))];
-      
-      const rows = roles.map(role => {
-        const rowData = [role.name];
-        monthlyEvents.forEach(ev => {
-          const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
-          // Limpa vírgulas para não quebrar o CSV
-          const name = sch?.profiles?.full_name ? sch.profiles.full_name.replace(/,/g, '') : '--';
-          rowData.push(name);
-        });
-        return rowData;
-      });
-
-      const csvContent = [header, ...rows].map(r => r.join(',')).join('\n');
-      const filename = `Escala_Mensal_${format(selectedMonth, 'MMMM_yyyy', { locale: ptBR })}.csv`;
-
       if (Platform.OS === 'web') {
+        // Fallback para CSV no Web pois ViewShot tem suporte limitado
+        const header = ['Funções', ...monthlyEvents.map(ev => format(parseISO(ev.event_date), 'dd/MM HH:mm'))];
+        const rows = roles.map(role => {
+          const rowData = [role.name];
+          monthlyEvents.forEach(ev => {
+            const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+            const name = sch?.profiles?.full_name ? sch.profiles.full_name.replace(/,/g, '') : '--';
+            rowData.push(name);
+          });
+          return rowData;
+        });
+        const csvContent = [header, ...rows].map(r => r.join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
+        link.setAttribute('download', `Escala_${format(selectedMonth, 'MMMM_yyyy', { locale: ptBR })}.csv`);
         link.click();
-        document.body.removeChild(link);
       } else {
-        const fileUri = FileSystem.cacheDirectory + filename;
-        await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Exportar Escala Mensal',
-          UTI: 'public.comma-separated-values-text'
+        // PNG para Mobile usando ViewShot
+        const uri = await captureRef(viewShotRef, {
+          format: 'png',
+          quality: 1,
+          result: 'tmpfile'
+        });
+        
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: 'Compartilhar Escala Mensal',
         });
       }
     } catch (error) {
       console.error('Erro ao exportar:', error);
-      showAlert('Erro', 'Ocorreu um erro ao gerar o arquivo da escala.', 'danger');
+      showAlert('Erro', 'Ocorreu um erro ao gerar a imagem da escala.', 'danger');
     } finally {
       setSaving(false);
     }
   };
+
+  const renderExportTemplate = () => (
+    <View style={styles.exportTemplateContainer}>
+      <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
+        <View style={styles.exportContent}>
+          <View style={styles.exportHeader}>
+            <Text style={styles.exportAppTitle}>VOLLY APP</Text>
+            <Text style={styles.exportTitle}>ESCALA MENSAL</Text>
+            <Text style={styles.exportSubtitle}>
+              {departments.find(d => d.department_id === selectedDeptId)?.departments.name.toUpperCase()} • {format(selectedMonth, 'MMMM / yyyy', { locale: ptBR }).toUpperCase()}
+            </Text>
+          </View>
+
+          <View style={styles.exportTable}>
+            <View style={styles.exportTableHeader}>
+              <View style={[styles.exportCell, { width: 140, backgroundColor: '#1A1A1A' }]}>
+                <Text style={styles.exportHeaderText}>FUNÇÃO</Text>
+              </View>
+              {monthlyEvents.map(ev => {
+                const evDate = parseISO(ev.event_date);
+                return (
+                  <View key={ev.id} style={styles.exportDayHeader}>
+                    <Text style={styles.exportDayNum}>{format(evDate, 'dd')}</Text>
+                    <Text style={styles.exportDayName}>{format(evDate, 'eee', { locale: ptBR }).toUpperCase()}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {roles.map((role) => (
+              <View key={role.id} style={styles.exportTableRow}>
+                <View style={[styles.exportCell, { width: 140 }]}>
+                  <Text style={styles.exportRoleText}>{role.name}</Text>
+                </View>
+                {monthlyEvents.map(ev => {
+                  const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+                  return (
+                    <View key={ev.id} style={styles.exportNameCell}>
+                      <Text style={[styles.exportNameText, !sch && { color: '#444' }]}>
+                        {sch ? sch.profiles?.full_name?.split(' ')[0] : '--'}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.exportFooter}>
+            <Text style={styles.exportFooterText}>Gerado via Volly App • Gestão Eficiente de Voluntários</Text>
+          </View>
+        </View>
+      </ViewShot>
+    </View>
+  );
 
   const renderDepartmentChips = () => (
     <ScrollView 
@@ -752,6 +808,9 @@ export default function EscalasTabsScreen() {
       {activeTab === 'DISPONIBILIDADE' && renderDisponibilidade()}
       {activeTab === 'ESCALAS' && renderEscalasTab()}
       {activeTab === 'MENSAL' && renderMensalTab()}
+      
+      {/* Template invisível para exportação de PNG */}
+      {renderExportTemplate()}
 
       <CustomModal 
         visible={modalVisible}
@@ -1430,4 +1489,108 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
   },
+  // Estilos para Exportação PNG
+  exportTemplateContainer: {
+    position: 'absolute',
+    left: -2000, // Fora da tela
+    width: 1000, // Largura fixa para garantir qualidade
+  },
+  exportContent: {
+    backgroundColor: '#000000',
+    padding: 40,
+    borderRadius: 0,
+  },
+  exportHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+    borderBottomWidth: 2,
+    borderBottomColor: '#6BC5A7',
+    paddingBottom: 20,
+  },
+  exportAppTitle: {
+    fontFamily: 'CreamCake',
+    fontSize: 48,
+    color: '#6BC5A7',
+    marginBottom: 5,
+  },
+  exportTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+  },
+  exportSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  exportTable: {
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  exportTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#1A1A1A',
+  },
+  exportDayHeader: {
+    flex: 1,
+    padding: 10,
+    alignItems: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: '#333',
+    minWidth: 60,
+  },
+  exportDayNum: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6BC5A7',
+  },
+  exportDayName: {
+    fontSize: 10,
+    color: '#666',
+  },
+  exportTableRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  exportCell: {
+    padding: 12,
+    justifyContent: 'center',
+    backgroundColor: '#0A0A0A',
+  },
+  exportRoleText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  exportHeaderText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#666',
+    textAlign: 'center',
+  },
+  exportNameCell: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: '#333',
+    minWidth: 60,
+  },
+  exportNameText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  exportFooter: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  exportFooterText: {
+    fontSize: 10,
+    color: '#444',
+    fontStyle: 'italic',
+  }
 });
