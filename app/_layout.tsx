@@ -1,3 +1,4 @@
+import 'react-native-url-polyfill/auto';
 import { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
@@ -34,6 +35,20 @@ export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+
+  // Adicionado para diagnosticar travamentos no carregamento e garantir exibição
+  useEffect(() => {
+    console.log('DEBUG: RootLayout Status:', { isMounted, fontsLoaded, isLoadingData });
+    
+    const safetyTimer = setTimeout(() => {
+      if (isLoadingData) {
+        console.warn('DEBUG: O carregamento está demorando muito. Forçando exibição da interface.');
+        setIsLoadingData(false);
+      }
+    }, 6000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [isLoadingData, fontsLoaded, isMounted]);
 
   useEffect(() => {
     if (!navigationState?.key) return;
