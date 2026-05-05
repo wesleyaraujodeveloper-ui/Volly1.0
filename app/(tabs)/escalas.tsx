@@ -317,60 +317,71 @@ export default function EscalasTabsScreen() {
     }
   };
 
-  const renderExportTemplate = () => (
-    <View style={styles.exportTemplateContainer} nativeID="export-template">
-      <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
-        <View style={styles.exportContent}>
-          <View style={styles.exportHeader}>
-            <Text style={styles.exportAppTitle}>VOLLY APP</Text>
-            <Text style={styles.exportTitle}>ESCALA MENSAL</Text>
-            <Text style={styles.exportSubtitle}>
-              {departments.find(d => d.department_id === selectedDeptId)?.departments.name.toUpperCase()} • {format(selectedMonth, 'MMMM / yyyy', { locale: ptBR }).toUpperCase()}
-            </Text>
-          </View>
+  const renderExportTemplate = () => {
+    // Calcula largura dinâmica para evitar esmagamento
+    const dynamicWidth = Math.max(1000, (monthlyEvents.length * 120) + 200);
 
-          <View style={styles.exportTable}>
-            <View style={styles.exportTableHeader}>
-              <View style={[styles.exportCell, { width: 140, backgroundColor: '#1A1A1A' }]}>
-                <Text style={styles.exportHeaderText}>FUNÇÃO</Text>
-              </View>
-              {monthlyEvents.map(ev => {
-                const evDate = parseISO(ev.event_date);
-                return (
-                  <View key={ev.id} style={styles.exportDayHeader}>
-                    <Text style={styles.exportDayNum}>{format(evDate, 'dd')}</Text>
-                    <Text style={styles.exportDayName}>{format(evDate, 'eee', { locale: ptBR }).toUpperCase()}</Text>
-                  </View>
-                );
-              })}
+    return (
+      <View style={[styles.exportTemplateContainer, { width: dynamicWidth }]} nativeID="export-template">
+        <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 1.0 }}>
+          <View style={[styles.exportContent, { width: dynamicWidth }]}>
+            <View style={styles.exportHeader}>
+              <Text style={styles.exportAppTitle}>VOLLY APP</Text>
+              <Text style={styles.exportTitle}>ESCALA MENSAL</Text>
+              <Text style={styles.exportSubtitle}>
+                {departments.find(d => d.department_id === selectedDeptId)?.departments.name.toUpperCase()} • {format(selectedMonth, 'MMMM / yyyy', { locale: ptBR }).toUpperCase()}
+              </Text>
             </View>
 
-            {roles.map((role) => (
-              <View key={role.id} style={styles.exportTableRow}>
-                <View style={[styles.exportCell, { width: 140 }]}>
-                  <Text style={styles.exportRoleText}>{role.name}</Text>
+            <View style={styles.exportTable}>
+              <View style={styles.exportTableHeader}>
+                <View style={[styles.exportCell, { width: 180, backgroundColor: '#1A1A1A' }]}>
+                  <Text style={[styles.exportHeaderText, { fontSize: 14 }]}>FUNÇÃO</Text>
                 </View>
                 {monthlyEvents.map(ev => {
-                  const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+                  const evDate = parseISO(ev.event_date);
                   return (
-                    <View key={ev.id} style={styles.exportNameCell}>
-                      <Text style={[styles.exportNameText, !sch && { color: '#444' }]}>
-                        {sch ? sch.profiles?.full_name?.split(' ')[0] : '--'}
-                      </Text>
+                    <View key={ev.id} style={styles.exportDayHeader}>
+                      <Text style={styles.exportDayNum}>{format(evDate, 'dd')}</Text>
+                      <Text style={styles.exportDayName}>{format(evDate, 'eee', { locale: ptBR }).toUpperCase()}</Text>
+                      <Text style={[styles.exportDayName, { color: '#6BC5A7' }]}>{format(evDate, 'HH:mm')}</Text>
                     </View>
                   );
                 })}
               </View>
-            ))}
-          </View>
 
-          <View style={styles.exportFooter}>
-            <Text style={styles.exportFooterText}>Gerado via Volly App • Gestão Eficiente de Voluntários</Text>
+              {roles.map((role) => (
+                <View key={role.id} style={styles.exportTableRow}>
+                  <View style={[styles.exportCell, { width: 180 }]}>
+                    <Text style={styles.exportRoleText}>{role.name}</Text>
+                  </View>
+                  {monthlyEvents.map(ev => {
+                    const sch = allMonthlySchedules.find(s => s.event_id === ev.id && s.role_id === role.id);
+                    return (
+                      <View key={ev.id} style={styles.exportNameCell}>
+                        <Text style={[styles.exportNameText, !sch && { color: '#333' }]}>
+                          {sch ? sch.profiles?.full_name?.split(' ')[0] : '--'}
+                        </Text>
+                        {sch && sch.profiles?.full_name?.split(' ').length > 1 && (
+                          <Text style={[styles.exportNameText, { fontSize: 10, opacity: 0.7 }]}>
+                            {sch.profiles.full_name.split(' ')[1]}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.exportFooter}>
+              <Text style={styles.exportFooterText}>Escala gerada automaticamente via Volly App • A maneira mais inteligente de gerenciar sua equipe</Text>
+            </View>
           </View>
-        </View>
-      </ViewShot>
-    </View>
-  );
+        </ViewShot>
+      </View>
+    );
+  };
 
   const renderDepartmentChips = () => (
     <ScrollView 
@@ -1491,40 +1502,39 @@ const styles = StyleSheet.create({
   // Estilos para Exportação PNG
   exportTemplateContainer: {
     position: 'absolute',
-    left: -2000, // Fora da tela
-    width: 1000, // Largura fixa para garantir qualidade
+    left: -5000, // Bem longe para não interferir na UI
   },
   exportContent: {
     backgroundColor: '#000000',
-    padding: 40,
+    padding: 60,
     borderRadius: 0,
   },
   exportHeader: {
     alignItems: 'center',
-    marginBottom: 30,
-    borderBottomWidth: 2,
+    marginBottom: 40,
+    borderBottomWidth: 3,
     borderBottomColor: '#6BC5A7',
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   exportAppTitle: {
     fontFamily: 'CreamCake',
-    fontSize: 48,
+    fontSize: 60,
     color: '#6BC5A7',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   exportTitle: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    letterSpacing: 2,
+    letterSpacing: 4,
   },
   exportSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    fontSize: 18,
+    color: '#888',
+    marginTop: 10,
   },
   exportTable: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#333',
   },
   exportTableHeader: {
@@ -1533,20 +1543,21 @@ const styles = StyleSheet.create({
   },
   exportDayHeader: {
     flex: 1,
-    padding: 10,
+    padding: 15,
     alignItems: 'center',
     borderLeftWidth: 1,
     borderLeftColor: '#333',
-    minWidth: 60,
+    minWidth: 100,
   },
   exportDayNum: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#6BC5A7',
+    color: '#FFFFFF',
   },
   exportDayName: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: 12,
+    color: '#888',
+    fontWeight: 'bold',
   },
   exportTableRow: {
     flexDirection: 'row',
@@ -1554,42 +1565,42 @@ const styles = StyleSheet.create({
     borderTopColor: '#333',
   },
   exportCell: {
-    padding: 12,
+    padding: 15,
     justifyContent: 'center',
     backgroundColor: '#0A0A0A',
   },
   exportRoleText: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   exportHeaderText: {
-    fontSize: 10,
     fontWeight: 'bold',
-    color: '#666',
+    color: '#888',
     textAlign: 'center',
   },
   exportNameCell: {
     flex: 1,
-    padding: 12,
+    padding: 15,
     justifyContent: 'center',
     alignItems: 'center',
     borderLeftWidth: 1,
     borderLeftColor: '#333',
-    minWidth: 60,
+    minWidth: 100,
   },
   exportNameText: {
-    fontSize: 12,
+    fontSize: 16,
     color: '#FFFFFF',
-    fontWeight: '500',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   exportFooter: {
-    marginTop: 30,
+    marginTop: 50,
     alignItems: 'center',
   },
   exportFooterText: {
-    fontSize: 10,
-    color: '#444',
+    fontSize: 14,
+    color: '#555',
     fontStyle: 'italic',
   }
 });
