@@ -45,8 +45,7 @@ const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', '
 
 export default function EscalasTabsScreen() {
   const { user, providerToken } = useAppStore();
-  const activeTab = useState<subTab>('DISPONIBILIDADE')[0];
-  const setActiveTab = useState<subTab>('DISPONIBILIDADE')[1];
+  const [activeTab, setActiveTab] = useState<subTab>('DISPONIBILIDADE');
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
   const viewShotRef = useRef<any>(null);
