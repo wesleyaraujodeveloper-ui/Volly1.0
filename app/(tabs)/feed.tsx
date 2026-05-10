@@ -582,7 +582,7 @@ export default function FeedScreen() {
             <View style={styles.postInputCard}>
               <View style={styles.postInputHeader}>
                 <Image 
-                  source={{ uri: user?.avatar_url || 'https://via.placeholder.com/40' }} 
+                  source={{ uri: user?.avatar_url || `https://ui-avatars.com/api/?name=${user?.name || 'Voluntario'}&background=random` }} 
                   style={styles.postAvatarSmall} 
                 />
                 <TextInput
@@ -734,7 +734,7 @@ export default function FeedScreen() {
                 <View style={{ width: '100%', marginTop: 15, paddingBottom: 5 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Image 
-                      source={{ uri: activeCommentPost.profiles?.avatar_url || 'https://via.placeholder.com/40' }} 
+                      source={{ uri: activeCommentPost.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${activeCommentPost.profiles?.full_name || 'U'}&background=random` }} 
                       style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8, backgroundColor: theme.colors.border }} 
                     />
                     <Text style={{ fontWeight: 'bold', color: theme.colors.text, fontSize: 13 }}>
@@ -758,7 +758,7 @@ export default function FeedScreen() {
                 ListEmptyComponent={<Text style={styles.emptyCommentsText}>Seja o primeiro a comentar!</Text>}
                 renderItem={({ item }) => (
                   <View style={styles.commentItem}>
-                    <Image source={{ uri: item.profiles?.avatar_url || 'https://via.placeholder.com/40' }} style={styles.commentAvatar} />
+                    <Image source={{ uri: item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.full_name || 'U'}&background=random` }} style={styles.commentAvatar} />
                     <View style={styles.commentBubble}>
                       <Text style={styles.commentAuthor}>{item.profiles?.full_name || 'Usuário'}</Text>
                       <Text style={styles.commentText}>{item.content}</Text>
