@@ -15,7 +15,7 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Volly Connect';
   const options = {
     body: data.body || 'Você tem uma nova atualização!',
-    icon: '/assets/images/icons/icone-volly-logo.png', // Certifique-se que este caminho existe
+    icon: '/assets/images/icons/icone_volly_logo.png', // Certifique-se que este caminho existe
     badge: '/favicon.ico',
     data: data.data || {}, // Dados extras para deep linking
   };

@@ -121,7 +121,7 @@ export default function EventosScreen() {
                 <EmptyState 
                   title="Nenhum evento encontrado"
                   description="Tente ajustar sua busca ou mudar o filtro de data."
-                  image={require('../../assets/empty.png')}
+                  image={require('../../assets/empty_state.png')}
                 />
               }
             />

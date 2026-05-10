@@ -125,7 +125,7 @@ export const eventService = {
 
     // Se NÃO houver data específica, filtramos apenas os próximos
     if (!filters?.date) {
-      query = query.gte('event_date', new Date().toISOString());
+      query = query.gte('event_date', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString());
     }
 
     query = query.order('event_date', { ascending: true });

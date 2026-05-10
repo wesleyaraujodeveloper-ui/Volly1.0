@@ -89,20 +89,35 @@ export const useMonthlyData = (departmentId: string | null, selectedMonth: Date 
       const start = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1).toISOString().split('T')[0];
       const end = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0).toISOString().split('T')[0];
 
-      // Buscar roles
+      // 1. Buscar IDs de eventos associados ao departamento via tabela de junção
+      const { data: junctionData } = await supabase
+        .from('event_departments')
+        .select('event_id')
+        .eq('department_id', departmentId);
+      
+      const junctionEventIds = junctionData ? junctionData.map(ed => ed.event_id) : [];
+
+      // 2. Buscar roles
       const { data: roles, error: rolesErr } = await supabase.from('roles').select('*').eq('department_id', departmentId);
       if (rolesErr) throw rolesErr;
 
-      // Buscar eventos no mês
-      const { data: events, error: evErr } = await supabase
+      // 3. Buscar eventos no mês (Filtra por ID principal OU IDs encontrados na junção)
+      let query = supabase
         .from('events')
-        .select('*, event_departments!inner(*)')
-        .eq('event_departments.department_id', departmentId)
+        .select('*, event_departments(departments(id, name))')
         .gte('event_date', `${start}T00:00:00Z`)
-        .lte('event_date', `${end}T23:59:59Z`)
-        .order('event_date', { ascending: true });
+        .lte('event_date', `${end}T23:59:59Z`);
+
+      if (junctionEventIds.length > 0) {
+        query = query.or(`department_id.eq.${departmentId},id.in.(${junctionEventIds.join(',')})`);
+      } else {
+        query = query.eq('department_id', departmentId);
+      }
+
+      const { data: events, error: evErr } = await query.order('event_date', { ascending: true });
       if (evErr) throw evErr;
 
+      // 4. Buscar escalas para esses eventos
       let schedules = [];
       if (events && events.length > 0) {
         const { data: mSchedules, error: schErr } = await supabase

@@ -4,7 +4,7 @@
     "slug": "vollyconnect",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icons/icone-volly-logo.png",
+    "icon": "./assets/images/icons/icone_volly_logo.png",
     "scheme": "vollyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#121212",
-        "foregroundImage": "./assets/images/icons/icone-volly-logo.png"
+        "foregroundImage": "./assets/images/icons/icone_volly_logo.png"
       },
       "package": "com.wesleydeveloper.volly",
       "permissions": [
@@ -41,14 +41,14 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icons/icone-volly-logo.png",
+      "favicon": "./assets/images/icons/icone_volly_logo.png",
       "name": "Volly Connect",
       "shortName": "Volly",
       "themeColor": "#121212",
       "backgroundColor": "#121212"
     },
     "notification": {
-      "icon": "./assets/images/icons/icone-volly-logo.png",
+      "icon": "./assets/images/icons/icone_volly_logo.png",
       "color": "#121212",
       "vapidPublicKey": "BMzKLdhLcF5qAzLy9BIIDC5miXslc1udM_NchdeH40TxHc7z5KEOzE7AFRCpW_SmEoBn_QF9BjewK5ARMweVXrQ",
       "serviceWorkerPath": "/expo-service-worker.js"
@@ -58,7 +58,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/splash_icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",

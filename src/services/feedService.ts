@@ -35,6 +35,7 @@ export const feedService = {
           id,
           title,
           event_date,
+          end_date,
           description,
           event_departments (
             departments (
@@ -50,7 +51,7 @@ export const feedService = {
       `)
       .eq('user_id', userId)
       .eq('status', 'CONFIRMADO')
-      .gte('events.event_date', new Date().toISOString())
+      .gte('events.event_date', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
       .order('event_date', { foreignTable: 'events', ascending: true })
       .limit(1)
       .maybeSingle();
@@ -106,7 +107,7 @@ export const feedService = {
           )
         )
       `)
-      .gte('event_date', new Date().toISOString());
+      .gte('event_date', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString());
 
     if (institutionId) {
       query = query.eq('institution_id', institutionId);

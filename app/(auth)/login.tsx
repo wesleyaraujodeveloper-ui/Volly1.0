@@ -127,7 +127,7 @@ export default function LoginScreen() {
       <View style={styles.logoContainer}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image 
-            source={lastBranding?.logo_url ? { uri: lastBranding.logo_url } : require('../../assets/images/icons/volly-logo.png')} 
+            source={lastBranding?.logo_url ? { uri: lastBranding.logo_url } : require('../../assets/images/icons/volly_logo.png')} 
             style={styles.logoImage}
             resizeMode="contain"
           />

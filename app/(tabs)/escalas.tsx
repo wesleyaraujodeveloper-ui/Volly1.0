@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image, Platform } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -64,11 +64,12 @@ export default function EscalasTabsScreen() {
   // Consultas
   const { data: userAbsences = [] } = useUserAbsences();
   const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
-  const pendingEvents = upcomingEvents.filter((e: any) => {
+  const pendingEvents = useMemo(() => upcomingEvents.filter((e: any) => {
     if (!e.schedules || e.schedules.length === 0) return true;
     // Verifica se há alguma escala para o departamento selecionado
     return !e.schedules.some((s: any) => s.roles?.department_id === selectedDeptId);
-  });
+  }), [upcomingEvents, selectedDeptId]);
+
   const monthEvents = pendingEvents;
 
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
@@ -88,14 +89,16 @@ export default function EscalasTabsScreen() {
     );
   };
 
-  const eventIds = pendingEvents.map((e: any) => e.id!);
+  const eventIds = useMemo(() => pendingEvents.map((e: any) => e.id!), [pendingEvents]);
   
-  const { data: serverAvailabilities = [] } = useEventAvailability(eventIds);
+  const { data: serverAvailabilities } = useEventAvailability(eventIds);
   const { data: teamAvailabilities = [] } = useTeamAvailability(selectedDeptId, eventIds);
   const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
 
   useEffect(() => {
-    setEventAvailabilities(serverAvailabilities);
+    if (serverAvailabilities) {
+      setEventAvailabilities(serverAvailabilities);
+    }
   }, [serverAvailabilities]);
 
   const { data: eventSchedules = [] } = useEventSchedules(expandedEventId);
@@ -278,8 +281,13 @@ export default function EscalasTabsScreen() {
 
     setSaving(true);
     try {
+      if (loadingMonthly) {
+        showAlert('Aguarde', 'Os dados ainda estão sendo carregados.', 'info');
+        return;
+      }
+
       // Pequeno delay para garantir que o template renderizou com os dados atuais
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (Platform.OS === 'web') {
         // PNG para Web usando html-to-image
@@ -447,7 +455,7 @@ export default function EscalasTabsScreen() {
           <EmptyState 
             title="Nenhum evento neste departamento"
             description="Não há eventos programados para o período selecionado."
-            image={require('../../assets/empty.png')}
+            image={require('../../assets/empty_state.png')}
           />
         ) : (
           monthEvents.map((event) => {
@@ -719,7 +727,7 @@ export default function EscalasTabsScreen() {
         <EmptyState 
           title="Sem eventos"
           description="Não há eventos próximos para gerenciar escalas neste grupo."
-          image={require('../../assets/empty.png')}
+          image={require('../../assets/empty_state.png')}
         />
       )}
     </ScrollView>
@@ -741,11 +749,11 @@ export default function EscalasTabsScreen() {
             </TouchableOpacity>
           </View>
           <TouchableOpacity 
-            style={styles.exportButton}
+            style={[styles.exportButton, (saving || loadingMonthly) && { opacity: 0.5 }]}
             onPress={handleDownloadMonthlyScale}
-            disabled={saving}
+            disabled={saving || loadingMonthly}
           >
-            {saving ? (
+            {saving || loadingMonthly ? (
               <ActivityIndicator size="small" color="#000" />
             ) : (
               <DownloadSimple size={18} color="#000" weight="bold" />
@@ -1506,9 +1514,9 @@ const styles = StyleSheet.create({
   exportTemplateContainer: {
     position: 'absolute',
     top: 0,
-    left: 0,
+    left: -5000, // Esconder fora da tela em vez de usar opacidade baixa
     zIndex: -1000,
-    opacity: 0.01, 
+    opacity: 1, 
   },
   exportContent: {
     backgroundColor: '#FFFFFF',
