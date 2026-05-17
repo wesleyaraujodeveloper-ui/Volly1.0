@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform, Modal, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform, Modal, KeyboardAvoidingView, Animated as RNAnimated } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { globalStyles, theme } from '../../src/theme';
 import { 
@@ -21,7 +21,7 @@ import {
   X
 } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { feedService } from '../../src/services/feedService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -64,6 +64,9 @@ export default function FeedScreen() {
 
   // Controle de Hidratação
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Animação do botão de chat
+  const pulseAnim = useRef(new RNAnimated.Value(1)).current;
 
   const queryClient = useQueryClient();
   const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
@@ -94,11 +97,31 @@ export default function FeedScreen() {
   }, [user]);
 
   useEffect(() => {
+    let isActive = false;
     if (nextEvent?.events) {
       const eventData = nextEvent.events as any;
-      setIsChatActive(chatService.isChatActive(eventData.event_date, eventData.end_date));
+      isActive = chatService.isChatActive(eventData.event_date, eventData.end_date);
+    }
+    
+    setIsChatActive(isActive);
+
+    if (isActive) {
+      RNAnimated.loop(
+        RNAnimated.sequence([
+          RNAnimated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ])
+      ).start();
     } else {
-      setIsChatActive(false);
+      pulseAnim.setValue(1);
     }
   }, [nextEvent]);
 
@@ -501,13 +524,16 @@ export default function FeedScreen() {
     if (!eventId) return null;
 
     return (
-      <TouchableOpacity 
-        style={styles.chatFAB}
-        onPress={() => router.push(`/events/${eventId}?tab=CHAT` as any)}
-      >
-        <ChatTeardropDots size={26} color="#FFFFFF" weight="fill" />
-        <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />
-      </TouchableOpacity>
+      <RNAnimated.View style={[styles.chatFABContainer, { transform: [{ scale: pulseAnim }] }]}>
+        <TouchableOpacity 
+          style={styles.chatFAB}
+          onPress={() => router.push(`/events/${eventId}?tab=CHAT` as any)}
+          activeOpacity={0.9}
+        >
+          <ChatTeardropDots size={28} color="#FFFFFF" weight="fill" />
+          <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />
+        </TouchableOpacity>
+      </RNAnimated.View>
     );
   };
 
@@ -1218,10 +1244,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-  chatFAB: {
+  chatFABContainer: {
     position: 'absolute',
     bottom: 30,
     right: 25,
+    zIndex: 999,
+  },
+  chatFAB: {
     backgroundColor: theme.colors.primary,
     width: 60,
     height: 60,
@@ -1233,7 +1262,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
-    zIndex: 999,
   },
   activeIndicator: {
     position: 'absolute',
