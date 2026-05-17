@@ -473,18 +473,10 @@ export default function EscalasTabsScreen() {
                   <View style={styles.availabilityOptions}>
                     <TouchableOpacity 
                       style={[styles.availOptionBtn, avail?.is_available === true && styles.availOptionBtnSelected]} 
-                      onPress={() => setAvailabilityStatus(event.id!, true)}
+                      onPress={() => setAvailabilityStatus(event.id!, !avail?.is_available)}
                     >
                       <CheckCircle size={18} color={avail?.is_available === true ? '#000' : theme.colors.textSecondary} weight={avail?.is_available === true ? 'fill' : 'regular'} />
                       <Text style={[styles.availOptionText, avail?.is_available === true && { color: '#000', fontWeight: 'bold' }]}>Vou</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[styles.availOptionBtn, avail?.is_available === false && styles.availOptionBtnError]} 
-                      onPress={() => setAvailabilityStatus(event.id!, false)}
-                    >
-                      <XCircle size={18} color={avail?.is_available === false ? '#fff' : theme.colors.textSecondary} weight={avail?.is_available === false ? 'fill' : 'regular'} />
-                      <Text style={[styles.availOptionText, avail?.is_available === false && { color: '#fff', fontWeight: 'bold' }]}>Não vou</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
