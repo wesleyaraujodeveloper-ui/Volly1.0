@@ -103,7 +103,7 @@ export default function FeedScreen() {
   }, [nextEvent]);
 
   useEffect(() => {
-    if (nextEvent && !nextEvent.google_event_id && providerToken) {
+    if (nextEvent && !(nextEvent as any).google_event_id && providerToken) {
       syncCalendarMutation.mutate({ scheduleId: nextEvent.id, token: providerToken });
     }
   }, [nextEvent, providerToken]);
@@ -225,8 +225,8 @@ export default function FeedScreen() {
       await createPostMutation.mutateAsync({
         userId: user.id, 
         content: newPostContent.trim(), 
-        imageUrl: imageUrl || undefined, 
-        institutionId: user.institution_id,
+        imageUrl: imageUrl ? (imageUrl as string) : undefined, 
+        institutionId: user.institution_id || undefined,
         visibility: user.role === 'MASTER' ? postVisibility : 'INTERNAL'
       });
       
@@ -347,8 +347,8 @@ export default function FeedScreen() {
 
   const renderNextMission = () => {
     if (!nextEvent) return null;
-    const event = nextEvent.events;
-    const role = nextEvent.roles;
+    const event = nextEvent.events as any;
+    const role = nextEvent.roles as any;
 
     return (
       <View style={styles.section}>
@@ -497,13 +497,13 @@ export default function FeedScreen() {
   };
 
   const renderChatFAB = () => {
-    const eventId = nextEvent?.events?.id;
+    const eventId = (nextEvent?.events as any)?.id;
     if (!eventId) return null;
 
     return (
       <TouchableOpacity 
         style={styles.chatFAB}
-        onPress={() => router.push(`/events/${eventId}?tab=CHAT`)}
+        onPress={() => router.push(`/events/${eventId}?tab=CHAT` as any)}
       >
         <ChatTeardropDots size={26} color="#FFFFFF" weight="fill" />
         <View style={[styles.activeIndicator, !isChatActive && { backgroundColor: theme.colors.textSecondary }]} />

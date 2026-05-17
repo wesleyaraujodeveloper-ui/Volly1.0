@@ -168,7 +168,7 @@ export default function PerfilScreen() {
         onConfirm={() => {
           if (modalData.title === 'Sair da Conta') {
              // onConfirm no modalData já tem a lógica de logout
-             modalData.onConfirm();
+             modalData.onConfirm?.();
           }
           setModalVisible(false);
         }}

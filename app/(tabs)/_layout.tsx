@@ -32,7 +32,6 @@ export default function TabsLayout() {
             />
             <Text 
               style={{ fontFamily: 'CreamCake', color: theme.colors.primary, fontSize: 30, marginLeft: 6 }}
-              className="notranslate"
             >
               Volly
             </Text>

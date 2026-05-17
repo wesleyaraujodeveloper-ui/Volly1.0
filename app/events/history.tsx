@@ -85,7 +85,7 @@ export default function HistoryScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity 
               style={styles.eventCard}
-              onPress={() => router.push(`/events/${item.id}?tab=CHAT`)}
+              onPress={() => router.push(`/events/${item.id}?tab=CHAT` as any)}
             >
               <View style={styles.eventInfo}>
                 <Text style={styles.eventTitle}>{item.title}</Text>
