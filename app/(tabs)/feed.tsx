@@ -98,9 +98,10 @@ export default function FeedScreen() {
 
   useEffect(() => {
     let isActive = false;
-    if (nextEvent?.events) {
-      const eventData = nextEvent.events as any;
-      isActive = chatService.isChatActive(eventData.event_date, eventData.end_date);
+    const currentEvent = (nextEvent?.events || nextGlobalEvent) as any;
+    
+    if (currentEvent) {
+      isActive = chatService.isChatActive(currentEvent.event_date, currentEvent.end_date);
     }
     
     setIsChatActive(isActive);
@@ -123,7 +124,7 @@ export default function FeedScreen() {
     } else {
       pulseAnim.setValue(1);
     }
-  }, [nextEvent]);
+  }, [nextEvent, nextGlobalEvent, pulseAnim]);
 
   useEffect(() => {
     if (nextEvent && !(nextEvent as any).google_event_id && providerToken) {
@@ -520,8 +521,12 @@ export default function FeedScreen() {
   };
 
   const renderChatFAB = () => {
-    const eventId = (nextEvent?.events as any)?.id;
+    const currentEvent = (nextEvent?.events || nextGlobalEvent) as any;
+    const eventId = currentEvent?.id;
     if (!eventId) return null;
+    
+    const isVolunteer = user?.role === 'VOLUNTÁRIO';
+    if (isVolunteer && !nextEvent?.events) return null;
 
     return (
       <RNAnimated.View style={[styles.chatFABContainer, { transform: [{ scale: pulseAnim }] }]}>
