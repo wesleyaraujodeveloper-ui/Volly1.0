@@ -135,3 +135,4 @@ const styles = StyleSheet.create({
   emptyContainer: { alignItems: 'center', marginTop: 60 },
   emptyText: { color: theme.colors.textSecondary, marginTop: 12 }
 });
+

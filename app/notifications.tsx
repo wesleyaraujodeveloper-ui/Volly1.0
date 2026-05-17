@@ -133,7 +133,7 @@ export default function NotificationsScreen() {
       ) : (
         <View style={styles.emptyContainer}>
           <Image 
-            source={require('../assets/empty_state.png')} 
+            source={require('../assets/empty_state.jpg')} 
             style={styles.emptyImage}
             resizeMode="contain"
           />
@@ -261,3 +261,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

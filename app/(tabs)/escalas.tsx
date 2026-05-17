@@ -455,7 +455,7 @@ export default function EscalasTabsScreen() {
           <EmptyState 
             title="Nenhum evento neste departamento"
             description="Não há eventos programados para o período selecionado."
-            image={require('../../assets/empty_state.png')}
+            image={require('../../assets/empty_state.jpg')}
           />
         ) : (
           monthEvents.map((event) => {
@@ -727,7 +727,7 @@ export default function EscalasTabsScreen() {
         <EmptyState 
           title="Sem eventos"
           description="Não há eventos próximos para gerenciar escalas neste grupo."
-          image={require('../../assets/empty_state.png')}
+          image={require('../../assets/empty_state.jpg')}
         />
       )}
     </ScrollView>
@@ -1619,3 +1619,4 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   }
 });
+

@@ -391,7 +391,7 @@ export default function GestaoMembrosScreen() {
               <EmptyState 
                 title={STRINGS.gestao.emptyState} 
                 description={STRINGS.gestao.emptyStateSub} 
-                image={require('../../assets/empty_state.png')} 
+                image={require('../../assets/empty_state.jpg')} 
               />
             }
             ListHeaderComponent={
@@ -912,3 +912,4 @@ const styles = StyleSheet.create({
   chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: 'bold' },
   chipTextSelected: { color: '#FFFFFF' }
 });
+

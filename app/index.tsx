@@ -9,3 +9,4 @@ export default function Index() {
   // The RootLayout will catch this and redirect to login if necessary.
   return <Redirect href="/(auth)/login" />;
 }
+

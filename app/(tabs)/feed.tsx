@@ -727,7 +727,7 @@ export default function FeedScreen() {
               <EmptyState 
                 title={STRINGS.feed.emptyState}
                 description={STRINGS.feed.emptyStateSub}
-                image={require('../../assets/empty_state.png')}
+                image={require('../../assets/empty_state.jpg')}
               />
             )}
 
@@ -1416,3 +1416,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 });
+
