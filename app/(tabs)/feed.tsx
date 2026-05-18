@@ -526,7 +526,7 @@ export default function FeedScreen() {
     if (!eventId) return null;
     
     const isVolunteer = user?.role === 'VOLUNTÁRIO';
-    if (isVolunteer && !nextEvent?.events) return null;
+    // if (isVolunteer && !nextEvent?.events) return null; // Removido para permitir visualização como leitura
 
     return (
       <RNAnimated.View style={[styles.chatFABContainer, { transform: [{ scale: pulseAnim }] }]}>
