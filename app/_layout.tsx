@@ -53,13 +53,13 @@ export default function RootLayout() {
   }, [isLoadingData, fontsLoaded, isMounted]);
 
   useEffect(() => {
-    if (!navigationState?.key) return;
-
     const handleSession = async (session: any) => {
       const currentId = session?.user?.id || null;
       
+      const currentState = useAppStore.getState();
+      
       // EVITA LOOP: Se o ID for o mesmo e já temos usuário, não processa novamente
-      if (currentId === lastUserId.current && user && !isLoadingData) {
+      if (currentId === lastUserId.current && currentState.user && !currentState.isLoadingData) {
         return;
       }
 
@@ -165,7 +165,7 @@ export default function RootLayout() {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigationState?.key]);
+  }, []);
 
   useEffect(() => {
     if (isLoadingData || !navigationState?.key) return;
