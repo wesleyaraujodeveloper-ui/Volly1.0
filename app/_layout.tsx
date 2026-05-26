@@ -157,16 +157,10 @@ export default function RootLayout() {
       }
     };
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.log('Erro ao recuperar sessão:', error.message);
-        setIsLoadingData(false);
-        return;
-      }
-      handleSession(session);
-    });
-
+    // Em Supabase v2, onAuthStateChange dispara o evento 'INITIAL_SESSION' automaticamente
+    // Portanto, não precisamos chamar getSession() manualmente aqui se já estamos escutando
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+       console.log('DEBUG: onAuthStateChange event:', event);
        handleSession(session);
     });
 
