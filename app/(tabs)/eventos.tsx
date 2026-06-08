@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState } from 'react';
 import { Event } from '../../src/services/eventService';
@@ -29,16 +29,25 @@ export default function EventosScreen() {
   const isPast = listTab === 'HISTORICO' && !selectedDate;
 
   // React Query Hooks
-  const { data: upcomingEvents = [], isLoading: loadingUpcoming } = useUpcomingEventsList({
+  const { data: upcomingEvents = [], isLoading: loadingUpcoming, refetch: refetchUpcoming, isFetching: isFetchingUpcoming } = useUpcomingEventsList({
     date: selectedDate || undefined,
     name: search || undefined,
     institutionId: instId
   });
 
-  const { data: pastEvents = [], isLoading: loadingPast } = usePastEventsList(10, instId);
+  const { data: pastEvents = [], isLoading: loadingPast, refetch: refetchPast, isFetching: isFetchingPast } = usePastEventsList(10, instId);
 
   const events = isPast ? pastEvents : upcomingEvents;
   const loading = isPast ? loadingPast : loadingUpcoming;
+  const refreshing = isPast ? isFetchingPast : isFetchingUpcoming;
+
+  const onRefresh = () => {
+    if (isPast) {
+      refetchPast();
+    } else {
+      refetchUpcoming();
+    }
+  };
 
   const renderEventItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
@@ -117,6 +126,7 @@ export default function EventosScreen() {
               keyExtractor={(item) => item.id!}
               renderItem={renderEventItem}
               contentContainerStyle={{ paddingBottom: 80 }}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
               ListEmptyComponent={
                 <EmptyState 
                   title="Nenhum evento encontrado"

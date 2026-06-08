@@ -189,6 +189,7 @@ export const useAutoGenerateSchedule = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['eventSchedules', variables.eventId] });
       queryClient.invalidateQueries({ queryKey: ['monthlyData'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingEvents'] });
     },
   });
 };
@@ -203,6 +204,7 @@ export const useCompleteSchedule = () => {
     onSuccess: (_, eventId) => {
       queryClient.invalidateQueries({ queryKey: ['eventSchedules', eventId] });
       queryClient.invalidateQueries({ queryKey: ['monthlyData'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingEvents'] });
     },
   });
 };

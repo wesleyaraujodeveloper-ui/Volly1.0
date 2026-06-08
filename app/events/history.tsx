@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
@@ -27,13 +27,20 @@ export default function HistoryScreen() {
     loadHistory();
   }, []);
 
-  const loadHistory = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadHistory = async (isRefresh = false) => {
     if (!startDate || !endDate) return; // Aguarda as datas serem definidas no client
-    setLoading(true);
+    
+    if (!isRefresh) setLoading(true);
+    else setRefreshing(true);
+    
     const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
     const { data } = await eventService.listHistory(startDate, endDate, instId);
     setEvents(data || []);
-    setLoading(false);
+    
+    if (!isRefresh) setLoading(false);
+    else setRefreshing(false);
   };
 
   return (
@@ -69,7 +76,7 @@ export default function HistoryScreen() {
             />
           </View>
         </View>
-        <TouchableOpacity style={styles.searchBtn} onPress={loadHistory}>
+        <TouchableOpacity style={styles.searchBtn} onPress={() => loadHistory(false)}>
            <Ionicons name="search" size={18} color="#121212" />
            <Text style={styles.searchBtnText}>Aplicar Filtro</Text>
         </TouchableOpacity>
@@ -82,6 +89,7 @@ export default function HistoryScreen() {
           data={events}
           keyExtractor={item => item.id!}
           contentContainerStyle={{ paddingBottom: 40 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadHistory(true)} tintColor={theme.colors.primary} />}
           renderItem={({ item }) => (
             <TouchableOpacity 
               style={styles.eventCard}

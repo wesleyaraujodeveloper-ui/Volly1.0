@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -97,10 +97,22 @@ export default function GestaoMembrosScreen() {
     };
   }, [user?.id, user?.role, leaderTeams.length, queryClient]);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['volunteers'] });
     queryClient.invalidateQueries({ queryKey: ['departments'] });
     queryClient.invalidateQueries({ queryKey: ['roles'] });
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['volunteers'] }),
+      queryClient.invalidateQueries({ queryKey: ['departments'] }),
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+    ]);
+    setRefreshing(false);
   };
 
   const handleEmailChange = (text: string) => {
@@ -387,6 +399,7 @@ export default function GestaoMembrosScreen() {
           <FlatList
             data={filteredVolunteers}
             keyExtractor={(item) => item.id || item.email}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
             ListEmptyComponent={
               <EmptyState 
                 title={STRINGS.gestao.emptyState} 
@@ -502,6 +515,7 @@ export default function GestaoMembrosScreen() {
           <FlatList
             data={departments}
             keyExtractor={(item) => item.id}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
             ListHeaderComponent={
               isAdminOrMaster ? (
                 <View style={styles.formCard}>
@@ -587,6 +601,7 @@ export default function GestaoMembrosScreen() {
             data={roles}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 40 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
             ListHeaderComponent={
               <>
                 <View style={styles.formCard}>

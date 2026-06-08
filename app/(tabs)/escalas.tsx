@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image, Platform, RefreshControl } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect, useMemo } from 'react';
 import { 
@@ -28,8 +28,7 @@ import {
   useUserDepartments, useUserAbsences, useUpcomingEventsByDept, 
   useEventAvailability, useTeamAvailability, useEventSchedules, 
   useMonthlyData, useUpdateAvailability, useAddAbsence, 
-  useRemoveAbsence, useAutoGenerateSchedule, useCompleteSchedule, 
-  useRequestSwap 
+  useRemoveAbsence, useAutoGenerateSchedule, useCompleteSchedule 
 } from '../../src/hooks/queries/useSchedules';
 import { supabase } from '../../src/services/supabase';
 import { format, parseISO } from 'date-fns';
@@ -51,6 +50,21 @@ export default function EscalasTabsScreen() {
   const queryClient = useQueryClient();
   const viewShotRef = useRef<any>(null);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['userDepartments'] }),
+      queryClient.invalidateQueries({ queryKey: ['userAbsences'] }),
+      queryClient.invalidateQueries({ queryKey: ['upcomingEventsByDept'] }),
+      queryClient.invalidateQueries({ queryKey: ['eventAvailability'] }),
+      queryClient.invalidateQueries({ queryKey: ['teamAvailability'] }),
+      queryClient.invalidateQueries({ queryKey: ['eventSchedules'] }),
+      queryClient.invalidateQueries({ queryKey: ['monthlyData'] })
+    ]);
+    setRefreshing(false);
+  };
+
   // Contexto
   const { data: departments = [], isLoading: loadingDepts } = useUserDepartments();
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
@@ -66,8 +80,15 @@ export default function EscalasTabsScreen() {
   const { data: upcomingEvents = [], isLoading: loadingEvents } = useUpcomingEventsByDept(selectedDeptId);
   const pendingEvents = useMemo(() => upcomingEvents.filter((e: any) => {
     if (!e.schedules || e.schedules.length === 0) return true;
-    // Verifica se há alguma escala para o departamento selecionado
-    return !e.schedules.some((s: any) => s.roles?.department_id === selectedDeptId);
+    
+    // Filtra as escalas do departamento selecionado
+    const deptSchedules = e.schedules.filter((s: any) => s.roles?.department_id === selectedDeptId);
+    
+    // Se não há escalas para o departamento, então continua pendente
+    if (deptSchedules.length === 0) return true;
+    
+    // Se há escalas, mas alguma delas ainda não foi concluída, o evento é pendente
+    return deptSchedules.some((s: any) => s.status === 'PENDENTE' || s.status === 'TROCA_SOLICITADA');
   }), [upcomingEvents, selectedDeptId]);
 
   const monthEvents = pendingEvents;
@@ -112,9 +133,7 @@ export default function EscalasTabsScreen() {
   const [showAbsenceModal, setShowAbsenceModal] = useState(false);
   const [newAbsence, setNewAbsence] = useState({ start_date: '', end_date: '', description: '' });
 
-  const [swapModalVisible, setSwapModalVisible] = useState(false);
-  const [swapReason, setSwapReason] = useState('');
-  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+
 
   const loading = loadingDepts || loadingEvents;
   const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
@@ -124,7 +143,7 @@ export default function EscalasTabsScreen() {
   const removeAbsenceMutation = useRemoveAbsence();
   const autoGenerateScheduleMutation = useAutoGenerateSchedule();
   const completeScheduleMutation = useCompleteSchedule();
-  const requestSwapMutation = useRequestSwap();
+
 
   useEffect(() => {
     if (activeTab === 'DISPONIBILIDADE' && selectedDeptId) {
@@ -227,7 +246,6 @@ export default function EscalasTabsScreen() {
         }
       }
       showAlert('Sucesso', `Processamento em lote finalizado! ${totalAlocados} voluntários alocados no total.`, 'success');
-      setSelectedEventIds([]);
     } catch (error: any) {
       showAlert('Atenção', 'Ocorreu um erro durante o processamento em lote.', 'danger');
     } finally {
@@ -258,20 +276,7 @@ export default function EscalasTabsScreen() {
     }
   };
 
-  const handleRequestSwap = async () => {
-    if (!selectedScheduleId) return;
-    setSaving(true);
-    try {
-      await requestSwapMutation.mutateAsync({ scheduleId: selectedScheduleId, reason: swapReason });
-      showAlert('Solicitação Enviada', 'Seu líder foi notificado sobre a sua necessidade de troca.', 'success');
-      setSwapModalVisible(false);
-      setSwapReason('');
-    } catch (error: any) {
-      showAlert('Erro', 'Não foi possível enviar a solicitação: ' + error.message, 'danger');
-    } finally {
-      setSaving(false);
-    }
-  };
+
 
   const handleDownloadMonthlyScale = async () => {
     if (monthlyEvents.length === 0 || roles.length === 0) {
@@ -447,7 +452,7 @@ export default function EscalasTabsScreen() {
     if (loading) return <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />;
 
     return (
-      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}>
         <Text style={styles.sectionTitle}>Dias disponíveis</Text>
         <Text style={styles.sectionSubtitle}>Aqui você atualizará os dias de disponibilidade da semana e também períodos de ausência programada.</Text>
         
@@ -580,23 +585,38 @@ export default function EscalasTabsScreen() {
     );
   };
 
-  const renderEscalasTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+  const renderEscalasTab = () => {
+    const canGenerate = selectedEventIds.length > 0 && selectedEventIds.some(id => {
+      const ev = pendingEvents.find((e: any) => e.id === id);
+      if (!ev) return false;
+      const deptSchedules = ev.schedules?.filter((s: any) => s.roles?.department_id === selectedDeptId) || [];
+      return deptSchedules.length === 0;
+    });
+
+    const canComplete = selectedEventIds.length > 0 && selectedEventIds.some(id => {
+      const ev = pendingEvents.find((e: any) => e.id === id);
+      if (!ev) return false;
+      const deptSchedules = ev.schedules?.filter((s: any) => s.roles?.department_id === selectedDeptId) || [];
+      return deptSchedules.length > 0 && deptSchedules.some((s: any) => s.status === 'PENDENTE');
+    });
+
+    return (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}>
       {isAdminOrLeader && (
         <View style={styles.adminActions}>
           <TouchableOpacity 
-            style={[styles.primaryButton, { backgroundColor: '#333', opacity: selectedEventIds.length === 0 ? 0.5 : 1 }]} 
+            style={[styles.primaryButton, { backgroundColor: '#333', opacity: (!canGenerate || saving) ? 0.5 : 1 }]} 
             onPress={handleAutoGenerateScale}
-            disabled={saving || selectedEventIds.length === 0}
+            disabled={saving || !canGenerate}
           >
             <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
               Gerar escalas ({selectedEventIds.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.primaryButton, { marginTop: 10, opacity: selectedEventIds.length === 0 ? 0.5 : 1 }]} 
+            style={[styles.primaryButton, { marginTop: 10, opacity: (!canComplete || saving) ? 0.5 : 1 }]} 
             onPress={handleCompleteScale} 
-            disabled={saving || selectedEventIds.length === 0}
+            disabled={saving || !canComplete}
           >
             <Text style={styles.buttonText}>Concluir e Notificar ({selectedEventIds.length})</Text>
           </TouchableOpacity>
@@ -692,18 +712,7 @@ export default function EscalasTabsScreen() {
                             <View style={[styles.smallDot, { backgroundColor: sch.status === 'CONFIRMADO' ? theme.colors.success : '#ff9000' }]} />
                           )}
 
-                          {sch.user_id === user?.id && sch.status !== 'TROCA_SOLICITADA' && sch.status !== 'AUSENTE' && (
-                            <TouchableOpacity 
-                              style={styles.requestSwapBtn} 
-                              onPress={() => {
-                                setSelectedScheduleId(sch.id);
-                                setSwapModalVisible(true);
-                              }}
-                            >
-                              <ArrowsLeftRight size={14} color={theme.colors.primary} weight="bold" />
-                              <Text style={styles.requestSwapBtnText}>Trocar</Text>
-                            </TouchableOpacity>
-                          )}
+
                         </View>
                       </View>
                     ))
@@ -723,10 +732,11 @@ export default function EscalasTabsScreen() {
         />
       )}
     </ScrollView>
-  );
+    );
+  };
 
   const renderMensalTab = () => (
-    <ScrollView style={styles.tabContent}>
+    <ScrollView style={styles.tabContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}>
       <View style={styles.mensalHeader}>
         <View style={styles.mensalControls}>
           <View style={styles.dateControl}>
@@ -835,45 +845,7 @@ export default function EscalasTabsScreen() {
         confirmText="OK"
       />
 
-      <Modal visible={swapModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Solicitar Troca de Escala</Text>
-            <Text style={styles.modalSubtitle}>Explique brevemente ao seu líder o motivo da troca (opcional).</Text>
-            
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="Ex: Tive um imprevisto no trabalho..."
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              numberOfLines={4}
-              value={swapReason}
-              onChangeText={setSwapReason}
-            />
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
-                onPress={() => setSwapModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalConfirmBtn} 
-                onPress={handleRequestSwap}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#000" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>Enviar Solicitação</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

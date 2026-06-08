@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -32,8 +32,17 @@ export default function PerfilScreen() {
     return null;
   };
 
-  const { data: userDepartments = [], isLoading: loadingDepts } = useUserDepartmentsProfile();
-  const { data: institution } = useUserInstitution(user?.institution_id);
+  const { data: userDepartments = [], isLoading: loadingDepts, refetch: refetchDepts, isFetching: isFetchingDepts } = useUserDepartmentsProfile();
+  const { data: institution, refetch: refetchInst, isFetching: isFetchingInst } = useUserInstitution(user?.institution_id);
+
+  const onRefresh = async () => {
+    await Promise.all([
+      refetchDepts(),
+      refetchInst()
+    ]);
+  };
+  
+  const refreshing = isFetchingDepts || isFetchingInst;
 
   const handleLogout = () => {
     setModalData({
@@ -63,7 +72,12 @@ export default function PerfilScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+    >
       {/* Header com Gradiente */}
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.primaryDark]}

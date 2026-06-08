@@ -18,7 +18,9 @@ import {
   YoutubeLogo, 
   User,
   XCircle,
-  X
+  X,
+  ArrowsLeftRight,
+  WarningCircle
 } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -34,7 +36,7 @@ import { notificationService } from '../../src/services/notificationService';
 import { supabase } from '../../src/services/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFeedPosts, useGlobalSchedulePanorama, useNextUserEvent, useNextGlobalEvent, useRecommendedSongs, useCreatePost, useDeletePost, useToggleLike } from '../../src/hooks/queries/useFeed';
-import { useSyncCalendar } from '../../src/hooks/queries/useSchedules';
+import { useSyncCalendar, useRequestSwap } from '../../src/hooks/queries/useSchedules';
 
 export default function FeedScreen() {
   const { user, providerToken } = useAppStore();
@@ -62,6 +64,11 @@ export default function FeedScreen() {
   // Estado de Notificações
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Estado de Troca de Escala
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [swapReason, setSwapReason] = useState('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+
   // Controle de Hidratação
   const [isMounted, setIsMounted] = useState(false);
   
@@ -82,6 +89,7 @@ export default function FeedScreen() {
   const deletePostMutation = useDeletePost();
   const toggleLikeMutation = useToggleLike();
   const syncCalendarMutation = useSyncCalendar();
+  const requestSwapMutation = useRequestSwap();
 
   const loading = loadingPosts;
   const refreshing = isFetchingPosts;
@@ -318,6 +326,18 @@ export default function FeedScreen() {
     }
   };
 
+  const handleRequestSwap = async () => {
+    if (!selectedScheduleId) return;
+    try {
+      await requestSwapMutation.mutateAsync({ scheduleId: selectedScheduleId, reason: swapReason });
+      Alert.alert('Solicitação Enviada', 'Seu líder foi notificado sobre a sua necessidade de troca.');
+      setSwapModalVisible(false);
+      setSwapReason('');
+      queryClient.invalidateQueries({ queryKey: ['panorama'] });
+    } catch (error: any) {
+      Alert.alert('Erro', 'Não foi possível enviar a solicitação: ' + error.message);
+    }
+  };
 
   // A tela principal renderiza imediatamente, os dados "pipocam" quando prontos.
   const renderLoadingFeedback = () => {
@@ -506,6 +526,24 @@ export default function FeedScreen() {
                                <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
                                <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
                              </View>
+
+                             {sch.status === 'TROCA_SOLICITADA' ? (
+                               <View style={styles.swapRequestedBadge}>
+                                 <WarningCircle size={12} color="#fff" weight="fill" />
+                                 <Text style={styles.swapRequestedText}>Troca Solicitada</Text>
+                               </View>
+                             ) : sch.user_id === user?.id && sch.status !== 'AUSENTE' ? (
+                               <TouchableOpacity 
+                                 style={styles.requestSwapBtn} 
+                                 onPress={() => {
+                                   setSelectedScheduleId(sch.id);
+                                   setSwapModalVisible(true);
+                                 }}
+                               >
+                                 <ArrowsLeftRight size={14} color={theme.colors.primary} weight="bold" />
+                                 <Text style={styles.requestSwapBtnText}>Trocar</Text>
+                               </TouchableOpacity>
+                             ) : null}
                            </View>
                          ))}
                        </View>
@@ -820,11 +858,93 @@ export default function FeedScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      <Modal visible={swapModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlaySwap}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Solicitar Troca de Escala</Text>
+            <Text style={styles.modalSubtitle}>Explique brevemente ao seu líder o motivo da troca (opcional).</Text>
+            
+            <TextInput
+              style={styles.reasonInput}
+              placeholder="Ex: Tive um imprevisto no trabalho..."
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              numberOfLines={4}
+              value={swapReason}
+              onChangeText={setSwapReason}
+            />
+
+            <View style={styles.modalActionsSwap}>
+              <TouchableOpacity 
+                style={styles.modalCancelBtn} 
+                onPress={() => setSwapModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.modalConfirmBtn} 
+                onPress={handleRequestSwap}
+              >
+                <Text style={styles.modalConfirmText}>Enviar Solicitação</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlaySwap: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    padding: 24,
+    borderRadius: 20,
+  },
+  modalSubtitle: {
+    color: theme.colors.textSecondary,
+    marginBottom: 15,
+  },
+  reasonInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 12,
+    color: theme.colors.text,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  modalActionsSwap: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    gap: 10,
+  },
+  modalCancelBtn: {
+    padding: 12,
+  },
+  modalCancelText: {
+    color: theme.colors.textSecondary,
+    fontWeight: 'bold',
+  },
+  modalConfirmBtn: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  modalConfirmText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1414,6 +1534,92 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
+  },
+  requestSwapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '40',
+    marginLeft: 10,
+  },
+  requestSwapBtnText: {
+    color: theme.colors.primary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  swapRequestedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.error,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  swapRequestedText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  modalOverlaySwap: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    width: '100%',
+  },
+  modalSubtitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 15,
+  },
+  reasonInput: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    color: theme.colors.text,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    textAlignVertical: 'top',
+    height: 80,
+    marginBottom: 20,
+    fontSize: 14,
+  },
+  modalActionsSwap: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    padding: 12,
+    marginRight: 10,
+  },
+  modalCancelText: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  modalConfirmText: {
+    color: '#000',
+    fontWeight: 'bold',
   },
 });
 

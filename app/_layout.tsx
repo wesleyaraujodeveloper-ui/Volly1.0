@@ -8,15 +8,23 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../src/services/supabase';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useFonts } from 'expo-font';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutos de cache
+      gcTime: 1000 * 60 * 60 * 24, // 24 horas (mantém em disco por um dia inteiro)
       retry: 2,
     },
   },
+});
+
+const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
 });
 
 export default function RootLayout() {
@@ -194,12 +202,12 @@ export default function RootLayout() {
         </Head>
       )}
       <StatusBar style="light" />
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: asyncStoragePersister }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </>
   );
 }

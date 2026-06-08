@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Image, ScrollView, RefreshControl } from 'react-native';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -255,8 +255,7 @@ export default function GestaoInstituicoesScreen() {
         data={institutions}
         keyExtractor={(item) => item.id}
         renderItem={renderInstitutionCard}
-        refreshing={isLoading}
-        onRefresh={() => refetch()}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={theme.colors.primary} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
           <View style={globalStyles.center}>

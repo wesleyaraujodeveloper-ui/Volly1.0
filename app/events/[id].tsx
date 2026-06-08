@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Alert, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Alert, ActivityIndicator, Linking, RefreshControl } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -64,8 +64,16 @@ export default function EventDetailScreen() {
     return () => { supabase.removeChannel(channel); };
   }, [id]);
 
-  async function loadData() {
-    setLoading(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData(true);
+    setRefreshing(false);
+  };
+
+  async function loadData(isRefresh = false) {
+    if (!isRefresh) setLoading(true);
     const { data: ev } = await eventService.getEventDetails(id);
     const { data: sch } = await scheduleService.listSchedulesByEvent(id);
     const { data: pl } = await supabase.from('playlists').select('*').eq('event_id', id).maybeSingle();
@@ -104,7 +112,7 @@ export default function EventDetailScreen() {
       setCanChat(can);
     }
 
-    setLoading(false);
+    if (!isRefresh) setLoading(false);
   }
 
   async function loadMessages() {
@@ -240,7 +248,7 @@ export default function EventDetailScreen() {
 
       <View style={{ flex: 1 }}>
         {activeTab === 'INFO' && (
-          <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}>
             <View style={styles.infoContent}>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Sobre o Evento</Text>
@@ -365,7 +373,7 @@ export default function EventDetailScreen() {
         )}
 
         {activeTab === 'ESCALAS' && (
-          <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}>
             <View style={styles.scalesContent}>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Composição da Equipe</Text>
@@ -434,6 +442,7 @@ export default function EventDetailScreen() {
               inverted
               keyExtractor={(item) => item.id}
               contentContainerStyle={{ padding: 10 }}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
               renderItem={({ item }) => (
                 <View style={[styles.messageBubble, item.user_id === user?.id && styles.myMessage]}>
                    <Text style={[styles.messageUser, item.user_id === user?.id && { color: '#FFFFFF' }]}>
