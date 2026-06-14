@@ -397,7 +397,11 @@ export default function FeedScreen() {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sua Próxima Missão</Text>
-        <TouchableOpacity style={styles.missionCard} activeOpacity={0.9}>
+        <TouchableOpacity 
+          style={styles.missionCard} 
+          activeOpacity={0.9}
+          onPress={() => router.push(`/events/${event.id}` as any)}
+        >
           <View style={styles.missionHeader}>
             <View style={styles.missionTag}>
               <Text style={styles.missionTagText}>EM BREVE</Text>
@@ -458,7 +462,11 @@ export default function FeedScreen() {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Nosso próximo compromisso!</Text>
-        <View style={styles.missionCard}>
+        <TouchableOpacity 
+          style={styles.missionCard}
+          activeOpacity={0.9}
+          onPress={() => router.push(`/events/${nextGlobalEvent.id}` as any)}
+        >
           <View style={styles.missionHeader}>
             <View style={[styles.missionTag, { backgroundColor: theme.colors.surfaceHighlight }]}>
               <Text style={[styles.missionTagText, { color: theme.colors.primary }]}>GERAL</Text>
@@ -468,7 +476,15 @@ export default function FeedScreen() {
           
           <Text style={styles.missionTitle}>{nextGlobalEvent.title}</Text>
           <Text style={styles.missionRole}>Data: <Text style={{ color: theme.colors.textSecondary }}>{format(eventDate, "dd 'de' MMMM", { locale: ptBR })}</Text></Text>
-        </View>
+          
+          <View style={styles.missionFooter}>
+            <View style={styles.deptInfo}>
+              <Users size={14} color={theme.colors.textSecondary} weight="regular" />
+              <Text style={styles.deptName}>Evento Geral</Text>
+            </View>
+            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
+          </View>
+        </TouchableOpacity>
       </View>
     );
   };
