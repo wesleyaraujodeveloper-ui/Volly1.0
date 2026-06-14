@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { theme } from '../../src/theme';
-import { House, Users, Calendar, ClipboardText, User, Buildings } from 'phosphor-react-native';
+import { House, Users, Calendar, ClipboardText, User, Buildings, MusicNotes } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { Image, View, Text } from 'react-native';
 
@@ -88,6 +88,15 @@ export default function TabsLayout() {
           href: (user?.role === 'MASTER' ? null : '/(tabs)/escalas') as any,
           tabBarIcon: ({ color, size, focused }) => (
             <ClipboardText size={size} color={color} weight={focused ? 'fill' : 'regular'} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="playlist"
+        options={{
+          title: 'Playlist',
+          tabBarIcon: ({ color, size, focused }) => (
+            <MusicNotes size={size} color={color} weight={focused ? 'fill' : 'regular'} />
           ),
         }}
       />

@@ -5,6 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
 import { scheduleService, Schedule } from '../../src/services/scheduleService';
 import { supabase } from '../../src/services/supabase';
+import { songService, GlobalSong, EventSong } from '../../src/services/songService';
+import { SongAutocompleteInput } from '../../src/components/SongAutocompleteInput';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,16 +31,15 @@ export default function EventDetailScreen() {
   
   const [event, setEvent] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
-  const [playlist, setPlaylist] = useState<any>(null);
-  const [songs, setSongs] = useState<any[]>([]);
+  const [songs, setSongs] = useState<EventSong[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [canChat, setCanChat] = useState(false);
   const [chatActive, setChatActive] = useState(true);
   const listRef = useRef<FlatList>(null);
 
-  // Form states for adding songs
-  const [newSong, setNewSong] = useState({ name: '', youtube: '', spotify: '' });
+  // Autocomplete Modal state
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
   
   // Selection states for schedules
   const [isAddingSchedule, setIsAddingSchedule] = useState(false);
@@ -76,11 +77,10 @@ export default function EventDetailScreen() {
     if (!isRefresh) setLoading(true);
     const { data: ev } = await eventService.getEventDetails(id);
     const { data: sch } = await scheduleService.listSchedulesByEvent(id);
-    const { data: pl } = await supabase.from('playlists').select('*').eq('event_id', id).maybeSingle();
+    const { data: evSongs } = await songService.getEventSongs(id);
     
     if (ev) {
       setEvent(ev);
-      // Busca funções de todos os departamentos vinculados ao evento
       const deptIds = ev.event_departments?.map((ed: any) => ed.departments?.id).filter(Boolean) || [];
       
       if (deptIds.length > 0) {
@@ -90,7 +90,6 @@ export default function EventDetailScreen() {
           .in('department_id', deptIds);
         setRoles(r || []);
       } else if (ev.department_id) {
-        // Fallback para o campo antigo caso a junção falhe
         const { data: r } = await supabase.from('roles').select('*').eq('department_id', ev.department_id);
         setRoles(r || []);
       } else {
@@ -99,9 +98,8 @@ export default function EventDetailScreen() {
     }
     
     setSchedules(sch || []);
-    if (pl) {
-      setPlaylist(pl);
-      setSongs(pl.links || []);
+    if (evSongs) {
+      setSongs(evSongs);
     }
     await loadMessages();
 
@@ -151,17 +149,41 @@ export default function EventDetailScreen() {
   const canEditPlaylist = (user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
   const canEditSchedule = (user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
 
-  const handleAddSongToList = () => {
-    if (!newSong.name) {
-      Alert.alert('Erro', 'O nome da música é obrigatório.');
-      return;
+  const handleSelectSong = async (globalSong: GlobalSong) => {
+    setIsSavingPlaylist(true);
+    try {
+      const { data, error } = await songService.addSongToEvent({
+        event_id: id,
+        song_id: globalSong.id,
+        order: songs.length
+      });
+      if (error) throw error;
+      if (data) setSongs([...songs, data]);
+    } catch (error: any) {
+      if (error.code === '23505') {
+         Alert.alert('Aviso', 'Esta música já está na setlist.');
+      } else {
+         Alert.alert('Erro', 'Não foi possível adicionar a música.');
+      }
+    } finally {
+      setIsSavingPlaylist(false);
     }
-    setSongs([...songs, { ...newSong }]);
-    setNewSong({ name: '', youtube: '', spotify: '' });
   };
 
-  const handleRemoveSongFromList = (index: number) => {
+  const handleRemoveSongFromList = async (index: number) => {
+    const songToRemove = songs[index];
+    if (songToRemove.id) {
+      setIsSavingPlaylist(true);
+      await songService.removeSongFromEvent(songToRemove.id);
+      setIsSavingPlaylist(false);
+    }
     const updatedSongs = songs.filter((_, i) => i !== index);
+    setSongs(updatedSongs);
+  };
+
+  const updateSongLink = (index: number, field: 'youtube_url' | 'spotify_url', value: string) => {
+    const updatedSongs = [...songs];
+    updatedSongs[index] = { ...updatedSongs[index], [field]: value };
     setSongs(updatedSongs);
   };
 
@@ -170,17 +192,18 @@ export default function EventDetailScreen() {
     
     setIsSavingPlaylist(true);
     try {
-      const { error } = await supabase
-        .from('playlists')
-        .upsert({ 
-          event_id: id, 
-          name: 'Setlist Principal', 
-          links: songs 
-        }, { onConflict: 'event_id' });
-
-      if (error) throw error;
+      // Atualiza os links e observações de cada música no evento
+      for (const song of songs) {
+        if (song.id) {
+          await songService.updateEventSong(song.id, {
+            youtube_url: song.youtube_url,
+            spotify_url: song.spotify_url,
+            notes: song.notes
+          });
+        }
+      }
       
-      Alert.alert('Sucesso', 'Playlist atualizada com sucesso!');
+      Alert.alert('Sucesso', 'Links salvos com sucesso!');
     } catch (error: any) {
       Alert.alert('Erro', 'Não foi possível salvar a playlist: ' + error.message);
     } finally {
@@ -274,11 +297,14 @@ export default function EventDetailScreen() {
                 <Text style={styles.sectionTitle}>Playlist / Setlist</Text>
                 {songs && songs.length > 0 ? (
                   songs.map((song, index) => (
-                    <View key={index} style={styles.songCard}>
+                    <View key={song.id || index} style={styles.songCard}>
                       <View style={styles.songHeader}>
                         <View style={styles.songInfoArea}>
                           <Text style={styles.songName} numberOfLines={2}>
-                            {song.name}
+                            {index + 1}. {song.global_song?.title || 'Música Desconhecida'}
+                          </Text>
+                          <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
+                            {song.global_song?.artist || ''}
                           </Text>
                         </View>
                         {canEditPlaylist ? (
@@ -291,20 +317,37 @@ export default function EventDetailScreen() {
                         ) : null}
                       </View>
 
-                      {!!(song.youtube || song.spotify) && (
+                      {canEditPlaylist ? (
+                        <View style={styles.editLinksArea}>
+                          <TextInput
+                            style={styles.smallInput}
+                            placeholder="Link do YouTube (opcional)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={song.youtube_url || ''}
+                            onChangeText={(val) => updateSongLink(index, 'youtube_url', val)}
+                          />
+                          <TextInput
+                            style={styles.smallInput}
+                            placeholder="Link do Spotify (opcional)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            value={song.spotify_url || ''}
+                            onChangeText={(val) => updateSongLink(index, 'spotify_url', val)}
+                          />
+                        </View>
+                      ) : (
                         <View style={styles.linkButtonsArea}>
-                          {!!song.youtube && (
+                          {!!song.youtube_url && (
                             <TouchableOpacity 
-                              onPress={() => Linking.openURL(song.youtube!)} 
+                              onPress={() => Linking.openURL(song.youtube_url!)} 
                               style={[styles.linkButton, styles.youtubeButton]}
                             >
                               <Ionicons name="logo-youtube" size={16} color="#ffffff" />
                               <Text style={styles.linkButtonText}>Assistir no YouTube</Text>
                             </TouchableOpacity>
                           )}
-                          {!!song.spotify && (
+                          {!!song.spotify_url && (
                             <TouchableOpacity 
-                              onPress={() => Linking.openURL(song.spotify!)} 
+                              onPress={() => Linking.openURL(song.spotify_url!)} 
                               style={[styles.linkButton, styles.spotifyButton]}
                             >
                               <Ionicons name="musical-notes" size={16} color="#ffffff" />
@@ -321,50 +364,27 @@ export default function EventDetailScreen() {
 
                 {canEditPlaylist ? (
                   <View style={styles.addSongForm}>
-                    <Text style={styles.addSongTitle}>Adicionar música ao rascunho</Text>
-                    <TextInput
-                      style={styles.songInput}
-                      placeholder="Nome da música"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      value={newSong.name}
-                      onChangeText={(t) => setNewSong({ ...newSong, name: t })}
-                    />
-                    <View style={styles.row}>
-                      <TextInput
-                        style={[styles.songInput, { flex: 1, marginRight: 4 }]}
-                        placeholder="Link YouTube"
-                        placeholderTextColor={theme.colors.textSecondary}
-                        value={newSong.youtube}
-                        onChangeText={(t) => setNewSong({ ...newSong, youtube: t })}
-                      />
-                      <TextInput
-                        style={[styles.songInput, { flex: 1, marginLeft: 4 }]}
-                        placeholder="Link Spotify"
-                        placeholderTextColor={theme.colors.textSecondary}
-                        value={newSong.spotify}
-                        onChangeText={(t) => setNewSong({ ...newSong, spotify: t })}
-                      />
-                    </View>
-                    
                     <TouchableOpacity 
                       style={styles.addToListBtn} 
-                      onPress={handleAddSongToList}
+                      onPress={() => setShowAutocomplete(true)}
                     >
                       <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                      <Text style={styles.addToListBtnText}>Adicionar à Lista</Text>
+                      <Text style={styles.addToListBtnText}>Buscar Músicas Globais</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                      style={[styles.confirmAddSong, isSavingPlaylist ? { opacity: 0.7 } : null]} 
-                      onPress={handleConfirmPlaylist}
-                      disabled={isSavingPlaylist}
-                    >
-                      {isSavingPlaylist ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.confirmAddSongText}>Confirmar Músicas</Text>
-                      )}
-                    </TouchableOpacity>
+                    {songs.length > 0 && (
+                      <TouchableOpacity 
+                        style={[styles.confirmAddSong, isSavingPlaylist ? { opacity: 0.7 } : null]} 
+                        onPress={handleConfirmPlaylist}
+                        disabled={isSavingPlaylist}
+                      >
+                        {isSavingPlaylist ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.confirmAddSongText}>Salvar Links</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ) : null}
               </View>
@@ -516,6 +536,12 @@ export default function EventDetailScreen() {
           </View>
         </View>
       )}
+
+      <SongAutocompleteInput 
+        visible={showAutocomplete}
+        onClose={() => setShowAutocomplete(false)}
+        onSelectSong={handleSelectSong}
+      />
     </View>
   );
 }
@@ -650,6 +676,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 10,
     marginBottom: 8,
+  },
+  editLinksArea: {
+    marginTop: 4,
+  },
+  smallInput: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    color: theme.colors.text,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    marginBottom: 6,
   },
   youtubeButton: {
     backgroundColor: 'rgba(255, 0, 0, 0.1)',
