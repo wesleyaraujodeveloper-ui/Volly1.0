@@ -71,6 +71,30 @@ export default function PerfilScreen() {
     showAlert(title, 'Esta configuração será liberada em breve na próxima atualização!', 'info');
   };
 
+  const handleEnablePushNotifications = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          showAlert('Sucesso', 'Notificações push ativadas para este navegador!', 'success');
+        } else {
+          showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+        }
+      } else {
+        // Para iOS/Android nativo via Expo
+        const { status } = await require('expo-notifications').requestPermissionsAsync();
+        if (status === 'granted') {
+          showAlert('Sucesso', 'Notificações ativadas no dispositivo!', 'success');
+        } else {
+          showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert('Erro', 'Não foi possível ativar as notificações.', 'danger');
+    }
+  };
+
   return (
     <ScrollView 
       style={styles.container} 
@@ -151,6 +175,11 @@ export default function PerfilScreen() {
           <Bell size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Notificações</Text>
           <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={handleEnablePushNotifications}>
+          <Bell size={24} color={theme.colors.primary} weight="fill" />
+          <Text style={[styles.menuItemText, { color: theme.colors.primary, fontWeight: 'bold' }]}>Ativar Notificações Push</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
