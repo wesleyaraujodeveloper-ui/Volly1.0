@@ -20,11 +20,16 @@ import {
   XCircle,
   X,
   ArrowsLeftRight,
-  WarningCircle
+  WarningCircle,
+  Star,
+  Megaphone,
+  PushPin
 } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { feedService } from '../../src/services/feedService';
+import { announcementService, Announcement } from '../../src/services/announcementService';
+import { feedbackService } from '../../src/services/feedbackService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
@@ -90,9 +95,36 @@ export default function FeedScreen() {
   const toggleLikeMutation = useToggleLike();
   const syncCalendarMutation = useSyncCalendar();
   const requestSwapMutation = useRequestSwap();
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [pendingFeedbackEvent, setPendingFeedbackEvent] = useState<any>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [createAnnModalVisible, setCreateAnnModalVisible] = useState(false);
+  const [newAnnTitle, setNewAnnTitle] = useState('');
+  const [newAnnContent, setNewAnnContent] = useState('');
+  const [newAnnDays, setNewAnnDays] = useState('7');
+  const [isPostingAnn, setIsPostingAnn] = useState(false);
 
   const loading = loadingPosts;
   const refreshing = isFetchingPosts;
+
+  const loadAnnouncements = async () => {
+    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+    const { data } = await announcementService.getActiveAnnouncements(instId || null);
+    if (data) setAnnouncements(data);
+  };
+
+  const checkPendingFeedback = async () => {
+    if (!user) return;
+    const { data } = await feedbackService.getPendingFeedbackEvent(user.id);
+    if (data) {
+      setPendingFeedbackEvent(data);
+      setFeedbackModalVisible(true);
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -101,6 +133,11 @@ export default function FeedScreen() {
       adminService.listInstitutions().then((res: any) => {
         setAllInstitutions(res.data || []);
       });
+    }
+
+    if (user) {
+      loadAnnouncements();
+      checkPendingFeedback();
     }
   }, [user]);
 
@@ -169,6 +206,7 @@ export default function FeedScreen() {
 
   const onRefresh = () => {
     refetchPosts();
+    loadAnnouncements();
     queryClient.invalidateQueries({ queryKey: ['panorama'] });
     queryClient.invalidateQueries({ queryKey: ['nextUserEvent'] });
     queryClient.invalidateQueries({ queryKey: ['nextGlobalEvent'] });
@@ -339,6 +377,67 @@ export default function FeedScreen() {
     }
   };
 
+  const handleSubmitFeedback = async () => {
+    if (!user || !pendingFeedbackEvent || feedbackRating === 0) return;
+    setIsSubmittingFeedback(true);
+    try {
+      await feedbackService.submitFeedback({
+        event_id: pendingFeedbackEvent.id,
+        user_id: user.id,
+        rating: feedbackRating,
+        comment: feedbackComment.trim()
+      });
+      // Notificar líder do departamento (simplificado: insere notificação caso o backend resolva o líder ou envia para o Master)
+      if (pendingFeedbackEvent.department_id) {
+        const { data: dept } = await supabase.from('departments').select('leader_id').eq('id', pendingFeedbackEvent.department_id).single();
+        if (dept && dept.leader_id) {
+          await supabase.from('notifications').insert([{
+            user_id: dept.leader_id,
+            title: 'Novo Feedback',
+            message: `${user.name} avaliou o evento ${pendingFeedbackEvent.title} com nota ${feedbackRating}.`,
+            link_url: `/events/${pendingFeedbackEvent.id}`
+          }]);
+        }
+      }
+      setFeedbackSuccess(true);
+      setTimeout(() => {
+        setFeedbackModalVisible(false);
+        setPendingFeedbackEvent(null);
+      }, 2000);
+    } catch (e: any) {
+      Alert.alert('Erro', 'Não foi possível enviar seu feedback.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!user || !newAnnTitle.trim() || !newAnnContent.trim()) return;
+    setIsPostingAnn(true);
+    try {
+      const days = parseInt(newAnnDays) || 7;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + days);
+
+      await announcementService.createAnnouncement({
+        institution_id: user.institution_id || undefined,
+        author_id: user.id,
+        title: newAnnTitle.trim(),
+        content: newAnnContent.trim(),
+        expires_at: expiresAt.toISOString()
+      });
+
+      setCreateAnnModalVisible(false);
+      setNewAnnTitle('');
+      setNewAnnContent('');
+      loadAnnouncements();
+    } catch (e: any) {
+      Alert.alert('Erro', 'Não foi possível criar o aviso.');
+    } finally {
+      setIsPostingAnn(false);
+    }
+  };
+
   // A tela principal renderiza imediatamente, os dados "pipocam" quando prontos.
   const renderLoadingFeedback = () => {
     if (loading && !refreshing) {
@@ -388,6 +487,51 @@ export default function FeedScreen() {
       </View>
     </View>
   );
+
+  const renderAnnouncements = () => {
+    if (announcements.length === 0 && user?.role !== 'LÍDER' && user?.role !== 'ADMIN' && user?.role !== 'MASTER') return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <PushPin size={18} color={theme.colors.primary} weight="fill" style={{ marginRight: 6 }} />
+            <Text style={styles.sectionTitle}>Avisos Oficiais</Text>
+          </View>
+          {(user?.role === 'LÍDER' || user?.role === 'ADMIN' || user?.role === 'MASTER') && (
+            <TouchableOpacity onPress={() => setCreateAnnModalVisible(true)}>
+              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>+ Novo Aviso</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {announcements.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {announcements.map((ann) => (
+              <View key={ann.id} style={{ width: 280, backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Megaphone size={16} color="#B8860B" weight="fill" style={{ marginRight: 4 }} />
+                  <Text style={{ color: '#B8860B', fontWeight: 'bold', fontSize: 12, flex: 1 }} numberOfLines={1}>{ann.title}</Text>
+                  {(user?.role === 'ADMIN' || user?.role === 'MASTER' || ann.author_id === user?.id) && (
+                    <TouchableOpacity onPress={() => announcementService.deleteAnnouncement(ann.id).then(() => loadAnnouncements())}>
+                      <X size={14} color={theme.colors.error} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <Text style={{ color: theme.colors.text, fontSize: 13 }} numberOfLines={3}>{ann.content}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                  <Image source={{ uri: ann.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ann.profiles?.full_name}` }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 6 }} />
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Por {ann.profiles?.full_name}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.emptyTextSmaller}>Nenhum aviso no momento.</Text>
+        )}
+      </View>
+    );
+  };
 
   const renderNextMission = () => {
     if (!nextEvent) return null;
@@ -903,6 +1047,113 @@ export default function FeedScreen() {
                 onPress={handleRequestSwap}
               >
                 <Text style={styles.modalConfirmText}>Enviar Solicitação</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Feedback */}
+      <Modal visible={feedbackModalVisible && !!pendingFeedbackEvent} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlaySwap}>
+          <View style={styles.modalCard}>
+            {feedbackSuccess ? (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <Star size={48} color={theme.colors.primary} weight="fill" />
+                <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 15, textAlign: 'center' }}>
+                  Obrigado pelo seu feedback!
+                </Text>
+                <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginTop: 10 }}>
+                  Sua opinião ajuda a melhorar nossa equipe.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+                  Como foi servir no evento "{pendingFeedbackEvent?.title}"?
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  Sua resposta ajuda seus líderes a acompanharem a equipe.
+                </Text>
+                
+                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 20 }}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <TouchableOpacity key={star} onPress={() => setFeedbackRating(star)}>
+                      <Star size={40} color={feedbackRating >= star ? theme.colors.primary : theme.colors.border} weight={feedbackRating >= star ? "fill" : "regular"} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TextInput
+                  style={styles.reasonInput}
+                  placeholder="Algum comentário ou sugestão? (Opcional)"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  multiline
+                  value={feedbackComment}
+                  onChangeText={setFeedbackComment}
+                />
+
+                <View style={styles.modalActionsSwap}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => {setFeedbackModalVisible(false); setPendingFeedbackEvent(null);}}>
+                    <Text style={styles.modalCancelText}>Agora Não</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalConfirmBtn, feedbackRating === 0 && { opacity: 0.5 }]} 
+                    onPress={handleSubmitFeedback}
+                    disabled={isSubmittingFeedback || feedbackRating === 0}
+                  >
+                    {isSubmittingFeedback ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Enviar Feedback</Text>}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Criar Aviso */}
+      <Modal visible={createAnnModalVisible} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlaySwap}>
+          <View style={styles.modalCard}>
+            <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Novo Aviso Oficial</Text>
+            
+            <TextInput
+              style={[styles.reasonInput, { minHeight: 40, marginBottom: 10 }]}
+              placeholder="Título do Aviso"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newAnnTitle}
+              onChangeText={setNewAnnTitle}
+            />
+            
+            <TextInput
+              style={[styles.reasonInput, { marginBottom: 10 }]}
+              placeholder="Conteúdo..."
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              value={newAnnContent}
+              onChangeText={setNewAnnContent}
+            />
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ color: theme.colors.textSecondary, marginRight: 10 }}>Duração (dias):</Text>
+              <TextInput
+                style={[styles.reasonInput, { minHeight: 40, flex: 1, textAlign: 'center' }]}
+                keyboardType="numeric"
+                value={newAnnDays}
+                onChangeText={setNewAnnDays}
+              />
+            </View>
+
+            <View style={styles.modalActionsSwap}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setCreateAnnModalVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalConfirmBtn, (!newAnnTitle.trim() || !newAnnContent.trim()) && { opacity: 0.5 }]} 
+                onPress={handleCreateAnnouncement}
+                disabled={isPostingAnn || !newAnnTitle.trim() || !newAnnContent.trim()}
+              >
+                {isPostingAnn ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Fixar Aviso</Text>}
               </TouchableOpacity>
             </View>
           </View>

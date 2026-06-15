@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl, Switch, Linking } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
 import { useUserDepartmentsProfile, useUserInstitution } from '../../src/hooks/queries/useProfile';
-import { User, Users, Bell, ShieldCheck, FileText, SignOut, CaretRight } from 'phosphor-react-native';
+import { User, Users, Bell, ShieldCheck, FileText, SignOut, CaretRight, WhatsappLogo } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STRINGS } from '../../src/constants/strings';
 import { CustomModal } from '../../src/components/CustomModal';
@@ -22,6 +22,20 @@ export default function PerfilScreen() {
     setModalData({ title, message, type });
     setModalVisible(true);
   };
+
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      if (Platform.OS === 'web') {
+        setPushEnabled(Notification.permission === 'granted');
+      } else {
+        const { status } = await require('expo-notifications').getPermissionsAsync();
+        setPushEnabled(status === 'granted' && !!user?.expo_push_token);
+      }
+    };
+    checkPushStatus();
+  }, [user?.expo_push_token]);
 
   const getTeamIcon = (name: string) => {
     const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -71,28 +85,55 @@ export default function PerfilScreen() {
     showAlert(title, 'Esta configuração será liberada em breve na próxima atualização!', 'info');
   };
 
-  const handleEnablePushNotifications = async () => {
+  const handleTogglePushNotifications = async (value: boolean) => {
     try {
-      if (Platform.OS === 'web') {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          showAlert('Sucesso', 'Notificações push ativadas para este navegador!', 'success');
+      if (value) {
+        if (Platform.OS === 'web') {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            setPushEnabled(true);
+            showAlert('Sucesso', 'Notificações ativadas para este navegador!', 'success');
+          } else {
+            setPushEnabled(false);
+            showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+          }
         } else {
-          showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+          const { status } = await require('expo-notifications').requestPermissionsAsync();
+          if (status === 'granted') {
+            setPushEnabled(true);
+            const token = (await require('expo-notifications').getExpoPushTokenAsync()).data;
+            if (user?.id) {
+              await supabase.from('profiles').update({ expo_push_token: token }).eq('id', user.id);
+            }
+            showAlert('Sucesso', 'Notificações ativadas no dispositivo!', 'success');
+          } else {
+            setPushEnabled(false);
+            showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+          }
         }
       } else {
-        // Para iOS/Android nativo via Expo
-        const { status } = await require('expo-notifications').requestPermissionsAsync();
-        if (status === 'granted') {
-          showAlert('Sucesso', 'Notificações ativadas no dispositivo!', 'success');
-        } else {
-          showAlert('Aviso', 'Permissão de notificação negada.', 'danger');
+        // Para desativar, removemos o token do Supabase para que o backend não envie mais
+        setPushEnabled(false);
+        if (user?.id) {
+          await supabase.from('profiles').update({ expo_push_token: null }).eq('id', user.id);
         }
+        showAlert('Info', 'Notificações push foram desativadas. Você não receberá mais alertas.', 'info');
       }
     } catch (error) {
       console.error(error);
-      showAlert('Erro', 'Não foi possível ativar as notificações.', 'danger');
+      setPushEnabled(!value);
+      showAlert('Erro', 'Não foi possível alterar a configuração de notificações.', 'danger');
     }
+  };
+
+  const handleSupportWhatsApp = () => {
+    const phoneNumber = '5567992803713';
+    const message = encodeURIComponent(`Olá, preciso de ajuda com o Volly! (Usuário: ${user?.name || 'Desconhecido'}, Email: ${user?.email || 'N/A'})`);
+    const url = `https://wa.me/${phoneNumber}?text=${message}`;
+    
+    Linking.openURL(url).catch(() => {
+      showAlert('Erro', 'Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.', 'danger');
+    });
   };
 
   return (
@@ -177,10 +218,18 @@ export default function PerfilScreen() {
           <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleEnablePushNotifications}>
-          <Bell size={24} color={theme.colors.primary} weight="fill" />
-          <Text style={[styles.menuItemText, { color: theme.colors.primary, fontWeight: 'bold' }]}>Ativar Notificações Push</Text>
-        </TouchableOpacity>
+        <View style={styles.menuItem}>
+          <Bell size={24} color={theme.colors.primary} weight={pushEnabled ? "fill" : "regular"} />
+          <Text style={[styles.menuItemText, { color: pushEnabled ? theme.colors.primary : theme.colors.text, fontWeight: pushEnabled ? 'bold' : 'normal' }]}>
+            Ativar Notificações
+          </Text>
+          <Switch 
+            value={pushEnabled} 
+            onValueChange={handleTogglePushNotifications} 
+            trackColor={{ false: theme.colors.border, true: theme.colors.primary + '80' }}
+            thumbColor={pushEnabled ? theme.colors.primary : '#f4f3f4'}
+          />
+        </View>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/privacy')}>
           <ShieldCheck size={24} color={theme.colors.text} weight="regular" />
@@ -191,6 +240,12 @@ export default function PerfilScreen() {
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/terms')}>
           <FileText size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Termos de Uso</Text>
+          <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={handleSupportWhatsApp}>
+          <WhatsappLogo size={24} color="#25D366" weight="regular" />
+          <Text style={styles.menuItemText}>Suporte via WhatsApp</Text>
           <CaretRight size={20} color={theme.colors.textSecondary} weight="bold" />
         </TouchableOpacity>
 
