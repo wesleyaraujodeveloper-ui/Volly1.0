@@ -107,9 +107,10 @@ export default function FeedScreen() {
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnDays, setNewAnnDays] = useState('7');
   const [isPostingAnn, setIsPostingAnn] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loading = loadingPosts;
-  const refreshing = isFetchingPosts;
+  const refreshing = isFetchingPosts || isRefreshing;
 
   const loadAnnouncements = async () => {
     const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
@@ -204,13 +205,20 @@ export default function FeedScreen() {
     }
   }, [posts, activeCommentPost]);
 
-  const onRefresh = () => {
-    refetchPosts();
-    loadAnnouncements();
-    queryClient.invalidateQueries({ queryKey: ['panorama'] });
-    queryClient.invalidateQueries({ queryKey: ['nextUserEvent'] });
-    queryClient.invalidateQueries({ queryKey: ['nextGlobalEvent'] });
-    queryClient.invalidateQueries({ queryKey: ['recommendedSongs'] });
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchPosts(),
+        loadAnnouncements(),
+        queryClient.invalidateQueries({ queryKey: ['panorama'] }),
+        queryClient.invalidateQueries({ queryKey: ['nextUserEvent'] }),
+        queryClient.invalidateQueries({ queryKey: ['nextGlobalEvent'] }),
+        queryClient.invalidateQueries({ queryKey: ['recommendedSongs'] })
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleImagePick = async () => {
