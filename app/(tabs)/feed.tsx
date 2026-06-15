@@ -804,6 +804,7 @@ export default function FeedScreen() {
               </ScrollView>
             )}
 
+            {renderAnnouncements()}
             {renderNextMission()}
             {renderNextGlobalEvent()}
             {renderRecommendedSongs()}
