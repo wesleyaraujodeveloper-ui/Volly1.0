@@ -21,6 +21,8 @@ export default function GestaoInstituicoesScreen() {
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [instToDelete, setInstToDelete] = useState<Institution | null>(null);
   const [editingInst, setEditingInst] = useState<Institution | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -141,25 +143,23 @@ export default function GestaoInstituicoesScreen() {
     }
   };
 
-  const handleDelete = (inst: Institution) => {
-    Alert.alert(
-      'Excluir Instituição',
-      `Tem certeza que deseja excluir a instituição "${inst.name}"? Esta ação não pode ser desfeita e pode afetar todos os usuários e eventos vinculados a ela.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(inst.id);
-            } catch (err: any) {
-              Alert.alert('Erro ao excluir', err.message || 'Falha ao remover a instituição. Tente desativá-la ou remover seus dependentes primeiro.');
-            }
-          }
-        }
-      ]
-    );
+  const handleDeleteClick = (inst: Institution) => {
+    setInstToDelete(inst);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!instToDelete) return;
+    try {
+      setLoading(true);
+      await deleteMutation.mutateAsync(instToDelete.id);
+      setDeleteModalVisible(false);
+      setInstToDelete(null);
+    } catch (err: any) {
+      Alert.alert('Erro ao excluir', err.message || 'Falha ao remover a instituição. Tente desativá-la ou remover seus dependentes primeiro.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderStatsDashboard = useMemo(() => {
@@ -262,7 +262,7 @@ export default function GestaoInstituicoesScreen() {
 
           <TouchableOpacity 
             style={[styles.editBtn, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]} 
-            onPress={() => handleDelete(item)}
+            onPress={() => handleDeleteClick(item)}
           >
             <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
           </TouchableOpacity>
@@ -366,6 +366,19 @@ export default function GestaoInstituicoesScreen() {
           </View>
         </ScrollView>
       </CustomModal>
+
+      <CustomModal
+        visible={deleteModalVisible}
+        title="Excluir Instituição"
+        message={`Tem certeza que deseja excluir a instituição "${instToDelete?.name}"?\nEsta ação não pode ser desfeita.`}
+        type="danger"
+        confirmText="Excluir Definitivamente"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setInstToDelete(null);
+        }}
+      />
     </View>
   );
 }

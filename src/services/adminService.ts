@@ -470,9 +470,14 @@ export const adminService = {
    * Exclui uma instituição.
    */
   deleteInstitution: async (id: string) => {
-    return await supabase
+    const { data, error, count } = await supabase
       .from('institutions')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('id', id);
+
+    if (error) return { data, error };
+    if (count === 0) return { data: null, error: { message: 'Acesso negado ou instituição não encontrada. (Restrição RLS ou FK)' } };
+
+    return { data, error: null };
   }
 };
