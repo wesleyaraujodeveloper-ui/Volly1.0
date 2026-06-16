@@ -14,6 +14,8 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { chatService } from '../../src/services/chatService';
 import { useRef } from 'react';
 
+const TONALIDADES = ["C", "C#", "D", "Eb", "F", "F#", "G", "G#", "A", "Bb", "B"];
+
 type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 
 export default function EventDetailScreen() {
@@ -181,7 +183,7 @@ export default function EventDetailScreen() {
     setSongs(updatedSongs);
   };
 
-  const updateSongLink = (index: number, field: 'youtube_url' | 'spotify_url', value: string) => {
+  const updateSongField = (index: number, field: 'youtube_url' | 'spotify_url' | 'tonalidade', value: string) => {
     const updatedSongs = [...songs];
     updatedSongs[index] = { ...updatedSongs[index], [field]: value };
     setSongs(updatedSongs);
@@ -198,12 +200,13 @@ export default function EventDetailScreen() {
           await songService.updateEventSong(song.id, {
             youtube_url: song.youtube_url,
             spotify_url: song.spotify_url,
+            tonalidade: song.tonalidade,
             notes: song.notes
           });
         }
       }
       
-      Alert.alert('Sucesso', 'Links salvos com sucesso!');
+      Alert.alert('Sucesso', 'Playlist e links salvos com sucesso!');
     } catch (error: any) {
       Alert.alert('Erro', 'Não foi possível salvar a playlist: ' + error.message);
     } finally {
@@ -302,6 +305,11 @@ export default function EventDetailScreen() {
                         <View style={styles.songInfoArea}>
                           <Text style={styles.songName} numberOfLines={2}>
                             {index + 1}. {song.global_song?.title || 'Música Desconhecida'}
+                            {song.tonalidade && (
+                              <Text style={{color: theme.colors.primary, fontWeight: 'bold', fontSize: 13}}>
+                                {'  '}[ Tom: {song.tonalidade} ]
+                              </Text>
+                            )}
                           </Text>
                           <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>
                             {song.global_song?.artist || ''}
@@ -319,19 +327,44 @@ export default function EventDetailScreen() {
 
                       {canEditPlaylist ? (
                         <View style={styles.editLinksArea}>
+                          <Text style={{color: theme.colors.textSecondary, fontSize: 12, marginBottom: 4, marginTop: 4, fontWeight: '500'}}>Tonalidade (Tom)</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 12}}>
+                            {TONALIDADES.map(tom => (
+                              <TouchableOpacity 
+                                key={tom} 
+                                onPress={() => updateSongField(index, 'tonalidade', tom)}
+                                style={{
+                                  paddingHorizontal: 14, 
+                                  paddingVertical: 6, 
+                                  borderRadius: 16, 
+                                  borderWidth: 1,
+                                  borderColor: song.tonalidade === tom ? theme.colors.primary : theme.colors.border,
+                                  backgroundColor: song.tonalidade === tom ? 'rgba(223, 114, 27, 0.15)' : theme.colors.background,
+                                  marginRight: 6
+                                }}
+                              >
+                                <Text style={{
+                                  color: song.tonalidade === tom ? theme.colors.primary : theme.colors.textSecondary,
+                                  fontWeight: song.tonalidade === tom ? 'bold' : 'normal',
+                                  fontSize: 12
+                                }}>{tom}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+
                           <TextInput
                             style={styles.smallInput}
                             placeholder="Link do YouTube (opcional)"
                             placeholderTextColor={theme.colors.textSecondary}
                             value={song.youtube_url || ''}
-                            onChangeText={(val) => updateSongLink(index, 'youtube_url', val)}
+                            onChangeText={(val) => updateSongField(index, 'youtube_url', val)}
                           />
                           <TextInput
                             style={styles.smallInput}
                             placeholder="Link do Spotify (opcional)"
                             placeholderTextColor={theme.colors.textSecondary}
                             value={song.spotify_url || ''}
-                            onChangeText={(val) => updateSongLink(index, 'spotify_url', val)}
+                            onChangeText={(val) => updateSongField(index, 'spotify_url', val)}
                           />
                         </View>
                       ) : (

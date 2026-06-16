@@ -17,6 +17,7 @@ export interface EventSong {
   order?: number;
   youtube_url?: string;
   spotify_url?: string;
+  tonalidade?: string;
   notes?: string;
   created_at?: string;
   global_song?: GlobalSong; // Relacionamento
