@@ -108,6 +108,7 @@ export default function FeedScreen() {
   const [newAnnDays, setNewAnnDays] = useState('7');
   const [isPostingAnn, setIsPostingAnn] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedAnns, setExpandedAnns] = useState<Record<string, boolean>>({});
 
   const loading = loadingPosts;
   const refreshing = isFetchingPosts || isRefreshing;
@@ -515,24 +516,37 @@ export default function FeedScreen() {
 
         {announcements.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {announcements.map((ann) => (
-              <View key={ann.id} style={{ width: 280, backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Megaphone size={16} color="#B8860B" weight="fill" style={{ marginRight: 4 }} />
-                  <Text style={{ color: '#B8860B', fontWeight: 'bold', fontSize: 12, flex: 1 }} numberOfLines={1}>{ann.title}</Text>
-                  {(user?.role === 'ADMIN' || user?.role === 'MASTER' || ann.author_id === user?.id) && (
-                    <TouchableOpacity onPress={() => announcementService.deleteAnnouncement(ann.id).then(() => loadAnnouncements())}>
-                      <X size={14} color={theme.colors.error} />
-                    </TouchableOpacity>
+            {announcements.map((ann) => {
+              const isExpanded = expandedAnns[ann.id];
+              return (
+                <TouchableOpacity 
+                  key={ann.id} 
+                  activeOpacity={0.9}
+                  onPress={() => setExpandedAnns(prev => ({ ...prev, [ann.id]: !prev[ann.id] }))}
+                  style={{ width: 280, backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)' }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Megaphone size={16} color="#B8860B" weight="fill" style={{ marginRight: 4 }} />
+                    <Text style={{ color: '#B8860B', fontWeight: 'bold', fontSize: 12, flex: 1 }} numberOfLines={1}>{ann.title}</Text>
+                    {(user?.role === 'ADMIN' || user?.role === 'MASTER' || ann.author_id === user?.id) && (
+                      <TouchableOpacity onPress={() => announcementService.deleteAnnouncement(ann.id).then(() => loadAnnouncements())}>
+                        <X size={14} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <Text style={{ color: theme.colors.text, fontSize: 13 }} numberOfLines={isExpanded ? undefined : 3}>{ann.content}</Text>
+                  {ann.content.length > 120 && (
+                    <Text style={{ color: '#B8860B', fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
+                      {isExpanded ? 'Mostrar menos' : 'Ler mais...'}
+                    </Text>
                   )}
-                </View>
-                <Text style={{ color: theme.colors.text, fontSize: 13 }} numberOfLines={3}>{ann.content}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                  <Image source={{ uri: ann.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ann.profiles?.full_name}` }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 6 }} />
-                  <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Por {ann.profiles?.full_name}</Text>
-                </View>
-              </View>
-            ))}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                    <Image source={{ uri: ann.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ann.profiles?.full_name}` }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 6 }} />
+                    <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Por {ann.profiles?.full_name}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         ) : (
           <Text style={styles.emptyTextSmaller}>Nenhum aviso no momento.</Text>

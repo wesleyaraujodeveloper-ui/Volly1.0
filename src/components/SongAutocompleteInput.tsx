@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, ScrollView } from 'react-native';
 import { theme } from '../theme';
 import { songService, GlobalSong } from '../services/songService';
 import { MagnifyingGlass, Plus, X, Hash } from 'phosphor-react-native';
@@ -21,6 +21,7 @@ export function SongAutocompleteInput({ onSelectSong, onClose, visible }: Props)
   const [newArtist, setNewArtist] = useState('');
   const [newTags, setNewTags] = useState('');
   const [creating, setCreating] = useState(false);
+  const [popularTags, setPopularTags] = useState<string[]>([]);
 
   useEffect(() => {
     if (visible) {
@@ -29,6 +30,36 @@ export function SongAutocompleteInput({ onSelectSong, onClose, visible }: Props)
       setShowNewForm(false);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (visible && showNewForm) {
+      // Carregar histórico de tags baseado nas músicas mais tocadas
+      songService.getTopGlobalSongs(100).then(res => {
+        if (res.data) {
+          const allTags = res.data.flatMap(s => s.tags || []);
+          const counts: Record<string, number> = {};
+          allTags.forEach(t => {
+            const cleanTag = t.trim();
+            if (cleanTag) counts[cleanTag] = (counts[cleanTag] || 0) + 1;
+          });
+          const top = Object.keys(counts).sort((a,b) => counts[b] - counts[a]).slice(0, 10);
+          
+          const defaults = ["Adoração", "Louvor", "Celebração", "Santa Ceia", "Apelo"];
+          const finalTags = Array.from(new Set([...top, ...defaults])).slice(0, 15);
+          setPopularTags(finalTags);
+        }
+      });
+    }
+  }, [visible, showNewForm]);
+
+  const toggleTag = (tag: string) => {
+    const currentTags = newTags.split(',').map(t => t.trim()).filter(Boolean);
+    if (currentTags.includes(tag)) {
+      setNewTags(currentTags.filter(t => t !== tag).join(', '));
+    } else {
+      setNewTags(currentTags.length > 0 ? `${newTags}, ${tag}` : tag);
+    }
+  };
 
   const searchSongs = useCallback(async (text: string) => {
     setQuery(text);
@@ -149,6 +180,36 @@ export function SongAutocompleteInput({ onSelectSong, onClose, visible }: Props)
             />
 
             <Text style={styles.label}>Tags (separadas por vírgula)</Text>
+            {popularTags.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12, maxHeight: 35 }}>
+                {popularTags.map(tag => {
+                  const currentTags = newTags.split(',').map(t => t.trim()).filter(Boolean);
+                  const isSelected = currentTags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      onPress={() => toggleTag(tag)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                        backgroundColor: isSelected ? 'rgba(223, 114, 27, 0.15)' : theme.colors.background,
+                        marginRight: 8,
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Text style={{
+                        color: isSelected ? theme.colors.primary : theme.colors.textSecondary,
+                        fontWeight: isSelected ? 'bold' : 'normal',
+                        fontSize: 12
+                      }}>{tag}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
             <TextInput
               style={styles.formInput}
               value={newTags}
