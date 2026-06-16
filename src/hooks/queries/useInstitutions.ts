@@ -54,3 +54,17 @@ export const useUpdateInstitution = () => {
     },
   });
 };
+
+export const useDeleteInstitution = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await adminService.deleteInstitution(id);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['institutionsList'] });
+    },
+  });
+};

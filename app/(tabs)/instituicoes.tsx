@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme, globalStyles } from '../../src/theme';
 import { adminService, Institution } from '../../src/services/adminService';
-import { useAllInstitutions, useCreateInstitution, useUpdateInstitution } from '../../src/hooks/queries/useInstitutions';
+import { useAllInstitutions, useCreateInstitution, useUpdateInstitution, useDeleteInstitution } from '../../src/hooks/queries/useInstitutions';
 import { CustomModal } from '../../src/components/CustomModal';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ export default function GestaoInstituicoesScreen() {
   const { data: institutions = [], isLoading, refetch } = useAllInstitutions();
   const createMutation = useCreateInstitution();
   const updateMutation = useUpdateInstitution();
+  const deleteMutation = useDeleteInstitution();
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -140,6 +141,27 @@ export default function GestaoInstituicoesScreen() {
     }
   };
 
+  const handleDelete = (inst: Institution) => {
+    Alert.alert(
+      'Excluir Instituição',
+      `Tem certeza que deseja excluir a instituição "${inst.name}"? Esta ação não pode ser desfeita e pode afetar todos os usuários e eventos vinculados a ela.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(inst.id);
+            } catch (err: any) {
+              Alert.alert('Erro ao excluir', err.message || 'Falha ao remover a instituição. Tente desativá-la ou remover seus dependentes primeiro.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderStatsDashboard = useMemo(() => {
     if (institutions.length === 0) return null;
 
@@ -236,6 +258,13 @@ export default function GestaoInstituicoesScreen() {
           
           <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
             <Ionicons name="settings-outline" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.editBtn, { backgroundColor: 'rgba(244, 67, 54, 0.1)' }]} 
+            onPress={() => handleDelete(item)}
+          >
+            <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
           </TouchableOpacity>
         </View>
       </View>

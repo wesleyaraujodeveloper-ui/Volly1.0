@@ -464,5 +464,15 @@ export const adminService = {
       .order('full_name');
     
     return { data, error };
+  },
+
+  /**
+   * Exclui uma instituição.
+   */
+  deleteInstitution: async (id: string) => {
+    return await supabase
+      .from('institutions')
+      .delete()
+      .eq('id', id);
   }
 };
