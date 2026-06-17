@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { STRINGS } from '../../src/constants/strings';
 import { CustomModal } from '../../src/components/CustomModal';
 import { Platform } from 'react-native';
+import { APP_VERSION } from '../../src/constants/config';
+import { systemService } from '../../src/services/systemService';
 
 export default function PerfilScreen() {
   const router = useRouter();
@@ -24,6 +26,13 @@ export default function PerfilScreen() {
   };
 
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [dbVersion, setDbVersion] = useState('');
+
+  useEffect(() => {
+    systemService.getLatestVersion().then(res => {
+      if (res.app_version) setDbVersion(res.app_version);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const checkPushStatus = async () => {
@@ -256,7 +265,12 @@ export default function PerfilScreen() {
       </View>
 
 
-      <Text style={styles.versionText}>{STRINGS.profile.version}</Text>
+      <Text style={styles.versionText}>Volly Connect - Versão {APP_VERSION}</Text>
+      {user?.role === 'MASTER' && dbVersion && (
+        <Text style={[styles.versionText, { marginTop: 4, color: APP_VERSION === dbVersion ? theme.colors.success : theme.colors.error }]}>
+          Versão Requerida (Banco): {dbVersion}
+        </Text>
+      )}
 
       <CustomModal 
         visible={modalVisible}
