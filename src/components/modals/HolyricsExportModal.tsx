@@ -219,7 +219,7 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
             <View style={styles.inputContainer}>
               <WifiHigh size={20} color={theme.colors.textSecondary} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
                 placeholder="Ex: 192.168.1.100"
                 placeholderTextColor={theme.colors.textSecondary}
                 value={ip}
@@ -229,36 +229,34 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 15 }}>
-            <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Porta</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="8080"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={port}
-                  onChangeText={setPort}
-                  keyboardType="numeric"
-                />
-              </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Porta</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
+                placeholder="8080"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={port}
+                onChangeText={setPort}
+                keyboardType="numeric"
+              />
             </View>
+          </View>
 
-            <View style={[styles.formGroup, { flex: 2 }]}>
-              <Text style={styles.label}>Token do Holyrics</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Seu token de API..."
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={token}
-                  onChangeText={setToken}
-                  secureTextEntry
-                />
-                <TouchableOpacity onPress={handleScan} style={{ padding: 8 }}>
-                  <QrCode size={22} color={theme.colors.primary} />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Token do Holyrics</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
+                placeholder="Seu token de API..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={token}
+                onChangeText={setToken}
+                secureTextEntry
+              />
+              <TouchableOpacity onPress={handleScan} style={{ padding: 8 }}>
+                <QrCode size={22} color={theme.colors.primary} />
+              </TouchableOpacity>
             </View>
           </View>
 
