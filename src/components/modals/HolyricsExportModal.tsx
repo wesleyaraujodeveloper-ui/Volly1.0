@@ -128,23 +128,39 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
     }
   };
 
-  if (isScanning) {
-    const WebScanner = Platform.OS === 'web' ? require('@yudiel/react-qr-scanner').Scanner : null;
+  useEffect(() => {
+    let html5QrcodeScanner: any = null;
 
+    if (Platform.OS === 'web' && isScanning) {
+      // Import dinâmico para não quebrar o SSR do Metro
+      const { Html5QrcodeScanner } = require('html5-qrcode');
+      
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "qr-reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        /* verbose= */ false
+      );
+      
+      html5QrcodeScanner.render((decodedText: string) => {
+        handleBarcodeScanned({ type: 'qr', data: decodedText });
+      }, (error: any) => {
+        // ignora erros de scan enquanto busca
+      });
+    }
+
+    return () => {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch((e: any) => console.log('Failed to clear scanner', e));
+      }
+    };
+  }, [isScanning]);
+
+  if (isScanning) {
     return (
       <Modal visible={visible} animationType="slide" transparent={false}>
         <View style={{ flex: 1, backgroundColor: 'black' }}>
-          {Platform.OS === 'web' && WebScanner ? (
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-              <WebScanner
-                onScan={(result: any) => {
-                  if (result && result.length > 0) {
-                    handleBarcodeScanned({ type: 'qr', data: result[0].rawValue });
-                  }
-                }}
-                styles={{ container: { width: '100%', height: '100%' } }}
-              />
-            </div>
+          {Platform.OS === 'web' ? (
+            <div id="qr-reader" style={{ width: '100%', height: '100%', backgroundColor: 'black' }}></div>
           ) : (
             <CameraView 
               style={StyleSheet.absoluteFillObject}
