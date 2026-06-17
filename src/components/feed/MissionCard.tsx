@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CaretRight, Users } from 'phosphor-react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useRouter } from 'expo-router';
 import { theme } from '../../theme';
+import { EventDetailsModal } from '../modals/EventDetailsModal';
+import { useState } from 'react';
 
 interface MissionCardProps {
   event: any;
@@ -13,7 +14,7 @@ interface MissionCardProps {
 }
 
 export function MissionCard({ event, role, isGlobal = false }: MissionCardProps) {
-  const router = useRouter();
+  const [modalVisible, setModalVisible] = useState(false);
   const eventDate = new Date(event.event_date);
 
   return (
@@ -24,7 +25,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
       <TouchableOpacity 
         style={styles.missionCard} 
         activeOpacity={0.9}
-        onPress={() => router.push(`/events/${event.id}` as any)}
+        onPress={() => setModalVisible(true)}
       >
         <View style={styles.missionHeader}>
           <View style={[styles.missionTag, isGlobal && { backgroundColor: theme.colors.surfaceHighlight }]}>
@@ -60,6 +61,13 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
           <CaretRight size={18} color={theme.colors.primary} weight="bold" />
         </View>
       </TouchableOpacity>
+
+      <EventDetailsModal 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)} 
+        event={event} 
+        role={role} 
+      />
     </View>
   );
 }

@@ -1,0 +1,179 @@
+import React from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { X, CalendarBlank, Clock, Info, Users } from 'phosphor-react-native';
+import { theme } from '../../../src/theme';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface EventDetailsModalProps {
+  visible: boolean;
+  onClose: () => void;
+  event: any;
+  role?: any;
+}
+
+export function EventDetailsModal({ visible, onClose, event, role }: EventDetailsModalProps) {
+  if (!event) return null;
+
+  const eventDate = new Date(event.event_date);
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Detalhes do Evento</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <X size={24} color={theme.colors.textSecondary} weight="bold" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            <Text style={styles.eventName}>{event.title}</Text>
+            
+            <View style={styles.infoBox}>
+              <View style={styles.infoRow}>
+                <CalendarBlank size={20} color={theme.colors.primary} />
+                <Text style={styles.infoText}>
+                  {format(eventDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </Text>
+              </View>
+              
+              <View style={styles.infoRow}>
+                <Clock size={20} color={theme.colors.primary} />
+                <Text style={styles.infoText}>{format(eventDate, "HH:mm")}h</Text>
+              </View>
+
+              {role && (
+                <View style={styles.infoRow}>
+                  <Users size={20} color={theme.colors.primary} />
+                  <Text style={styles.infoText}>Sua Função: <Text style={{fontWeight: 'bold', color: theme.colors.text}}>{role.name}</Text></Text>
+                </View>
+              )}
+            </View>
+
+            {!!event.description && (
+              <View style={styles.descriptionBox}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Info size={18} color={theme.colors.textSecondary} />
+                  <Text style={styles.descriptionTitle}>Descrição / Observações</Text>
+                </View>
+                <Text style={styles.descriptionText}>{event.description}</Text>
+              </View>
+            )}
+            
+            <View style={styles.warningBox}>
+              <Text style={styles.warningText}>
+                Esta é apenas uma visualização das informações básicas. Para detalhes complexos, procure a liderança.
+              </Text>
+            </View>
+
+          </ScrollView>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={onClose}>
+            <Text style={styles.primaryButtonText}>Fechar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  scrollArea: {
+    marginBottom: 20,
+  },
+  eventName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    marginBottom: 20,
+  },
+  infoBox: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    gap: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoText: {
+    color: theme.colors.textSecondary,
+    fontSize: 15,
+    marginLeft: 10,
+    textTransform: 'capitalize',
+  },
+  descriptionBox: {
+    backgroundColor: theme.colors.surface,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  descriptionTitle: {
+    color: theme.colors.textSecondary,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  descriptionText: {
+    color: theme.colors.text,
+    lineHeight: 22,
+  },
+  warningBox: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  warningText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
