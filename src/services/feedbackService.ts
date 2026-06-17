@@ -47,7 +47,7 @@ export const feedbackService = {
       .gte('events.event_date', sevenDaysAgo.toISOString())
       .lte('events.event_date', now.toISOString())
       .neq('status', 'AUSENTE')
-      .order('events.event_date', { ascending: false });
+      .order('event_date', { foreignTable: 'events', ascending: false });
 
     if (error || !schedules || schedules.length === 0) {
       return { data: null, error };
