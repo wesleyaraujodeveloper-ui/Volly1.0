@@ -130,25 +130,44 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
 
   useEffect(() => {
     let html5QrcodeScanner: any = null;
+    let isMounted = true;
 
     if (Platform.OS === 'web' && isScanning) {
-      // Import dinâmico para não quebrar o SSR do Metro
-      const { Html5QrcodeScanner } = require('html5-qrcode');
-      
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "qr-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        /* verbose= */ false
-      );
-      
-      html5QrcodeScanner.render((decodedText: string) => {
-        handleBarcodeScanned({ type: 'qr', data: decodedText });
-      }, (error: any) => {
-        // ignora erros de scan enquanto busca
-      });
+      // Adicionamos um delay para garantir que o Modal foi montado no DOM
+      setTimeout(() => {
+        if (!isMounted) return;
+        const domNode = document.getElementById('qr-reader');
+        if (!domNode) {
+          console.error("DOM node qr-reader not found");
+          Alert.alert("Erro", "Não foi possível carregar a câmera no momento.");
+          return;
+        }
+
+        try {
+          const { Html5QrcodeScanner } = require('html5-qrcode');
+          
+          html5QrcodeScanner = new Html5QrcodeScanner(
+            "qr-reader",
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            /* verbose= */ false
+          );
+          
+          html5QrcodeScanner.render((decodedText: string) => {
+            if (isMounted) {
+              html5QrcodeScanner.clear().catch((e: any) => console.log(e));
+              handleBarcodeScanned({ type: 'qr', data: decodedText });
+            }
+          }, (error: any) => {
+            // ignora erros de scan enquanto busca
+          });
+        } catch (error) {
+          console.error("Scanner Error", error);
+        }
+      }, 500); // 500ms delay para a animação do Modal
     }
 
     return () => {
+      isMounted = false;
       if (html5QrcodeScanner) {
         html5QrcodeScanner.clear().catch((e: any) => console.log('Failed to clear scanner', e));
       }
@@ -160,7 +179,9 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
       <Modal visible={visible} animationType="slide" transparent={false}>
         <View style={{ flex: 1, backgroundColor: 'black' }}>
           {Platform.OS === 'web' ? (
-            <div id="qr-reader" style={{ width: '100%', height: '100%', backgroundColor: 'black' }}></div>
+            <div style={{ flex: 1, backgroundColor: 'black', display: 'flex', flexDirection: 'column' }}>
+              <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto', backgroundColor: 'black' }}></div>
+            </div>
           ) : (
             <CameraView 
               style={StyleSheet.absoluteFillObject}
