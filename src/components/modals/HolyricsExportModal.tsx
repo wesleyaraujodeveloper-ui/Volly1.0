@@ -232,13 +232,8 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
           </View>
 
           <Text style={styles.subtitle}>
-            Conecte-se ao PC da igreja pela mesma rede Wi-Fi e envie a playlist com um clique. Ou leia o QR Code gerado pelo Holyrics para preencher automaticamente.
+            Conecte-se ao PC da igreja pela mesma rede Wi-Fi e envie a playlist com um clique.
           </Text>
-
-          <TouchableOpacity style={styles.scanBtn} onPress={handleScan}>
-            <QrCode size={24} color="#FFF" />
-            <Text style={styles.scanBtnText}>Ler QR Code</Text>
-          </TouchableOpacity>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>IP do Computador (Rede Local)</Text>
@@ -281,6 +276,10 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
                 secureTextEntry
               />
             </View>
+            <TouchableOpacity style={styles.scanBtnSmall} onPress={handleScan}>
+              <QrCode size={20} color={theme.colors.primary} />
+              <Text style={styles.scanBtnSmallText}>Escanear QR Code</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.actionsContainer}>
@@ -451,19 +450,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  scanBtn: {
-    backgroundColor: theme.colors.primary,
+  scanBtnSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 8,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '40',
+    gap: 6,
   },
-  scanBtnText: {
-    color: '#FFF',
-    fontSize: 16,
+  scanBtnSmallText: {
+    color: theme.colors.primary,
+    fontSize: 14,
     fontWeight: 'bold',
   }
 });
