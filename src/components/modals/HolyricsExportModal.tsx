@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Desktop, PlugsConnected, Plugs, X, WifiHigh } from 'phosphor-react-native';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Button } from 'react-native';
+import { Desktop, PlugsConnected, Plugs, X, WifiHigh, QrCode } from 'phosphor-react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { theme } from '../../../src/theme';
 import { holyricsService, HolyricsConfig } from '../../../src/services/holyricsService';
 import { EventSong } from '../../../src/services/songService';
@@ -18,6 +19,9 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
   const [isTesting, setIsTesting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
+  const [isScanning, setIsScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     if (visible) {
@@ -87,6 +91,71 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
     }
   };
 
+  const handleScan = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (result.granted) {
+        setIsScanning(true);
+      } else {
+        Alert.alert('Permissão negada', 'Precisamos de acesso à câmera para ler o QR Code.');
+      }
+    } else {
+      setIsScanning(true);
+    }
+  };
+
+  const handleBarcodeScanned = ({ type, data }: { type: string, data: string }) => {
+    setIsScanning(false);
+    
+    // O QR Code do Holyrics pode ser um JSON contendo IP, Porta e Token
+    // ou apenas uma string. Tentamos fazer o parse.
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.token) setToken(parsed.token);
+      if (parsed.ip) setIp(parsed.ip);
+      if (parsed.port) setPort(parsed.port.toString());
+      Alert.alert('Sucesso', 'Configurações capturadas pelo QR Code!');
+    } catch {
+      // Se não for JSON, assumimos que é apenas o Token
+      setToken(data);
+      Alert.alert('Sucesso', 'Token capturado pelo QR Code!');
+    }
+  };
+
+  if (isScanning) {
+    return (
+      <Modal visible={visible} animationType="slide" transparent={false}>
+        <View style={{ flex: 1, backgroundColor: 'black' }}>
+          <CameraView 
+            style={StyleSheet.absoluteFillObject}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr"],
+            }}
+            onBarcodeScanned={handleBarcodeScanned}
+          />
+          
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scannerTarget} />
+          </View>
+
+          <TouchableOpacity 
+            onPress={() => setIsScanning(false)} 
+            style={styles.scannerCloseBtn}
+          >
+            <X size={32} color="#FFF" />
+          </TouchableOpacity>
+
+          <View style={styles.scannerInstructions}>
+            <Text style={styles.scannerInstructionsText}>
+              Aponte para o QR Code no aplicativo Holyrics
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <KeyboardAvoidingView 
@@ -149,6 +218,9 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
                   onChangeText={setToken}
                   secureTextEntry
                 />
+                <TouchableOpacity onPress={handleScan} style={{ padding: 8 }}>
+                  <QrCode size={22} color={theme.colors.primary} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -285,4 +357,40 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scannerTarget: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: 'transparent',
+    borderRadius: 20,
+  },
+  scannerCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    borderRadius: 25,
+  },
+  scannerInstructions: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  scannerInstructionsText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  }
 });

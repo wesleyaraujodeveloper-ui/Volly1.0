@@ -39,6 +39,7 @@ export default function EventDetailScreen() {
   const [event, setEvent] = useState<any>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [songs, setSongs] = useState<EventSong[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [canChat, setCanChat] = useState(false);
@@ -108,6 +109,7 @@ export default function EventDetailScreen() {
     setSchedules(sch || []);
     if (evSongs) {
       setSongs(evSongs);
+      setHasUnsavedChanges(false);
     }
     await loadMessages();
 
@@ -193,10 +195,11 @@ export default function EventDetailScreen() {
     const updatedSongs = [...songs];
     updatedSongs[index] = { ...updatedSongs[index], [field]: value };
     setSongs(updatedSongs);
+    setHasUnsavedChanges(true);
   };
 
   const handleConfirmPlaylist = async () => {
-    if (!canEditPlaylist) return;
+    if (!canEditPlaylist || !hasUnsavedChanges) return;
     
     setIsSavingPlaylist(true);
     try {
@@ -212,7 +215,8 @@ export default function EventDetailScreen() {
         }
       }
       
-      Alert.alert('Sucesso', 'Playlist e links salvos com sucesso!');
+      setHasUnsavedChanges(false);
+      Alert.alert('Sucesso', 'Alteração salva com sucesso!');
     } catch (error: any) {
       Alert.alert('Erro', 'Não foi possível salvar a playlist: ' + error.message);
     } finally {
@@ -429,14 +433,22 @@ export default function EventDetailScreen() {
 
                     {songs.length > 0 && (
                       <TouchableOpacity 
-                        style={[styles.confirmAddSong, isSavingPlaylist ? { opacity: 0.7 } : null]} 
+                        style={[
+                          styles.confirmAddSong, 
+                          (isSavingPlaylist || !hasUnsavedChanges) ? { opacity: 0.5, backgroundColor: theme.colors.border } : null
+                        ]} 
                         onPress={handleConfirmPlaylist}
-                        disabled={isSavingPlaylist}
+                        disabled={isSavingPlaylist || !hasUnsavedChanges}
                       >
                         {isSavingPlaylist ? (
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
-                          <Text style={styles.confirmAddSongText}>Salvar Links</Text>
+                          <Text style={[
+                            styles.confirmAddSongText,
+                            !hasUnsavedChanges && { color: theme.colors.textSecondary }
+                          ]}>
+                            {hasUnsavedChanges ? "Salvar" : "Salvo"}
+                          </Text>
                         )}
                       </TouchableOpacity>
                     )}
