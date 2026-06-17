@@ -42,6 +42,17 @@ import { supabase } from '../../src/services/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFeedPosts, useGlobalSchedulePanorama, useNextUserEvent, useNextGlobalEvent, useRecommendedSongs, useCreatePost, useDeletePost, useToggleLike } from '../../src/hooks/queries/useFeed';
 import { useSyncCalendar, useRequestSwap } from '../../src/hooks/queries/useSchedules';
+import { FeedHeader } from '../../src/components/feed/FeedHeader';
+import { AnnouncementsSection } from '../../src/components/feed/AnnouncementsSection';
+import { MissionCard } from '../../src/components/feed/MissionCard';
+import { RecommendedSongs } from '../../src/components/feed/RecommendedSongs';
+import { PanoramaTimeline } from '../../src/components/feed/PanoramaTimeline';
+import { PostCard } from '../../src/components/feed/PostCard';
+import { PostInputBox } from '../../src/components/feed/PostInputBox';
+import { CommentsModal } from '../../src/components/modals/CommentsModal';
+import { SwapScheduleModal } from '../../src/components/modals/SwapScheduleModal';
+import { FeedbackModal } from '../../src/components/modals/FeedbackModal';
+import { CreateAnnouncementModal } from '../../src/components/modals/CreateAnnouncementModal';
 
 export default function FeedScreen() {
   const { user, providerToken } = useAppStore();
@@ -223,7 +234,14 @@ export default function FeedScreen() {
   };
 
   const handleImagePick = async () => {
-    if (Platform.OS === 'web') {
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permissão Negada', 'Precisamos de acesso à galeria para selecionar fotos.');
+          return;
+        }
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -234,59 +252,33 @@ export default function FeedScreen() {
       if (!result.canceled && result.assets[0].base64) {
         setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
       }
-      return;
+    } catch (error) {
+      console.log('Error picking image', error);
     }
+  };
 
-    Alert.alert(
-      'Selecionar Foto',
-      'Escolha de onde você deseja selecionar a imagem para o mural:',
-      [
-        {
-          text: 'Câmera',
-          onPress: () => {
-            setTimeout(async () => {
-              const { status } = await ImagePicker.requestCameraPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert('Permissão Negada', 'Precisamos de acesso à câmera para tirar fotos.');
-                return;
-              }
-              const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: true,
-                aspect: [3, 4],
-                quality: 0.8,
-                base64: true,
-              });
-              if (!result.canceled && result.assets[0].base64) {
-                setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
-              }
-            }, 300);
-          }
-        },
-        {
-          text: 'Galeria',
-          onPress: () => {
-            setTimeout(async () => {
-              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-              if (status !== 'granted') {
-                Alert.alert('Permissão Negada', 'Precisamos de acesso à galeria para selecionar fotos.');
-                return;
-              }
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [3, 4],
-                quality: 0.8,
-                base64: true,
-              });
-              if (!result.canceled && result.assets[0].base64) {
-                setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
-              }
-            }, 300);
-          }
-        },
-        { text: 'Cancelar', style: 'cancel' }
-      ]
-    );
+  const handleCameraPick = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permissão Negada', 'Precisamos de acesso à câmera para tirar fotos.');
+          return;
+        }
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.8,
+        base64: true,
+      });
+      if (!result.canceled && result.assets[0].base64) {
+        setSelectedImage({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+      }
+    } catch (error) {
+      console.log('Error taking photo', error);
+      Alert.alert('Erro', 'Não foi possível acessar a câmera no momento.');
+    }
   };
 
   const handleCreatePost = async () => {
@@ -459,286 +451,6 @@ export default function FeedScreen() {
     return null;
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.dateText}>
-          {isMounted ? format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR }) : '...'}
-        </Text>
-        <Text style={styles.greeting}>
-          {isMounted ? `Olá, ${user?.name?.split(' ')[0] || 'Voluntário'}! 👋` : 'Olá! 👋'}
-        </Text>
-      </View>
-      
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <TouchableOpacity 
-          style={styles.notificationBtn} 
-          onPress={() => router.push('/notifications')}
-          activeOpacity={0.7}
-        >
-          <Bell size={26} color={theme.colors.text} weight="regular" />
-          {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.avatarContainer}>
-          {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <User size={20} color={theme.colors.textSecondary} />
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderAnnouncements = () => {
-    if (announcements.length === 0 && user?.role !== 'LÍDER' && user?.role !== 'ADMIN' && user?.role !== 'MASTER') return null;
-
-    return (
-      <View style={styles.section}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <PushPin size={18} color={theme.colors.primary} weight="fill" style={{ marginRight: 6 }} />
-            <Text style={styles.sectionTitle}>Avisos Oficiais</Text>
-          </View>
-          {(user?.role === 'LÍDER' || user?.role === 'ADMIN' || user?.role === 'MASTER') && (
-            <TouchableOpacity onPress={() => setCreateAnnModalVisible(true)}>
-              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>+ Novo Aviso</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {announcements.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {announcements.map((ann) => {
-              const isExpanded = expandedAnns[ann.id];
-              return (
-                <TouchableOpacity 
-                  key={ann.id} 
-                  activeOpacity={0.9}
-                  onPress={() => setExpandedAnns(prev => ({ ...prev, [ann.id]: !prev[ann.id] }))}
-                  style={{ width: 280, backgroundColor: 'rgba(255, 215, 0, 0.1)', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255, 215, 0, 0.3)' }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Megaphone size={16} color="#B8860B" weight="fill" style={{ marginRight: 4 }} />
-                    <Text style={{ color: '#B8860B', fontWeight: 'bold', fontSize: 12, flex: 1 }} numberOfLines={1}>{ann.title}</Text>
-                    {(user?.role === 'ADMIN' || user?.role === 'MASTER' || ann.author_id === user?.id) && (
-                      <TouchableOpacity onPress={() => announcementService.deleteAnnouncement(ann.id).then(() => loadAnnouncements())}>
-                        <X size={14} color={theme.colors.error} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <Text style={{ color: theme.colors.text, fontSize: 13 }} numberOfLines={isExpanded ? undefined : 3}>{ann.content}</Text>
-                  {ann.content.length > 120 && (
-                    <Text style={{ color: '#B8860B', fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
-                      {isExpanded ? 'Mostrar menos' : 'Ler mais...'}
-                    </Text>
-                  )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                    <Image source={{ uri: ann.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${ann.profiles?.full_name}` }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: 6 }} />
-                    <Text style={{ color: theme.colors.textSecondary, fontSize: 10 }}>Por {ann.profiles?.full_name}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        ) : (
-          <Text style={styles.emptyTextSmaller}>Nenhum aviso no momento.</Text>
-        )}
-      </View>
-    );
-  };
-
-  const renderNextMission = () => {
-    if (!nextEvent) return null;
-    const event = nextEvent.events as any;
-    const role = nextEvent.roles as any;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sua Próxima Missão</Text>
-        <TouchableOpacity 
-          style={styles.missionCard} 
-          activeOpacity={0.9}
-          onPress={() => router.push(`/events/${event.id}` as any)}
-        >
-          <View style={styles.missionHeader}>
-            <View style={styles.missionTag}>
-              <Text style={styles.missionTagText}>EM BREVE</Text>
-            </View>
-            <Text style={styles.missionTime}>{format(new Date(event.event_date), 'HH:mm')}</Text>
-          </View>
-          
-          <Text style={styles.missionTitle}>{event.title}</Text>
-          <Text style={styles.missionRole}>Sua função: <Text style={{ color: theme.colors.primary }}>{role?.name || 'Geral'}</Text></Text>
-          
-          <View style={styles.missionFooter}>
-            <View style={styles.deptInfo}>
-              <Users size={14} color={theme.colors.textSecondary} weight="regular" />
-              <Text style={styles.deptName}>
-                {event.event_departments?.[0]?.departments?.name || 'Equipe Principal'}
-              </Text>
-            </View>
-            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
-          </View>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderRecommendedSongs = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Músicas para se Inspirar</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.songsScroll}>
-        {songs.length > 0 ? songs.map((song, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={styles.songCard}
-            onPress={() => song.youtube ? Linking.openURL(song.youtube) : song.spotify ? Linking.openURL(song.spotify) : null}
-          >
-            <View style={styles.songIconBox}>
-              {song.youtube ? (
-                <YoutubeLogo size={24} color="#FF0000" weight="fill" />
-              ) : (
-                <MusicNotes size={24} color={theme.colors.primary} weight="regular" />
-              )}
-            </View>
-            <View style={styles.songDetails}>
-              <Text style={styles.songName} numberOfLines={1}>{song.name}</Text>
-              <Text style={styles.songSub}>Tocado recentemente</Text>
-            </View>
-          </TouchableOpacity>
-        )) : (
-          <Text style={styles.emptyText}>Nenhuma música sugerida no momento.</Text>
-        )}
-      </ScrollView>
-    </View>
-  );
-
-  const renderNextGlobalEvent = () => {
-    if (!nextGlobalEvent) return null;
-    const eventDate = new Date(nextGlobalEvent.event_date);
-    
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Nosso próximo compromisso!</Text>
-        <TouchableOpacity 
-          style={styles.missionCard}
-          activeOpacity={0.9}
-          onPress={() => router.push(`/events/${nextGlobalEvent.id}` as any)}
-        >
-          <View style={styles.missionHeader}>
-            <View style={[styles.missionTag, { backgroundColor: theme.colors.surfaceHighlight }]}>
-              <Text style={[styles.missionTagText, { color: theme.colors.primary }]}>GERAL</Text>
-            </View>
-            <Text style={styles.missionTime}>{format(eventDate, 'HH:mm')}</Text>
-          </View>
-          
-          <Text style={styles.missionTitle}>{nextGlobalEvent.title}</Text>
-          <Text style={styles.missionRole}>Data: <Text style={{ color: theme.colors.textSecondary }}>{format(eventDate, "dd 'de' MMMM", { locale: ptBR })}</Text></Text>
-          
-          <View style={styles.missionFooter}>
-            <View style={styles.deptInfo}>
-              <Users size={14} color={theme.colors.textSecondary} weight="regular" />
-              <Text style={styles.deptName}>Evento Geral</Text>
-            </View>
-            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
-          </View>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderPanorama = () => {
-    if (loadingPanorama) return <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />;
-    if (panoramaData.length === 0) return <Text style={[styles.emptyText, { marginTop: 40 }]}>Nenhuma escala gerada no momento.</Text>;
-
-    return (
-      <View style={{ marginTop: 10, paddingBottom: 80 }}>
-        {panoramaData.map((ev: any) => {
-          const groupedDepts: Record<string, { deptName: string, schedules: any[] }> = {};
-          
-          if (ev.schedules) {
-            ev.schedules.forEach((sch: any) => {
-              const deptId = sch.roles?.departments?.id || 'unknown';
-              const deptName = sch.roles?.departments?.name || 'Geral';
-              if (!groupedDepts[deptId]) groupedDepts[deptId] = { deptName, schedules: [] };
-              groupedDepts[deptId].schedules.push(sch);
-            });
-          }
-
-          return (
-            <View key={ev.id} style={styles.panoramaTimelineCard}>
-               <View style={styles.panoramaTimelineHeader}>
-                 <View style={styles.panoramaDateBadge}>
-                   <Text style={styles.panoramaDateDay}>{format(new Date(ev.event_date), "dd")}</Text>
-                   <Text style={styles.panoramaDateMonth}>{format(new Date(ev.event_date), "MMM", { locale: ptBR })}</Text>
-                 </View>
-                 <View style={{ flex: 1, marginLeft: 15 }}>
-                    <Text style={styles.panoramaEventTitle}>{ev.title}</Text>
-                    <Text style={styles.panoramaEventDayName}>{format(new Date(ev.event_date), "EEEE", { locale: ptBR })}</Text>
-                 </View>
-               </View>
-               
-               <View style={styles.panoramaContent}>
-                 {Object.values(groupedDepts).length === 0 ? (
-                   <Text style={[styles.emptyText, { marginTop: 10, fontSize: 12 }]}>Ninguém escalado ainda.</Text>
-                 ) : (
-                   Object.values(groupedDepts).map((group, idx) => (
-                     <View key={idx} style={styles.panoramaDeptGroup}>
-                       <View style={styles.panoramaDeptLabel}>
-                         <View style={styles.panoramaDeptDot} />
-                         <Text style={styles.panoramaDeptName}>{group.deptName}</Text>
-                       </View>
-                       
-                       <View style={styles.panoramaVolunteersList}>
-                         {group.schedules.map((sch: any) => (
-                           <View key={sch.id} style={styles.panoramaVolunteerCard}>
-                             <Image 
-                               source={{ uri: sch.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${sch.profiles?.full_name}&background=1A1A1A&color=fff` }} 
-                               style={styles.panoramaAvatar} 
-                             />
-                             <View style={{ flex: 1 }}>
-                               <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
-                               <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
-                             </View>
-
-                             {sch.status === 'TROCA_SOLICITADA' ? (
-                               <View style={styles.swapRequestedBadge}>
-                                 <WarningCircle size={12} color="#fff" weight="fill" />
-                                 <Text style={styles.swapRequestedText}>Troca Solicitada</Text>
-                               </View>
-                             ) : sch.user_id === user?.id && sch.status !== 'AUSENTE' ? (
-                               <TouchableOpacity 
-                                 style={styles.requestSwapBtn} 
-                                 onPress={() => {
-                                   setSelectedScheduleId(sch.id);
-                                   setSwapModalVisible(true);
-                                 }}
-                               >
-                                 <ArrowsLeftRight size={14} color={theme.colors.primary} weight="bold" />
-                                 <Text style={styles.requestSwapBtnText}>Trocar</Text>
-                               </TouchableOpacity>
-                             ) : null}
-                           </View>
-                         ))}
-                       </View>
-                     </View>
-                   ))
-                 )}
-               </View>
-            </View>
-          );
-        })}
-      </View>
-    );
-  };
 
   const renderChatFAB = () => {
     const currentEvent = (nextEvent?.events || nextGlobalEvent) as any;
@@ -768,7 +480,7 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
       >
-        {renderHeader()}
+        <FeedHeader user={user} unreadCount={unreadCount} />
 
         {user?.role !== 'MASTER' && (
           <View style={styles.modeTabs}>
@@ -798,7 +510,15 @@ export default function FeedScreen() {
         )}
 
         {feedMode === 'PANORAMA' ? (
-          renderPanorama()
+          <PanoramaTimeline 
+            loading={loadingPanorama} 
+            data={panoramaData} 
+            user={user} 
+            onRequestSwap={(id) => {
+              setSelectedScheduleId(id);
+              setSwapModalVisible(true);
+            }} 
+          />
         ) : (
           <>
             {user?.role === 'MASTER' && allInstitutions.length > 0 && (
@@ -826,125 +546,42 @@ export default function FeedScreen() {
               </ScrollView>
             )}
 
-            {renderAnnouncements()}
-            {renderNextMission()}
-            {renderNextGlobalEvent()}
-            {renderRecommendedSongs()}
+            <AnnouncementsSection 
+              announcements={announcements} 
+              user={user} 
+              onRefresh={loadAnnouncements} 
+              onOpenCreateModal={() => setCreateAnnModalVisible(true)} 
+            />
+            {nextEvent && <MissionCard event={nextEvent.events} role={nextEvent.roles} />}
+            {nextGlobalEvent && <MissionCard event={nextGlobalEvent} isGlobal={true} />}
+            <RecommendedSongs songs={songs} />
 
-            <View style={styles.postInputCard}>
-              <View style={styles.postInputHeader}>
-                <Image 
-                  source={{ uri: user?.avatar_url || `https://ui-avatars.com/api/?name=${user?.name || 'Voluntario'}&background=random` }} 
-                  style={styles.postAvatarSmall} 
-                />
-                <TextInput
-                  style={styles.postInput}
-                  placeholder="No que você está pensando?"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  value={newPostContent}
-                  onChangeText={setNewPostContent}
-                  multiline
-                />
-              </View>
-              
-              <View style={styles.postInputFooter}>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity style={styles.postActionBtn} onPress={handleImagePick}>
-                    <Camera size={22} color={theme.colors.primary} weight="regular" />
-                  </TouchableOpacity>
-                  
-                  {user?.role === 'MASTER' && (
-                    <TouchableOpacity 
-                      style={[styles.postActionBtn, postVisibility === 'GLOBAL' && { backgroundColor: 'rgba(107, 197, 167, 0.1)' }]} 
-                      onPress={() => setPostVisibility(v => v === 'INTERNAL' ? 'GLOBAL' : 'INTERNAL')}
-                    >
-                      <Globe 
-                        size={22} 
-                        color={postVisibility === 'GLOBAL' ? theme.colors.success : theme.colors.textSecondary} 
-                        weight={postVisibility === 'GLOBAL' ? 'fill' : 'regular'}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                
-                <TouchableOpacity 
-                  style={[styles.postButton, (!newPostContent.trim() && !selectedImage) && styles.postButtonDisabled]} 
-                  onPress={handleCreatePost}
-                  disabled={isPosting || (!newPostContent.trim() && !selectedImage)}
-                >
-                  {isPosting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <PaperPlaneTilt size={18} color="#FFFFFF" weight="fill" />}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {selectedImage && selectedImage.uri && (
-              <View style={styles.previewContainer}>
-                <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} />
-                <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSelectedImage(null)}>
-                  <XCircle size={24} color={theme.colors.error} weight="fill" />
-                </TouchableOpacity>
-              </View>
-            )}
+            <PostInputBox 
+              user={user}
+              newPostContent={newPostContent}
+              setNewPostContent={setNewPostContent}
+              selectedImage={selectedImage}
+              setSelectedImage={setSelectedImage}
+              isPosting={isPosting}
+              postVisibility={postVisibility}
+              setPostVisibility={setPostVisibility}
+              handleImagePick={handleImagePick}
+              handleCameraPick={handleCameraPick}
+              handleCreatePost={handleCreatePost}
+            />
 
             {renderLoadingFeedback()}
 
-            {posts.length > 0 ? posts.map((post) => {
-              const authorName = post.profiles?.full_name || 'Usuário';
-              const authorAvatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}`;
-              let displayDate = 'Recentemente';
-              
-              try {
-                if (post.created_at) displayDate = format(new Date(post.created_at), "dd/MM 'às' HH:mm");
-              } catch (e) {}
-
-              return (
-                <View key={post.id} style={styles.postCard}>
-                  <View style={styles.postHeader}>
-                    <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-                    <View style={styles.postAuthorInfo}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={styles.postAuthor}>{authorName}</Text>
-                        {user?.role === 'MASTER' && post.institutions && (
-                          <View style={styles.instBadge}>
-                            <Text style={styles.instBadgeText}>{post.institutions.name}</Text>
-                          </View>
-                        )}
-                        {post.visibility === 'GLOBAL' && (
-                          <View style={[styles.instBadge, { backgroundColor: 'rgba(107, 197, 167, 0.1)', borderColor: theme.colors.success }]}>
-                            <Text style={[styles.instBadgeText, { color: theme.colors.success }]}>GLOBAL</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.postTime}>{displayDate}</Text>
-                    </View>
-                    {(user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER' || post.user_id === user?.id) && (
-                      <TouchableOpacity 
-                        style={styles.moreOptionsBtn} 
-                        onPress={() => handleDeletePost(post.id)}
-                      >
-                        <Trash size={18} color={theme.colors.error} weight="regular" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <Text style={styles.postContent}>{post.content}</Text>
-                  {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />}
-                  <View style={styles.postFooter}>
-                    <TouchableOpacity style={styles.interactionBtn} onPress={() => handleLike(post.id)}>
-                      <Heart 
-                        size={20} 
-                        color={post.post_likes?.some((l: any) => l.user_id === user?.id) ? theme.colors.error : theme.colors.textSecondary} 
-                        weight={post.post_likes?.some((l: any) => l.user_id === user?.id) ? 'fill' : 'regular'}
-                      />
-                      <Text style={styles.interactionText}>{post.likesCount}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.interactionBtn} onPress={() => openComments(post)}>
-                      <ChatCircleText size={18} color={theme.colors.textSecondary} weight="regular" />
-                      <Text style={styles.interactionText}>{post.commentsCount}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            }) : (
+            {posts.length > 0 ? posts.map((post) => (
+              <PostCard 
+                key={post.id} 
+                post={post} 
+                user={user} 
+                onDelete={handleDeletePost} 
+                onLike={handleLike} 
+                onComment={openComments} 
+              />
+            )) : (
               <EmptyState 
                 title={STRINGS.feed.emptyState}
                 description={STRINGS.feed.emptyStateSub}
@@ -967,274 +604,56 @@ export default function FeedScreen() {
       </ScrollView>
       {renderChatFAB()}
 
-      {/* Comentários Modal */}
-      <Modal visible={!!activeCommentPost} animationType="slide" transparent={true}>
-        <KeyboardAvoidingView 
-          style={styles.modalOverlay} 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderGrabber} />
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: 10 }}>
-                <Text style={styles.modalTitle}>Comentários</Text>
-                <TouchableOpacity onPress={closeComments} style={{ padding: 5 }}>
-                  <X size={24} color={theme.colors.textSecondary} weight="bold" />
-                </TouchableOpacity>
-              </View>
-              {activeCommentPost && (
-                <View style={{ width: '100%', marginTop: 15, paddingBottom: 5 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                    <Image 
-                      source={{ uri: activeCommentPost.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${activeCommentPost.profiles?.full_name || 'U'}&background=random` }} 
-                      style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8, backgroundColor: theme.colors.border }} 
-                    />
-                    <Text style={{ fontWeight: 'bold', color: theme.colors.text, fontSize: 13 }}>
-                      {activeCommentPost.profiles?.full_name || 'Usuário'}
-                    </Text>
-                  </View>
-                  <Text style={{ color: theme.colors.text, fontSize: 14, lineHeight: 20 }} numberOfLines={4}>
-                    {activeCommentPost.content}
-                  </Text>
-                </View>
-              )}
-            </View>
-            
-            {loadingComments ? (
-              <ActivityIndicator style={{ marginTop: 40 }} color={theme.colors.primary} />
-            ) : (
-              <FlatList
-                data={postComments}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ padding: 20 }}
-                ListEmptyComponent={<Text style={styles.emptyCommentsText}>Seja o primeiro a comentar!</Text>}
-                renderItem={({ item }) => (
-                  <View style={styles.commentItem}>
-                    <Image source={{ uri: item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.full_name || 'U'}&background=random` }} style={styles.commentAvatar} />
-                    <View style={styles.commentBubble}>
-                      <Text style={styles.commentAuthor}>{item.profiles?.full_name || 'Usuário'}</Text>
-                      <Text style={styles.commentText}>{item.content}</Text>
-                    </View>
-                  </View>
-                )}
-              />
-            )}
+      <CommentsModal 
+        visible={!!activeCommentPost}
+        activeCommentPost={activeCommentPost}
+        closeComments={closeComments}
+        loadingComments={loadingComments}
+        postComments={postComments}
+        newCommentText={newCommentText}
+        setNewCommentText={setNewCommentText}
+        submitComment={submitComment}
+        isCommenting={isCommenting}
+      />
 
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Escreva um comentário..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={newCommentText}
-                onChangeText={setNewCommentText}
-                multiline
-              />
-              <TouchableOpacity style={styles.commentSendBtn} onPress={submitComment} disabled={isCommenting}>
-                {isCommenting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <PaperPlaneTilt size={18} color="#fff" weight="fill" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <SwapScheduleModal 
+        visible={swapModalVisible}
+        swapReason={swapReason}
+        setSwapReason={setSwapReason}
+        onCancel={() => setSwapModalVisible(false)}
+        onConfirm={handleRequestSwap}
+      />
 
-      <Modal visible={swapModalVisible} transparent animationType="fade">
-        <View style={styles.modalOverlaySwap}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Solicitar Troca de Escala</Text>
-            <Text style={styles.modalSubtitle}>Explique brevemente ao seu líder o motivo da troca (opcional).</Text>
-            
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="Ex: Tive um imprevisto no trabalho..."
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              numberOfLines={4}
-              value={swapReason}
-              onChangeText={setSwapReason}
-            />
+      <FeedbackModal 
+        visible={feedbackModalVisible && !!pendingFeedbackEvent}
+        pendingFeedbackEvent={pendingFeedbackEvent}
+        feedbackSuccess={feedbackSuccess}
+        feedbackRating={feedbackRating}
+        setFeedbackRating={setFeedbackRating}
+        feedbackComment={feedbackComment}
+        setFeedbackComment={setFeedbackComment}
+        onCancel={() => {setFeedbackModalVisible(false); setPendingFeedbackEvent(null);}}
+        onSubmit={handleSubmitFeedback}
+        isSubmitting={isSubmittingFeedback}
+      />
 
-            <View style={styles.modalActionsSwap}>
-              <TouchableOpacity 
-                style={styles.modalCancelBtn} 
-                onPress={() => setSwapModalVisible(false)}
-              >
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.modalConfirmBtn} 
-                onPress={handleRequestSwap}
-              >
-                <Text style={styles.modalConfirmText}>Enviar Solicitação</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de Feedback */}
-      <Modal visible={feedbackModalVisible && !!pendingFeedbackEvent} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlaySwap}>
-          <View style={styles.modalCard}>
-            {feedbackSuccess ? (
-              <View style={{ alignItems: 'center', padding: 20 }}>
-                <Star size={48} color={theme.colors.primary} weight="fill" />
-                <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginTop: 15, textAlign: 'center' }}>
-                  Obrigado pelo seu feedback!
-                </Text>
-                <Text style={{ color: theme.colors.textSecondary, textAlign: 'center', marginTop: 10 }}>
-                  Sua opinião ajuda a melhorar nossa equipe.
-                </Text>
-              </View>
-            ) : (
-              <>
-                <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-                  Como foi servir no evento "{pendingFeedbackEvent?.title}"?
-                </Text>
-                <Text style={styles.modalSubtitle}>
-                  Sua resposta ajuda seus líderes a acompanharem a equipe.
-                </Text>
-                
-                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 20 }}>
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <TouchableOpacity key={star} onPress={() => setFeedbackRating(star)}>
-                      <Star size={40} color={feedbackRating >= star ? theme.colors.primary : theme.colors.border} weight={feedbackRating >= star ? "fill" : "regular"} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <TextInput
-                  style={styles.reasonInput}
-                  placeholder="Algum comentário ou sugestão? (Opcional)"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  multiline
-                  value={feedbackComment}
-                  onChangeText={setFeedbackComment}
-                />
-
-                <View style={styles.modalActionsSwap}>
-                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => {setFeedbackModalVisible(false); setPendingFeedbackEvent(null);}}>
-                    <Text style={styles.modalCancelText}>Agora Não</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.modalConfirmBtn, feedbackRating === 0 && { opacity: 0.5 }]} 
-                    onPress={handleSubmitFeedback}
-                    disabled={isSubmittingFeedback || feedbackRating === 0}
-                  >
-                    {isSubmittingFeedback ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Enviar Feedback</Text>}
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal Criar Aviso */}
-      <Modal visible={createAnnModalVisible} animationType="fade" transparent={true}>
-        <View style={styles.modalOverlaySwap}>
-          <View style={styles.modalCard}>
-            <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 15 }}>Novo Aviso Oficial</Text>
-            
-            <TextInput
-              style={[styles.reasonInput, { minHeight: 40, marginBottom: 10 }]}
-              placeholder="Título do Aviso"
-              placeholderTextColor={theme.colors.textSecondary}
-              value={newAnnTitle}
-              onChangeText={setNewAnnTitle}
-            />
-            
-            <TextInput
-              style={[styles.reasonInput, { marginBottom: 10 }]}
-              placeholder="Conteúdo..."
-              placeholderTextColor={theme.colors.textSecondary}
-              multiline
-              value={newAnnContent}
-              onChangeText={setNewAnnContent}
-            />
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ color: theme.colors.textSecondary, marginRight: 10 }}>Duração (dias):</Text>
-              <TextInput
-                style={[styles.reasonInput, { minHeight: 40, flex: 1, textAlign: 'center' }]}
-                keyboardType="numeric"
-                value={newAnnDays}
-                onChangeText={setNewAnnDays}
-              />
-            </View>
-
-            <View style={styles.modalActionsSwap}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setCreateAnnModalVisible(false)}>
-                <Text style={styles.modalCancelText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalConfirmBtn, (!newAnnTitle.trim() || !newAnnContent.trim()) && { opacity: 0.5 }]} 
-                onPress={handleCreateAnnouncement}
-                disabled={isPostingAnn || !newAnnTitle.trim() || !newAnnContent.trim()}
-              >
-                {isPostingAnn ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalConfirmText}>Fixar Aviso</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
+      <CreateAnnouncementModal 
+        visible={createAnnModalVisible}
+        title={newAnnTitle}
+        setTitle={setNewAnnTitle}
+        content={newAnnContent}
+        setContent={setNewAnnContent}
+        days={newAnnDays}
+        setDays={setNewAnnDays}
+        onCancel={() => setCreateAnnModalVisible(false)}
+        onSubmit={handleCreateAnnouncement}
+        isPosting={isPostingAnn}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlaySwap: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: theme.colors.surface,
-    padding: 24,
-    borderRadius: 20,
-  },
-  modalSubtitle: {
-    color: theme.colors.textSecondary,
-    marginBottom: 15,
-  },
-  reasonInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    color: theme.colors.text,
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  modalActionsSwap: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 20,
-    gap: 10,
-  },
-  modalCancelBtn: {
-    padding: 12,
-  },
-  modalCancelText: {
-    color: theme.colors.textSecondary,
-    fontWeight: 'bold',
-  },
-  modalConfirmBtn: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-  },
-  modalConfirmText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1247,106 +666,13 @@ const styles = StyleSheet.create({
   activeModeTab: { backgroundColor: '#6BC5A7' },
   modeTabText: { color: theme.colors.textSecondary, fontWeight: 'bold', marginLeft: 8 },
   activeModeTabText: { color: '#FFFFFF' },
-  panoramaTimelineCard: {
-    marginBottom: 30,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  panoramaTimelineHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: theme.colors.surfaceHighlight,
-  },
-  panoramaDateBadge: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  panoramaDateDay: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  panoramaDateMonth: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  panoramaEventTitle: {
-    color: theme.colors.text,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  panoramaEventDayName: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    textTransform: 'capitalize',
-  },
-  panoramaContent: {
-    padding: 16,
-  },
-  panoramaDeptGroup: {
-    marginBottom: 20,
-  },
-  panoramaDeptLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  panoramaDeptDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.primary,
-    marginRight: 8,
-  },
-  panoramaDeptName: {
-    color: theme.colors.text,
-    fontSize: 13,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  panoramaVolunteersList: {
-    gap: 10,
-  },
-  panoramaVolunteerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: 12,
-  },
-  panoramaAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 10,
-    backgroundColor: theme.colors.background,
-  },
-  panoramaSchName: {
-    color: theme.colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  panoramaSchRole: {
-    color: theme.colors.textSecondary,
-    fontSize: 11,
-  },
   dateText: {
     color: theme.colors.textSecondary,
     fontSize: 12,
     textTransform: 'uppercase',
     fontWeight: 'bold',
     letterSpacing: 1,
+
   },
   greeting: {
     fontSize: 24,

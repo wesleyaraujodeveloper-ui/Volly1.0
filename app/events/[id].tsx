@@ -13,8 +13,13 @@ import { ptBR } from 'date-fns/locale';
 import { useAppStore } from '../../src/store/useAppStore';
 import { chatService } from '../../src/services/chatService';
 import { useRef } from 'react';
+import { HolyricsExportModal } from '../../src/components/modals/HolyricsExportModal';
+import { Desktop } from 'phosphor-react-native';
 
-const TONALIDADES = ["C", "C#", "D", "Eb", "F", "F#", "G", "G#", "A", "Bb", "B"];
+const TONALIDADES_GROUPS = [
+  ["C", "Cm"], ["C#", "C#m"], ["D", "Dm"], ["Eb", "Ebm"], ["E", "Em"], ["F", "Fm"], 
+  ["F#", "F#m"], ["G", "Gm"], ["G#", "G#m"], ["A", "Am"], ["Bb", "Bbm"], ["B", "Bm"]
+];
 
 type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 
@@ -49,6 +54,7 @@ export default function EventDetailScreen() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [balancedVolunteers, setBalancedVolunteers] = useState<any[]>([]);
   const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
+  const [holyricsModalVisible, setHolyricsModalVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -297,7 +303,18 @@ export default function EventDetailScreen() {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Playlist / Setlist</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Playlist / Setlist</Text>
+                  {songs && songs.length > 0 && (
+                    <TouchableOpacity 
+                      onPress={() => setHolyricsModalVisible(true)} 
+                      style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}
+                    >
+                      <Desktop size={16} color="#FFF" weight="bold" />
+                      <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12, marginLeft: 6 }}>Holyrics</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {songs && songs.length > 0 ? (
                   songs.map((song, index) => (
                     <View key={song.id || index} style={styles.songCard}>
@@ -329,26 +346,31 @@ export default function EventDetailScreen() {
                         <View style={styles.editLinksArea}>
                           <Text style={{color: theme.colors.textSecondary, fontSize: 12, marginBottom: 4, marginTop: 4, fontWeight: '500'}}>Tonalidade (Tom)</Text>
                           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 12}}>
-                            {TONALIDADES.map(tom => (
-                              <TouchableOpacity 
-                                key={tom} 
-                                onPress={() => updateSongField(index, 'tonalidade', tom)}
-                                style={{
-                                  paddingHorizontal: 14, 
-                                  paddingVertical: 6, 
-                                  borderRadius: 16, 
-                                  borderWidth: 1,
-                                  borderColor: song.tonalidade === tom ? theme.colors.primary : theme.colors.border,
-                                  backgroundColor: song.tonalidade === tom ? 'rgba(223, 114, 27, 0.15)' : theme.colors.background,
-                                  marginRight: 6
-                                }}
-                              >
-                                <Text style={{
-                                  color: song.tonalidade === tom ? theme.colors.primary : theme.colors.textSecondary,
-                                  fontWeight: song.tonalidade === tom ? 'bold' : 'normal',
-                                  fontSize: 12
-                                }}>{tom}</Text>
-                              </TouchableOpacity>
+                            {TONALIDADES_GROUPS.map((group, gIdx) => (
+                              <View key={gIdx} style={{ marginRight: 6 }}>
+                                {group.map(tom => (
+                                  <TouchableOpacity 
+                                    key={tom} 
+                                    onPress={() => updateSongField(index, 'tonalidade', tom)}
+                                    style={{
+                                      paddingHorizontal: 14, 
+                                      paddingVertical: 6, 
+                                      borderRadius: 16, 
+                                      borderWidth: 1,
+                                      borderColor: song.tonalidade === tom ? theme.colors.primary : theme.colors.border,
+                                      backgroundColor: song.tonalidade === tom ? 'rgba(223, 114, 27, 0.15)' : theme.colors.background,
+                                      marginBottom: tom.includes('m') ? 0 : 6
+                                    }}
+                                  >
+                                    <Text style={{
+                                      color: song.tonalidade === tom ? theme.colors.primary : theme.colors.textSecondary,
+                                      fontWeight: song.tonalidade === tom ? 'bold' : 'normal',
+                                      fontSize: 12,
+                                      textAlign: 'center'
+                                    }}>{tom}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
                             ))}
                           </ScrollView>
 
@@ -574,6 +596,12 @@ export default function EventDetailScreen() {
         visible={showAutocomplete}
         onClose={() => setShowAutocomplete(false)}
         onSelectSong={handleSelectSong}
+      />
+
+      <HolyricsExportModal
+        visible={holyricsModalVisible}
+        onClose={() => setHolyricsModalVisible(false)}
+        songs={songs}
       />
     </View>
   );
