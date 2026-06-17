@@ -211,8 +211,13 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
           </View>
 
           <Text style={styles.subtitle}>
-            Conecte-se ao PC da igreja pela mesma rede Wi-Fi e envie a playlist com um clique.
+            Conecte-se ao PC da igreja pela mesma rede Wi-Fi e envie a playlist com um clique. Ou leia o QR Code gerado pelo Holyrics para preencher automaticamente.
           </Text>
+
+          <TouchableOpacity style={styles.scanBtn} onPress={handleScan}>
+            <QrCode size={24} color="#FFF" />
+            <Text style={styles.scanBtnText}>Ler QR Code</Text>
+          </TouchableOpacity>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>IP do Computador (Rede Local)</Text>
@@ -254,9 +259,6 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
                 onChangeText={setToken}
                 secureTextEntry
               />
-              <TouchableOpacity onPress={handleScan} style={{ padding: 8 }}>
-                <QrCode size={22} color={theme.colors.primary} />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -427,5 +429,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  scanBtn: {
+    backgroundColor: theme.colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 8,
+  },
+  scanBtnText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   }
 });
