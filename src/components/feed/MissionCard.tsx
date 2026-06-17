@@ -67,6 +67,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
         onClose={() => setModalVisible(false)} 
         event={event} 
         role={role} 
+        isGlobal={isGlobal}
       />
     </View>
   );

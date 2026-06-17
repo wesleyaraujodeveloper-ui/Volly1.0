@@ -4,15 +4,19 @@ import { X, CalendarBlank, Clock, Info, Users } from 'phosphor-react-native';
 import { theme } from '../../../src/theme';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useRouter } from 'expo-router';
 
 interface EventDetailsModalProps {
   visible: boolean;
   onClose: () => void;
   event: any;
   role?: any;
+  isGlobal?: boolean;
 }
 
-export function EventDetailsModal({ visible, onClose, event, role }: EventDetailsModalProps) {
+export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: EventDetailsModalProps) {
+  const router = useRouter();
+
   if (!event) return null;
 
   const eventDate = new Date(event.event_date);
@@ -70,9 +74,23 @@ export function EventDetailsModal({ visible, onClose, event, role }: EventDetail
 
           </ScrollView>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={onClose}>
-            <Text style={styles.primaryButtonText}>Fechar</Text>
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
+              <Text style={styles.secondaryButtonText}>Fechar</Text>
+            </TouchableOpacity>
+
+            {!isGlobal && (
+              <TouchableOpacity 
+                style={styles.primaryButton} 
+                onPress={() => {
+                  onClose();
+                  router.push(`/events/${event.id}` as any);
+                }}
+              >
+                <Text style={styles.primaryButtonText}>Acessar Painel</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -165,7 +183,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceHighlight,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
   primaryButton: {
+    flex: 1,
     backgroundColor: theme.colors.primary,
     borderRadius: 12,
     padding: 16,
@@ -173,7 +211,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
 });
