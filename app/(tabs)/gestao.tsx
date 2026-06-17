@@ -30,7 +30,7 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
 
 export default function GestaoMembrosScreen() {
-  const { user } = useAppStore();
+  const { user, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,12 +46,22 @@ export default function GestaoMembrosScreen() {
 
   const queryClient = useQueryClient();
   const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+  const filterInstId = selectedInstitutionId || instId;
 
-  const { data: volunteers = [], isLoading: loadingVolunteers } = useVolunteers(instId);
-  const { data: departments = [], isLoading: loadingDepts } = useDepartments(instId);
+  const { data: volunteers = [], isLoading: loadingVolunteers } = useVolunteers(filterInstId ?? null);
+  const { data: departments = [], isLoading: loadingDepts } = useDepartments(filterInstId ?? null);
   const { data: roles = [], isLoading: loadingRoles } = useRoles();
   const { data: leaderTeamsData = [] } = useLeaderDepartments(user?.id);
   const leaderTeams = leaderTeamsData.map(d => d.id);
+  const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user?.role === 'MASTER' && allInstitutions.length === 0) {
+      adminService.listInstitutions().then((res: any) => {
+        setAllInstitutions(res.data || []);
+      });
+    }
+  }, [user]);
 
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptDesc, setNewDeptDesc] = useState('');
@@ -379,6 +389,32 @@ export default function GestaoMembrosScreen() {
         <Text style={globalStyles.textTitle}>Gestão de Equipes</Text>
         <Text style={globalStyles.textBody}>Administre membros e departamentos.</Text>
       </View>
+
+      {/* FILTROS MASTER */}
+      {user?.role === 'MASTER' && allInstitutions.length > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterContainer}
+        >
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedInstitutionId === null && styles.filterChipActive]}
+            onPress={() => setSelectedInstitutionId(null)}
+          >
+            <Text style={[styles.filterText, selectedInstitutionId === null && styles.filterTextActive]}>Tudo</Text>
+          </TouchableOpacity>
+          {allInstitutions.map((inst) => (
+            <TouchableOpacity 
+              key={inst.id}
+              style={[styles.filterChip, selectedInstitutionId === inst.id && styles.filterChipActive]}
+              onPress={() => setSelectedInstitutionId(inst.id)}
+            >
+              <Text style={[styles.filterText, selectedInstitutionId === inst.id && styles.filterTextActive]}>{inst.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       {/* TABS */}
       <View style={styles.tabBar}>
@@ -909,8 +945,48 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { color: theme.colors.text, fontSize: 18, fontWeight: 'bold' },
   roleOptionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: theme.colors.background },
-  roleOptionTitle: { color: theme.colors.text, fontSize: 14, fontWeight: 'bold' },
-  roleOptionDesc: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  roleOptionTitle: {
+    color: theme.colors.text,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  roleOptionDesc: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+  },
+  filterScroll: {
+    marginBottom: 20,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    maxHeight: 45,
+    minHeight: 45,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 40,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
   searchArea: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.background, borderRadius: 8, paddingHorizontal: 12, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border },
   searchInput: { flex: 1, color: theme.colors.text, paddingVertical: 10, marginLeft: 8 },
   manageTeamBtn: { padding: 8 },

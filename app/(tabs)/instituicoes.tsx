@@ -8,6 +8,8 @@ import { useAllInstitutions, useCreateInstitution, useUpdateInstitution, useDele
 import { CustomModal } from '../../src/components/CustomModal';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useRouter } from 'expo-router';
+import { systemService } from '../../src/services/systemService';
+import { APP_VERSION } from '../../src/constants/config';
 
 export default function GestaoInstituicoesScreen() {
   const { user } = useAppStore();
@@ -32,7 +34,36 @@ export default function GestaoInstituicoesScreen() {
   const [adminEmail, setAdminEmail] = useState('');
   const [isSlugManual, setIsSlugManual] = useState(false);
 
-  // O React Query cuida do fetch quando user.role === 'MASTER' através das invalidations ou navegação, mas aqui apenas usamos o hook.
+  // Controle de versão (OTA)
+  const [dbVersion, setDbVersion] = useState<string>('');
+  const [editingVersion, setEditingVersion] = useState(false);
+  const [newVersionInput, setNewVersionInput] = useState('');
+
+  useEffect(() => {
+    if (user?.role === 'MASTER') {
+      systemService.getLatestVersion().then(res => {
+        if (res.app_version) {
+          setDbVersion(res.app_version);
+          setNewVersionInput(res.app_version);
+        }
+      });
+    }
+  }, [user]);
+
+  const handleUpdateVersion = async () => {
+    if (!newVersionInput.trim()) return;
+    try {
+      setLoading(true);
+      await systemService.updateVersion(newVersionInput.trim());
+      setDbVersion(newVersionInput.trim());
+      setEditingVersion(false);
+      Alert.alert('Sucesso', 'Versão atualizada no banco. Usuários receberão o aviso de atualização.');
+    } catch (e: any) {
+      Alert.alert('Erro', 'Falha ao atualizar versão: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -111,6 +142,7 @@ export default function GestaoInstituicoesScreen() {
       Alert.alert('Erro ao Salvar', err.message);
     } finally {
       setLoading(false);
+      refetch(); // Força atualização pra refletir admins
     }
   };
 
@@ -271,8 +303,8 @@ export default function GestaoInstituicoesScreen() {
     );
   }, [router]);
 
-  return (
-    <View style={globalStyles.container}>
+  const renderHeader = () => (
+    <>
       <View style={styles.header}>
         <Text style={globalStyles.textTitle}>Gestão Global</Text>
         <Text style={globalStyles.textBody}>Controle de instituições e cotas SaaS.</Text>
@@ -280,10 +312,56 @@ export default function GestaoInstituicoesScreen() {
 
       {renderStatsDashboard}
 
+      <View style={styles.versionCard}>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10}}>
+          <Ionicons name="cloud-upload" size={24} color={theme.colors.primary} />
+          <Text style={styles.instName}>Motor de Atualização OTA</Text>
+        </View>
+        <Text style={styles.statsText}>Versão Interna do Código: <Text style={{fontWeight: 'bold', color: theme.colors.text}}>{APP_VERSION}</Text></Text>
+        
+        <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 10}}>
+          <Text style={styles.statsText}>Versão Forçada no Banco:</Text>
+          {editingVersion ? (
+            <TextInput 
+              style={[styles.input, { flex: 1, height: 40, padding: 8 }]} 
+              value={newVersionInput}
+              onChangeText={setNewVersionInput}
+              keyboardType="numeric"
+            />
+          ) : (
+            <Text style={{fontWeight: 'bold', color: dbVersion === APP_VERSION ? theme.colors.success : theme.colors.error, fontSize: 16}}>
+              {dbVersion || 'Carregando...'}
+            </Text>
+          )}
+        </View>
+
+        <View style={{flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10}}>
+          {editingVersion ? (
+            <>
+              <TouchableOpacity style={{marginRight: 15, padding: 8}} onPress={() => setEditingVersion(false)}>
+                <Text style={{color: theme.colors.textSecondary}}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{backgroundColor: theme.colors.primary, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8}} onPress={handleUpdateVersion}>
+                <Text style={{color: '#FFF', fontWeight: 'bold'}}>Salvar</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity style={{backgroundColor: theme.colors.surfaceHighlight, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 8}} onPress={() => setEditingVersion(true)}>
+              <Text style={{color: theme.colors.primary, fontWeight: 'bold'}}>Editar Versão</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </>
+  );
+
+  return (
+    <View style={globalStyles.container}>
       <FlatList
         data={institutions}
         keyExtractor={(item) => item.id}
         renderItem={renderInstitutionCard}
+        ListHeaderComponent={renderHeader}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={theme.colors.primary} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
@@ -429,6 +507,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     opacity: 0.7,
+  },
+  versionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
   card: {
     backgroundColor: theme.colors.surface,

@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, ActivityIndicator, Alert, Platform, AppState, AppStateStatus } from 'react-native';
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import Head from 'expo-router/head';
 import { useAppStore } from '../src/store/useAppStore';
@@ -12,6 +12,9 @@ import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { systemService } from '../src/services/systemService';
+import { APP_VERSION } from '../src/constants/config';
+import { UpdateAvailableModal } from '../src/components/modals/UpdateAvailableModal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,10 +36,36 @@ export default function RootLayout() {
     'CreamCake': require('../assets/fonts/CreamCake.otf'),
   });
 
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const appState = useRef(AppState.currentState);
   const lastUserId = useRef<string | null>(null);
+
+  const checkVersion = async () => {
+    // Apenas checa se estiver montado
+    try {
+      const { app_version } = await systemService.getLatestVersion();
+      if (app_version && app_version !== APP_VERSION) {
+        setUpdateAvailable(true);
+      }
+    } catch (e) {
+      console.log('Erro ao checar versão', e);
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
+    checkVersion();
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        checkVersion();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   useNotifications();
@@ -208,6 +237,17 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
       </PersistQueryClientProvider>
+      <UpdateAvailableModal 
+        visible={updateAvailable} 
+        onUpdate={() => {
+          if (Platform.OS === 'web') {
+            window.location.reload();
+          } else {
+            // Em React Native puro seria Updates.reloadAsync(), mas vamos ignorar se for PWA focado em Web
+            Alert.alert("Atualização", "Por favor, reinicie o aplicativo.");
+          }
+        }} 
+      />
     </>
   );
 }

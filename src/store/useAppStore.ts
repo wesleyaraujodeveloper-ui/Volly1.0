@@ -21,6 +21,8 @@ interface AppState {
   setProviderToken: (token: string | null) => void;
   isLoadingData: boolean;
   setIsLoadingData: (loading: boolean) => void;
+  selectedInstitutionId: string | null;
+  setSelectedInstitutionId: (id: string | null) => void;
   clearSession: () => void;
 }
 
@@ -36,12 +38,15 @@ export const useAppStore = create<AppState>()(
       isLoadingData: true, // Começa em true enquanto checa a sessão no Supabase
       setIsLoadingData: (loading) => set({ isLoadingData: loading }),
 
-      clearSession: () => set({ user: null, providerToken: null }),
+      selectedInstitutionId: null,
+      setSelectedInstitutionId: (id) => set({ selectedInstitutionId: id }),
+
+      clearSession: () => set({ user: null, providerToken: null, selectedInstitutionId: null }),
     }),
     {
       name: 'volly-app-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({ user: state.user }), // Persistimos apenas o usuário para carregamento imediato
+      partialize: (state) => ({ user: state.user, selectedInstitutionId: state.selectedInstitutionId }), // Persistimos o usuário e o filtro selecionado
     }
   )
 );

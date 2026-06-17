@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Event } from '../../src/services/eventService';
 import { useUpcomingEventsList, usePastEventsList } from '../../src/hooks/queries/useEvents';
 import { Calendar } from 'react-native-calendars';
@@ -17,7 +17,7 @@ type ListTab = 'PROXIMOS' | 'HISTORICO';
 
 export default function EventosScreen() {
   const router = useRouter();
-  const { user } = useAppStore();
+  const { user, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('LISTA');
   const [listTab, setListTab] = useState<ListTab>('PROXIMOS');
   const [search, setSearch] = useState('');
@@ -25,6 +25,18 @@ export default function EventosScreen() {
   
   const isLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
   const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+  const filterInstId = selectedInstitutionId || instId;
+
+  const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user?.role === 'MASTER' && allInstitutions.length === 0) {
+      const { adminService } = require('../../src/services/adminService');
+      adminService.listInstitutions().then((res: any) => {
+        setAllInstitutions(res.data || []);
+      });
+    }
+  }, [user]);
 
   const isPast = listTab === 'HISTORICO' && !selectedDate;
 
@@ -32,10 +44,10 @@ export default function EventosScreen() {
   const { data: upcomingEvents = [], isLoading: loadingUpcoming, refetch: refetchUpcoming, isFetching: isFetchingUpcoming } = useUpcomingEventsList({
     date: selectedDate || undefined,
     name: search || undefined,
-    institutionId: instId
+    institutionId: filterInstId ?? null
   });
 
-  const { data: pastEvents = [], isLoading: loadingPast, refetch: refetchPast, isFetching: isFetchingPast } = usePastEventsList(10, instId);
+  const { data: pastEvents = [], isLoading: loadingPast, refetch: refetchPast, isFetching: isFetchingPast } = usePastEventsList(10, filterInstId ?? null);
 
   const events = isPast ? pastEvents : upcomingEvents;
   const loading = isPast ? loadingPast : loadingUpcoming;
@@ -70,6 +82,32 @@ export default function EventosScreen() {
 
   return (
     <View style={globalStyles.container}>
+      {/* FILTROS MASTER */}
+      {user?.role === 'MASTER' && allInstitutions.length > 0 && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterContainer}
+        >
+          <TouchableOpacity 
+            style={[styles.filterChip, selectedInstitutionId === null && styles.filterChipActive]}
+            onPress={() => setSelectedInstitutionId(null)}
+          >
+            <Text style={[styles.filterText, selectedInstitutionId === null && styles.filterTextActive]}>Tudo</Text>
+          </TouchableOpacity>
+          {allInstitutions.map((inst) => (
+            <TouchableOpacity 
+              key={inst.id}
+              style={[styles.filterChip, selectedInstitutionId === inst.id && styles.filterChipActive]}
+              onPress={() => setSelectedInstitutionId(inst.id)}
+            >
+              <Text style={[styles.filterText, selectedInstitutionId === inst.id && styles.filterTextActive]}>{inst.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <MagnifyingGlass size={18} color={theme.colors.textSecondary} weight="bold" />
@@ -301,6 +339,39 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
+  },
+  filterScroll: {
+    marginBottom: 20,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+    maxHeight: 45,
+    minHeight: 45,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 40,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterText: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
   },
 });
 

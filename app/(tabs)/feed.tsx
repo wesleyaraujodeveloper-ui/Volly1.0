@@ -55,7 +55,7 @@ import { FeedbackModal } from '../../src/components/modals/FeedbackModal';
 import { CreateAnnouncementModal } from '../../src/components/modals/CreateAnnouncementModal';
 
 export default function FeedScreen() {
-  const { user, providerToken } = useAppStore();
+  const { user, providerToken, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const router = useRouter();
   const [isChatActive, setIsChatActive] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
@@ -74,7 +74,6 @@ export default function FeedScreen() {
   
   // Estados de Filtro para MASTER
   const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
-  const [selectedInstitutionId, setSelectedInstitutionId] = useState<string | null>(null);
   const [postVisibility, setPostVisibility] = useState<'INTERNAL' | 'GLOBAL'>('INTERNAL');
 
   // Estado de Notificações
@@ -95,10 +94,14 @@ export default function FeedScreen() {
   const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
   const feedInstId = selectedInstitutionId || instId;
 
-  const { data: posts = [], isLoading: loadingPosts, isFetching: isFetchingPosts, refetch: refetchPosts } = useFeedPosts(feedInstId ?? null);
-  const { data: panoramaData = [], isLoading: loadingPanorama } = useGlobalSchedulePanorama(instId ?? null);
+  // Mural é Global (usa instId)
+  const { data: posts = [], isLoading: loadingPosts, isFetching: isFetchingPosts, refetch: refetchPosts } = useFeedPosts(instId ?? null);
+  
+  // Escalas são Locais (usam feedInstId)
+  const { data: panoramaData = [], isLoading: loadingPanorama } = useGlobalSchedulePanorama(feedInstId ?? null);
+  const { data: nextGlobalEvent } = useNextGlobalEvent(feedInstId ?? null);
+  
   const { data: nextEvent } = useNextUserEvent(user?.id);
-  const { data: nextGlobalEvent } = useNextGlobalEvent(instId ?? null);
   const { data: songs = [] } = useRecommendedSongs(10);
 
   const createPostMutation = useCreatePost();
@@ -125,7 +128,7 @@ export default function FeedScreen() {
   const refreshing = isFetchingPosts || isRefreshing;
 
   const loadAnnouncements = async () => {
-    const instId = user?.access_level === 'MASTER' ? null : user?.institution_id;
+    // Avisos são globais (usa instId)
     const { data } = await announcementService.getActiveAnnouncements(instId || null);
     if (data) setAnnouncements(data);
   };
@@ -152,7 +155,7 @@ export default function FeedScreen() {
       loadAnnouncements();
       checkPendingFeedback();
     }
-  }, [user]);
+  }, [user, feedInstId]);
 
   useEffect(() => {
     let isActive = false;
@@ -1111,8 +1114,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginHorizontal: -20,
     paddingHorizontal: 20,
+    maxHeight: 45, // Fix height to prevent layout jumps
+    minHeight: 45,
   },
   filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingRight: 40,
     gap: 8,
   },

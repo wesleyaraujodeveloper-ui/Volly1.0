@@ -453,17 +453,64 @@ export const adminService = {
     }
   },
   /**
-   * Lista todos os administradores de uma instituição específica.
+   * Lista todos os administradores de uma instituição (Ativos e Pendentes).
    */
   listInstitutionAdmins: async (institutionId: string) => {
-    const { data, error } = await supabase
+    // 1. Perfis ativos
+    const { data: profiles, error: pError } = await supabase
       .from('profiles')
       .select('*')
       .eq('institution_id', institutionId)
       .eq('access_level', 'ADMIN')
       .order('full_name');
     
-    return { data, error };
+    // 2. Convites pendentes
+    const { data: invites, error: iError } = await supabase
+      .from('invitations')
+      .select('*')
+      .eq('institution_id', institutionId)
+      .eq('role', 'ADMIN');
+
+    if (pError || iError) return { data: null, error: pError || iError };
+
+    const combined = [
+      ...(profiles || []).map(p => ({ ...p, isPending: false })),
+      ...(invites || []).map(i => ({ id: `invite_${i.email}`, email: i.email, full_name: 'Pendente (Convite enviado)', isPending: true }))
+    ];
+    
+    return { data: combined, error: null };
+  },
+
+  /**
+   * Convida um novo administrador para a instituição
+   */
+  inviteAdmin: async (institutionId: string, email: string) => {
+    const cleanEmail = email.toLowerCase().trim();
+    // Verifica se já existe em profiles
+    const { data: profile } = await supabase.from('profiles').select('id').eq('email', cleanEmail).maybeSingle();
+    
+    if (profile) {
+      // Já tem conta, só promove
+      const { error } = await supabase.from('profiles').update({ access_level: 'ADMIN', institution_id: institutionId }).eq('id', profile.id);
+      return { error };
+    } else {
+      // Cria convite
+      const { error } = await supabase.from('invitations').upsert([{ email: cleanEmail, role: 'ADMIN', institution_id: institutionId }]);
+      return { error };
+    }
+  },
+
+  /**
+   * Remove um administrador (rebaixa para voluntário ou exclui o convite)
+   */
+  removeAdmin: async (institutionId: string, email: string, isPending: boolean) => {
+    if (isPending) {
+      const { error } = await supabase.from('invitations').delete().eq('institution_id', institutionId).eq('email', email).eq('role', 'ADMIN');
+      return { error };
+    } else {
+      const { error } = await supabase.from('profiles').update({ access_level: 'VOLUNTÁRIO' }).eq('institution_id', institutionId).eq('email', email);
+      return { error };
+    }
   },
 
   /**
@@ -479,5 +526,82 @@ export const adminService = {
     if (count === 0) return { data: null, error: { message: 'Acesso negado ou instituição não encontrada. (Restrição RLS ou FK)' } };
 
     return { data, error: null };
+  },
+
+  /**
+   * Busca o e-mail do administrador principal de uma instituição (para edição).
+   */
+  getPrimaryAdminEmail: async (institutionId: string) => {
+    // 1. Tenta buscar em profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('institution_id', institutionId)
+      .eq('access_level', 'ADMIN')
+      .limit(1)
+      .maybeSingle();
+    
+    if (profile?.email) return profile.email;
+
+    // 2. Se não achou, tenta buscar nos convites pendentes
+    const { data: invite } = await supabase
+      .from('invitations')
+      .select('email')
+      .eq('institution_id', institutionId)
+      .eq('role', 'ADMIN')
+      .limit(1)
+      .maybeSingle();
+    
+    if (invite?.email) return invite.email;
+
+    return '';
+  },
+
+  /**
+   * Atualiza ou transfere o admin principal da instituição.
+   */
+  updatePrimaryAdmin: async (institutionId: string, oldEmail: string | null, newEmail: string) => {
+    const cleanNew = newEmail.toLowerCase().trim();
+    const cleanOld = oldEmail ? oldEmail.toLowerCase().trim() : null;
+
+    if (!cleanNew || cleanNew === cleanOld) return { error: null };
+
+    // 1. Rebaixa o antigo admin, se houver
+    if (cleanOld) {
+      await supabase.from('profiles')
+        .update({ access_level: 'VOLUNTÁRIO' })
+        .eq('institution_id', institutionId)
+        .eq('email', cleanOld);
+        
+      await supabase.from('invitations')
+        .delete()
+        .eq('institution_id', institutionId)
+        .eq('email', cleanOld)
+        .eq('role', 'ADMIN');
+    }
+
+    // 2. Promove ou convida o novo admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', cleanNew)
+      .maybeSingle();
+    
+    if (profile) {
+      // Atualiza usuário existente
+      const { error } = await supabase.from('profiles')
+        .update({ access_level: 'ADMIN', institution_id: institutionId })
+        .eq('id', profile.id);
+      return { error };
+    } else {
+      // Cria convite novo
+      const { error } = await supabase.from('invitations')
+        .upsert([{
+          email: cleanNew,
+          role: 'ADMIN',
+          institution_id: institutionId
+        }]);
+      return { error };
+    }
   }
 };
