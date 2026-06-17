@@ -92,6 +92,12 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
   };
 
   const handleScan = async () => {
+    if (Platform.OS === 'web') {
+      // No web, vamos abrir direto porque as permissões do navegador cuidam disso
+      setIsScanning(true);
+      return;
+    }
+
     if (!permission?.granted) {
       const result = await requestPermission();
       if (result.granted) {
@@ -123,17 +129,32 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
   };
 
   if (isScanning) {
+    const WebScanner = Platform.OS === 'web' ? require('@yudiel/react-qr-scanner').Scanner : null;
+
     return (
       <Modal visible={visible} animationType="slide" transparent={false}>
         <View style={{ flex: 1, backgroundColor: 'black' }}>
-          <CameraView 
-            style={StyleSheet.absoluteFillObject}
-            facing="back"
-            barcodeScannerSettings={{
-              barcodeTypes: ["qr"],
-            }}
-            onBarcodeScanned={handleBarcodeScanned}
-          />
+          {Platform.OS === 'web' && WebScanner ? (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+              <WebScanner
+                onScan={(result: any) => {
+                  if (result && result.length > 0) {
+                    handleBarcodeScanned({ type: 'qr', data: result[0].rawValue });
+                  }
+                }}
+                styles={{ container: { width: '100%', height: '100%' } }}
+              />
+            </div>
+          ) : (
+            <CameraView 
+              style={StyleSheet.absoluteFillObject}
+              facing="back"
+              barcodeScannerSettings={{
+                barcodeTypes: ["qr"],
+              }}
+              onBarcodeScanned={handleBarcodeScanned}
+            />
+          )}
           
           <View style={styles.scannerOverlay}>
             <View style={styles.scannerTarget} />
