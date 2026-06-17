@@ -123,28 +123,38 @@ export const feedService = {
    */
   getRecommendedSongs: async (limit: number = 5) => {
     const { data, error } = await supabase
-      .from('playlists')
-      .select('links')
+      .from('event_songs')
+      .select(`
+        youtube_url,
+        spotify_url,
+        global_songs (
+          title
+        )
+      `)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(limit * 4);
     
     if (error) return { data: [], error };
 
-    // Achata a lista de links JSONB e remove duplicados (pelo nome)
     const allSongs: any[] = [];
     const names = new Set();
 
-    data?.forEach(p => {
-      const links = Array.isArray(p.links) ? p.links : [];
-      links.forEach((s: any) => {
-        if (!names.has(s.name)) {
-          names.add(s.name);
-          allSongs.push(s);
-        }
-      });
+    data?.forEach((s: any) => {
+      // Validar se tem pelo menos um link
+      if (!s.youtube_url && !s.spotify_url) return;
+
+      const title = s.global_songs?.title;
+      if (title && !names.has(title)) {
+        names.add(title);
+        allSongs.push({
+          name: title,
+          youtube: s.youtube_url,
+          spotify: s.spotify_url
+        });
+      }
     });
 
-    return { data: allSongs.slice(0, 10), error: null };
+    return { data: allSongs.slice(0, limit), error: null };
   },
 
   /**
