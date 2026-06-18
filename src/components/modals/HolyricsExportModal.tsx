@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Button, Linking } from 'react-native';
-import { Desktop, PlugsConnected, Plugs, X, WifiHigh, QrCode } from 'phosphor-react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { Desktop, PlugsConnected, Plugs, X, Password } from 'phosphor-react-native';
 import { theme } from '../../../src/theme';
 import { holyricsService, HolyricsConfig } from '../../../src/services/holyricsService';
 import { EventSong } from '../../../src/services/songService';
@@ -13,15 +12,10 @@ interface HolyricsExportModalProps {
 }
 
 export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportModalProps) {
-  const [ip, setIp] = useState('');
-  const [port, setPort] = useState('8080');
-  const [token, setToken] = useState('');
+  const [connectionCode, setConnectionCode] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  
-  const [isScanning, setIsScanning] = useState(false);
-  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     if (visible) {
@@ -32,22 +26,20 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
 
   const loadSavedConfig = async () => {
     const config = await holyricsService.loadConfig();
-    if (config) {
-      setIp(config.ip);
-      setPort(config.port);
-      setToken(config.token);
+    if (config && config.connectionCode) {
+      setConnectionCode(config.connectionCode);
     }
   };
 
   const handleTestConnection = async () => {
-    if (!ip || !port || !token) {
-      Alert.alert('Aviso', 'Preencha todos os campos antes de testar.');
+    if (!connectionCode) {
+      Alert.alert('Aviso', 'Preencha o Código de Conexão antes de testar.');
       return;
     }
     
     setIsTesting(true);
     setConnectionStatus('idle');
-    const config = { ip: ip.trim(), port: port.trim(), token: token.trim() };
+    const config = { connectionCode: connectionCode.trim() };
     
     // Save locally
     await holyricsService.saveConfig(config);
@@ -57,16 +49,16 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
 
     if (success) {
       setConnectionStatus('success');
-      Alert.alert('Sucesso', 'Conexão com o Holyrics estabelecida!');
+      Alert.alert('Sucesso', 'Código salvo! O envio será direcionado para o Volly Connector associado a este código.');
     } else {
       setConnectionStatus('error');
-      Alert.alert('Erro de Conexão', message || 'Não foi possível conectar. Verifique se o celular está no mesmo Wi-Fi do computador da igreja.');
+      Alert.alert('Erro', message || 'Código inválido.');
     }
   };
 
   const handleExport = async () => {
-    if (!ip || !port || !token) {
-      Alert.alert('Aviso', 'Preencha as configurações do Holyrics.');
+    if (!connectionCode) {
+      Alert.alert('Aviso', 'Preencha o Código de Conexão do PC da Igreja.');
       return;
     }
 
@@ -76,166 +68,20 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
     }
 
     setIsExporting(true);
-    const config = { ip: ip.trim(), port: port.trim(), token: token.trim() };
+    const config = { connectionCode: connectionCode.trim() };
     await holyricsService.saveConfig(config);
 
     const { success, message } = await holyricsService.exportPlaylist(config, songs);
     setIsExporting(false);
 
     if (success) {
-      Alert.alert('Exportado com Sucesso! 🎉', 'As músicas foram enviadas para o Holyrics.', [
+      Alert.alert('Exportado com Sucesso! 🎉', 'As músicas chegaram no computador da Igreja.', [
         { text: 'OK', onPress: onClose }
       ]);
     } else {
-      Alert.alert('Falha na Exportação', message || 'Verifique o formato da API ou a conexão de rede.');
+      Alert.alert('Falha na Exportação', message || 'Não foi possível completar o envio para a Igreja.');
     }
   };
-
-  const handleScan = async () => {
-    if (Platform.OS === 'web') {
-      // No web, vamos abrir direto porque as permissões do navegador cuidam disso
-      setIsScanning(true);
-      return;
-    }
-
-    if (!permission?.granted) {
-      if (permission?.canAskAgain === false) {
-        Alert.alert(
-          'Permissão Necessária',
-          'O acesso à câmera foi negado. Por favor, habilite a permissão nas configurações do seu aparelho.',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Abrir Configurações', onPress: () => Linking.openSettings() }
-          ]
-        );
-        return;
-      }
-
-      const result = await requestPermission();
-      if (result.granted) {
-        setIsScanning(true);
-      } else {
-        if (!result.canAskAgain) {
-          Alert.alert(
-            'Permissão Necessária',
-            'O acesso à câmera foi negada. Por favor, habilite a permissão nas configurações do seu aparelho.',
-            [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Abrir Configurações', onPress: () => Linking.openSettings() }
-            ]
-          );
-        } else {
-          Alert.alert('Permissão negada', 'Precisamos de acesso à câmera para ler o QR Code.');
-        }
-      }
-    } else {
-      setIsScanning(true);
-    }
-  };
-
-  const handleBarcodeScanned = ({ type, data }: { type: string, data: string }) => {
-    setIsScanning(false);
-    
-    // O QR Code do Holyrics pode ser um JSON contendo IP, Porta e Token
-    // ou apenas uma string. Tentamos fazer o parse.
-    try {
-      const parsed = JSON.parse(data);
-      if (parsed.token) setToken(parsed.token);
-      if (parsed.ip) setIp(parsed.ip);
-      if (parsed.port) setPort(parsed.port.toString());
-      Alert.alert('Sucesso', 'Configurações capturadas pelo QR Code!');
-    } catch {
-      // Se não for JSON, assumimos que é apenas o Token
-      setToken(data);
-      Alert.alert('Sucesso', 'Token capturado pelo QR Code!');
-    }
-  };
-
-  useEffect(() => {
-    let html5QrcodeScanner: any = null;
-    let isMounted = true;
-
-    if (Platform.OS === 'web' && isScanning) {
-      // Adicionamos um delay para garantir que o Modal foi montado no DOM
-      setTimeout(() => {
-        if (!isMounted) return;
-        const domNode = document.getElementById('qr-reader');
-        if (!domNode) {
-          console.error("DOM node qr-reader not found");
-          Alert.alert("Erro", "Não foi possível carregar a câmera no momento.");
-          return;
-        }
-
-        try {
-          const { Html5QrcodeScanner } = require('html5-qrcode');
-          
-          html5QrcodeScanner = new Html5QrcodeScanner(
-            "qr-reader",
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            /* verbose= */ false
-          );
-          
-          html5QrcodeScanner.render((decodedText: string) => {
-            if (isMounted) {
-              html5QrcodeScanner.clear().catch((e: any) => console.log(e));
-              handleBarcodeScanned({ type: 'qr', data: decodedText });
-            }
-          }, (error: any) => {
-            // ignora erros de scan enquanto busca
-          });
-        } catch (error) {
-          console.error("Scanner Error", error);
-        }
-      }, 500); // 500ms delay para a animação do Modal
-    }
-
-    return () => {
-      isMounted = false;
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().catch((e: any) => console.log('Failed to clear scanner', e));
-      }
-    };
-  }, [isScanning]);
-
-  if (isScanning) {
-    return (
-      <Modal visible={visible} animationType="slide" transparent={false}>
-        <View style={{ flex: 1, backgroundColor: 'black' }}>
-          {Platform.OS === 'web' ? (
-            <div style={{ flex: 1, backgroundColor: 'black', display: 'flex', flexDirection: 'column' }}>
-              <div id="qr-reader" style={{ width: '100%', maxWidth: '500px', margin: '0 auto', backgroundColor: 'black' }}></div>
-            </div>
-          ) : (
-            <CameraView 
-              style={StyleSheet.absoluteFillObject}
-              facing="back"
-              barcodeScannerSettings={{
-                barcodeTypes: ["qr"],
-              }}
-              onBarcodeScanned={handleBarcodeScanned}
-            />
-          )}
-          
-          <View style={styles.scannerOverlay} pointerEvents="none">
-            <View style={styles.scannerTarget} />
-          </View>
-
-          <TouchableOpacity 
-            onPress={() => setIsScanning(false)} 
-            style={styles.scannerCloseBtn}
-          >
-            <X size={32} color="#FFF" />
-          </TouchableOpacity>
-
-          <View style={styles.scannerInstructions}>
-            <Text style={styles.scannerInstructionsText}>
-              Aponte para o QR Code no aplicativo Holyrics
-            </Text>
-          </View>
-        </View>
-      </Modal>
-    );
-  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
@@ -255,54 +101,22 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
           </View>
 
           <Text style={styles.subtitle}>
-            Conecte-se ao PC da igreja pela mesma rede Wi-Fi e envie a playlist com um clique.
+            Digite o Código de Conexão configurado no Volly Connector do computador da sua igreja. O envio é feito pela nuvem de onde você estiver.
           </Text>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>IP do Computador (Rede Local)</Text>
+            <Text style={styles.label}>Código de Conexão</Text>
             <View style={styles.inputContainer}>
-              <WifiHigh size={20} color={theme.colors.textSecondary} />
+              <Password size={20} color={theme.colors.textSecondary} />
               <TextInput
                 style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
-                placeholder="Ex: 192.168.1.100"
+                placeholder="Ex: 123456"
                 placeholderTextColor={theme.colors.textSecondary}
-                value={ip}
-                onChangeText={setIp}
-                keyboardType="numeric"
+                value={connectionCode}
+                onChangeText={setConnectionCode}
+                keyboardType="default"
               />
             </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Porta</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
-                placeholder="8080"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={port}
-                onChangeText={setPort}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Token do Holyrics</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
-                placeholder="Seu token de API..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={token}
-                onChangeText={setToken}
-                secureTextEntry
-              />
-            </View>
-            <TouchableOpacity style={styles.scanBtnSmall} onPress={handleScan}>
-              <QrCode size={20} color={theme.colors.primary} />
-              <Text style={styles.scanBtnSmallText}>Escanear QR Code</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.actionsContainer}>
@@ -321,16 +135,16 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
                     <Plugs size={20} color={theme.colors.text} weight="regular" />
                   )}
                   <Text style={[styles.testBtnText, connectionStatus === 'success' && { color: theme.colors.success }]}>
-                    {connectionStatus === 'success' ? 'Conectado!' : 'Testar Conexão'}
+                    {connectionStatus === 'success' ? 'Salvo!' : 'Salvar Código'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.exportBtn, (!ip || !port || !token) && { opacity: 0.5 }]} 
+              style={[styles.exportBtn, (!connectionCode) && { opacity: 0.5 }]} 
               onPress={handleExport}
-              disabled={isExporting || !ip || !port || !token}
+              disabled={isExporting || !connectionCode}
             >
               {isExporting ? (
                 <ActivityIndicator size="small" color="#FFF" />
@@ -403,6 +217,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: 15,
     marginLeft: 8,
+    textTransform: 'uppercase',
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -436,59 +251,5 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  scannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scannerTarget: {
-    width: 250,
-    height: 250,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    backgroundColor: 'transparent',
-    borderRadius: 20,
-  },
-  scannerCloseBtn: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 25,
-  },
-  scannerInstructions: {
-    position: 'absolute',
-    bottom: 80,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  scannerInstructionsText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  scanBtnSmall: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginTop: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: theme.colors.surfaceHighlight,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary + '40',
-    gap: 6,
-  },
-  scanBtnSmallText: {
-    color: theme.colors.primary,
-    fontSize: 14,
-    fontWeight: 'bold',
   }
 });
