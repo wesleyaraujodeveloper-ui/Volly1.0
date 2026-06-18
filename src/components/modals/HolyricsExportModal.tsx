@@ -216,7 +216,7 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
             />
           )}
           
-          <View style={styles.scannerOverlay}>
+          <View style={styles.scannerOverlay} pointerEvents="none">
             <View style={styles.scannerTarget} />
           </View>
 
