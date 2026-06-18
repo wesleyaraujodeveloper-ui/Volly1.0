@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Button } from 'react-native';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Button, Linking } from 'react-native';
 import { Desktop, PlugsConnected, Plugs, X, WifiHigh, QrCode } from 'phosphor-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { theme } from '../../../src/theme';
@@ -99,11 +99,34 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
     }
 
     if (!permission?.granted) {
+      if (permission?.canAskAgain === false) {
+        Alert.alert(
+          'Permissão Necessária',
+          'O acesso à câmera foi negado. Por favor, habilite a permissão nas configurações do seu aparelho.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Abrir Configurações', onPress: () => Linking.openSettings() }
+          ]
+        );
+        return;
+      }
+
       const result = await requestPermission();
       if (result.granted) {
         setIsScanning(true);
       } else {
-        Alert.alert('Permissão negada', 'Precisamos de acesso à câmera para ler o QR Code.');
+        if (!result.canAskAgain) {
+          Alert.alert(
+            'Permissão Necessária',
+            'O acesso à câmera foi negada. Por favor, habilite a permissão nas configurações do seu aparelho.',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Abrir Configurações', onPress: () => Linking.openSettings() }
+            ]
+          );
+        } else {
+          Alert.alert('Permissão negada', 'Precisamos de acesso à câmera para ler o QR Code.');
+        }
       }
     } else {
       setIsScanning(true);
