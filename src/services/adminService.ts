@@ -452,6 +452,44 @@ export const adminService = {
       return { publicUrl: null, error };
     }
   },
+
+  /**
+   * Upload de ícone customizado da equipe/departamento.
+   */
+  uploadDepartmentIcon: async (deptId: string, base64Data: string) => {
+    try {
+      const { decode } = require('base64-arraybuffer');
+      const fileName = `${deptId}-${Date.now()}.jpg`;
+      const filePath = `${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('department-icons')
+        .upload(filePath, decode(base64Data), {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('department-icons')
+        .getPublicUrl(data.path);
+
+      // Atualiza a tabela departments com a nova URL
+      const { error: updateError } = await supabase
+        .from('departments')
+        .update({ icon_url: publicUrl })
+        .eq('id', deptId);
+        
+      if (updateError) throw updateError;
+
+      return { publicUrl, error: null };
+    } catch (error) {
+      console.error('Department icon upload error:', error);
+      return { publicUrl: null, error };
+    }
+  },
+
   /**
    * Lista todos os administradores de uma instituição (Ativos e Pendentes).
    */

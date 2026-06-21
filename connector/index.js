@@ -1,9 +1,15 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
+const path = require('path');
 const fetch = require('node-fetch');
+const WebSocket = require('ws');
+
+// Polyfill para Supabase no Node.js
+global.WebSocket = WebSocket;
 
 // 1. Carregar configuração
-const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+const configPath = path.join(process.cwd(), 'config.json');
+const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 if (!config.holyricsToken || config.holyricsToken === 'COLOQUE_SEU_TOKEN_AQUI') {
   console.error("ERRO: Você precisa configurar o seu Token do Holyrics no arquivo config.json!");

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CaretRight, Users } from 'phosphor-react-native';
+import { Image } from 'expo-image';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { theme } from '../../theme';
@@ -50,7 +51,15 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
         
         <View style={styles.missionFooter}>
           <View style={styles.deptInfo}>
-            <Users size={14} color={theme.colors.textSecondary} weight="regular" />
+            {event.event_departments?.[0]?.departments?.icon_url ? (
+              <Image 
+                source={{ uri: event.event_departments[0].departments.icon_url }} 
+                style={{ width: 18, height: 18, borderRadius: 9 }} 
+                contentFit="cover" 
+              />
+            ) : (
+              <Users size={14} color={theme.colors.textSecondary} weight="regular" />
+            )}
             <Text style={styles.deptName}>
               {isGlobal 
                 ? 'Evento Geral' 

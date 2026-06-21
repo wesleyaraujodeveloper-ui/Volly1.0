@@ -5,6 +5,9 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
 import { useVolunteers, useDepartments, useRoles, useLeaderDepartments } from '../../src/hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Image } from 'expo-image';
 import { 
   LockSimple, 
   MagnifyingGlass, 
@@ -23,7 +26,8 @@ import {
   Square, 
   UserCircle, 
   XCircle,
-  RadioButton
+  RadioButton,
+  Camera
 } from 'phosphor-react-native';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -282,12 +286,48 @@ export default function GestaoMembrosScreen() {
   const handleSaveEditDepartment = async () => {
     if (!editingDept || !editingDept.name.trim()) return;
     setLoading(true);
+
+    if (editingDept.new_icon_base64) {
+      const { error: iconError } = await adminService.uploadDepartmentIcon(editingDept.id, editingDept.new_icon_base64);
+      if (iconError) {
+        Alert.alert('Erro ao enviar ícone', iconError.message || 'Falha ao salvar a imagem');
+      }
+    }
+
     const { error } = await adminService.updateDepartment(editingDept.id, editingDept.name, editingDept.description);
     setLoading(false);
     if (error) Alert.alert('Erro', error.message);
     else {
       setEditingDept(null);
       refreshAll();
+    }
+  };
+
+  const handlePickDepartmentIcon = async () => {
+    if (!editingDept) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      
+      if (!result.canceled && result.assets[0]) {
+        // Redimensiona e comprime para limite de 256x256
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 256, height: 256 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        
+        if (manipResult.base64) {
+          setEditingDept({ ...editingDept, new_icon_base64: manipResult.base64, display_uri: manipResult.uri });
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao escolher imagem:', error);
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem.');
     }
   };
 
@@ -613,7 +653,7 @@ export default function GestaoMembrosScreen() {
                   </View>
                   {isAdminOrMaster && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '' })}>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '', icon_url: item.icon_url || '' })}>
                         <PencilSimple size={20} color={theme.colors.primary} weight="regular" />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateLeader(item.id)}>
@@ -872,6 +912,21 @@ export default function GestaoMembrosScreen() {
               <TouchableOpacity onPress={() => setEditingDept(null)}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
             </View>
             <View style={styles.formCard}>
+              <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                <TouchableOpacity onPress={handlePickDepartmentIcon} style={{ position: 'relative' }}>
+                  {(editingDept.display_uri || editingDept.icon_url) ? (
+                    <Image source={{ uri: editingDept.display_uri || editingDept.icon_url }} style={{ width: 80, height: 80, borderRadius: 40 }} contentFit="cover" />
+                  ) : (
+                    <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border }}>
+                      <Camera size={32} color={theme.colors.textSecondary} weight="regular" />
+                    </View>
+                  )}
+                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.colors.primary, borderRadius: 12, padding: 4 }}>
+                    <PencilSimple size={12} color="#FFF" weight="fill" />
+                  </View>
+                </TouchableOpacity>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 8 }}>Toque para alterar o ícone (1:1)</Text>
+              </View>
               <TextInput 
                 style={styles.input} 
                 placeholder="Nome da Equipe" 
