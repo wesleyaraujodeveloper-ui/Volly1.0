@@ -126,7 +126,7 @@ export const availabilityService = {
 
     const { data, error } = await supabase
       .from('user_departments')
-      .select('department_id, departments(id, name)')
+      .select('department_id, departments(id, name, icon_url)')
       .eq('user_id', user.id);
 
     // Converte de array para objeto único para facilitar o uso na UI

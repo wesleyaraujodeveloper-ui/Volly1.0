@@ -195,8 +195,10 @@ export default function PerfilScreen() {
                   const teamIcon = getTeamIcon(dept.departments.name);
                   return (
                     <View key={index} style={styles.teamCard}>
-                      <View style={styles.teamIconBox}>
-                        {teamIcon ? (
+                      <View style={[styles.teamIconBox, dept.departments.icon_url && { backgroundColor: 'transparent' }]}>
+                        {dept.departments.icon_url ? (
+                          <Image source={{ uri: dept.departments.icon_url }} style={{ width: '100%', height: '100%', borderRadius: 15 }} />
+                        ) : teamIcon ? (
                           <Image source={teamIcon} style={styles.teamIconImage} />
                         ) : (
                           <Users size={24} color={theme.colors.primary} weight="regular" />
