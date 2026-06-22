@@ -212,6 +212,24 @@
             </ol>
         </div>
 
+        <div class="tutorial-box" style="background-color: rgba(34, 197, 94, 0.1); border-color: var(--success); margin-top: 10px;">
+            <strong style="color: var(--success);">⚙️ Instalação do Script (Passo Único)</strong>
+            <p style="margin-top: 8px; margin-bottom: 12px; font-size: 13px;">
+                Como o Holyrics bloqueia a injeção automática de arquivos, você precisa colar o código abaixo diretamente no programa.
+            </p>
+            <ol style="font-size: 13px; margin-bottom: 15px;">
+                <li>No Holyrics, vá no menu superior em <strong>Arquivo</strong> > <strong>Configurações</strong> > aba <strong>API Server</strong>.</li>
+                <li>Na parte inferior, clique no botão <strong>JavaScript</strong>.</li>
+                <li>Se houver algum código lá, <strong>APAGUE</strong> tudo.</li>
+                <li>Clique no botão <strong>📋 Copiar Código</strong> abaixo e cole na tela limpa do Holyrics.</li>
+                <li>Clique em <strong>Ok / Salvar</strong>.</li>
+            </ol>
+            
+            <textarea id="scriptText" readonly style="width: 100%; height: 80px; background: #000; color: #fff; font-family: monospace; font-size: 11px; margin-top: 5px; padding: 10px; border-radius: 4px; box-sizing: border-box; resize: none;"></textarea>
+            
+            <button type="button" onclick="copyScript()" style="background-color: var(--success); padding: 10px; margin-top: 10px; font-size: 14px;">📋 Copiar Código</button>
+        </div>
+
         <button id="saveBtn" onclick="saveConfig()">Salvar e Conectar</button>
         <div id="statusMsg" class="status"></div>
     </div>
@@ -230,7 +248,7 @@
                     // Se já estiver rodando certinho, mostra sucesso
                     if(data.isRunning) {
                         showSuccess("Conexão ativa! Feche esta página e deixe a tela preta aberta.");
-                        document.getElementById('saveBtn').innerText = "Atualizar Configurações";
+                        document.getElementById('saveBtn').innerText = "Iniciar Volly Connector";
                     }
                 }
             } catch(e) {}
@@ -265,7 +283,7 @@
 
                 if(res.ok && data.success) {
                     showSuccess("Configuração salva com sucesso! A tela preta agora começará a ouvir as playlists. Você pode fechar esta página.");
-                    btn.innerHTML = 'Atualizar Configurações';
+                    btn.innerHTML = 'Iniciar Volly Connector';
                 } else {
                     throw new Error(data.message || "Erro ao salvar.");
                 }
@@ -282,6 +300,32 @@
             const status = document.getElementById('statusMsg');
             status.className = "status success";
             status.innerText = msg;
+        }
+
+        async function loadScript() {
+            try {
+                const res = await fetch('/api/holyrics-script');
+                const fbData = await res.json();
+                if(fbData.script) {
+                    document.getElementById('scriptText').value = fbData.script.trim();
+                }
+            } catch(err){}
+        }
+
+        // Carrega o script na textarea logo de início
+        loadScript();
+
+        function copyScript() {
+            const textarea = document.getElementById('scriptText');
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // Para mobile
+
+            try {
+                document.execCommand('copy');
+                showSuccess("Copiado! Agora é só colar no Holyrics.");
+            } catch (err) {
+                alert("Falha ao copiar. Selecione o texto manualmente e copie.");
+            }
         }
     </script>
 </body>
