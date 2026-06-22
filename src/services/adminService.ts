@@ -14,11 +14,13 @@ export interface Institution {
   id: string;
   name: string;
   slug: string;
+  active: boolean;
   user_limit: number;
   logo_url: string | null;
-  active: boolean;
+  settings: any;
   created_at: string;
   userCount?: number;
+  trial_end_date?: string | null;
 }
 
 export const adminService = {
@@ -383,7 +385,7 @@ export const adminService = {
   /**
    * Cria uma nova instituição.
    */
-  createInstitution: async (name: string, slug: string, userLimit: number = 30, logoUrl?: string | null, adminEmail?: string | null) => {
+  createInstitution: async (name: string, slug: string, userLimit: number = 15, logoUrl?: string | null, adminEmail?: string | null) => {
     // 1. Cria a Instituição
     const { data: inst, error: instError } = await supabase
       .from('institutions')
@@ -641,5 +643,25 @@ export const adminService = {
         }]);
       return { error };
     }
+  },
+
+  /**
+   * Inicia ou renova um período de teste de 30 dias para uma instituição.
+   */
+  startTrial: async (institutionId: string) => {
+    // Calcula a data de expiração (30 dias a partir de agora)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    
+    const { data, error } = await supabase
+      .from('institutions')
+      .update({ 
+        trial_end_date: futureDate.toISOString(),
+        active: true // reativa a instituição se estivesse pausada
+      })
+      .eq('id', institutionId)
+      .select();
+
+    return { data, error };
   }
 };

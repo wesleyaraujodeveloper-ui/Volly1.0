@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração - Volly Connector</title>
+    <style>
+        :root {
+            --primary: #F97316;
+            --primary-dark: #EA580C;
+            --background: #09090B;
+            --surface: #18181B;
+            --surface-hover: #27272A;
+            --border: #3F3F46;
+            --text: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --success: #22C55E;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: var(--primary);
+            margin: 0;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        input {
+            width: 100%;
+            background-color: var(--background);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+        }
+
+        .tutorial-box {
+            background-color: rgba(249, 115, 22, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .tutorial-box strong {
+            color: var(--primary);
+        }
+
+        .tutorial-box ol {
+            margin: 10px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .tutorial-box li {
+            margin-bottom: 4px;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        button:disabled {
+            background-color: var(--border);
+            cursor: not-allowed;
+            color: var(--text-secondary);
+        }
+
+        .status {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status.success {
+            display: block;
+            color: var(--success);
+        }
+
+        .status.error {
+            display: block;
+            color: #EF4444;
+        }
+
+        /* Loading spinner */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="container" id="mainContainer">
+        <div class="header">
+            <h1 class="logo">Volly</h1>
+            <p class="subtitle">Conector do Holyrics</p>
+        </div>
+
+        <div class="form-group">
+            <label for="connectionCode">Código de Conexão</label>
+            <input type="text" id="connectionCode" placeholder="Ex: 123456" autocomplete="off">
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 0;">
+                O código gerado dentro do aplicativo Volly no celular do líder.
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="holyricsPort">Porta do Holyrics</label>
+            <input type="number" id="holyricsPort" placeholder="Ex: 8091" value="8091" autocomplete="off">
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 0;">
+                Por padrão o Holyrics usa a porta 8091.
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label for="holyricsToken">Token do Holyrics</label>
+            <input type="text" id="holyricsToken" placeholder="Cole a chave gigante aqui..." autocomplete="off">
+        </div>
+
+        <div class="tutorial-box">
+            <strong>Onde encontro o Token do Holyrics?</strong>
+            <ol>
+                <li>Abra o programa Holyrics neste computador.</li>
+                <li>Vá em <strong>Arquivo</strong> > <strong>Configurações</strong>.</li>
+                <li>No menu esquerdo, clique em <strong>API Server</strong>. (Aproveite para confirmar a porta).</li>
+                <li>Clique em <strong>Gerenciar Permissões</strong> e adicione um novo Token (dê o nome de Volly).</li>
+                <li>Marque <strong>todas</strong> as caixinhas de permissão para esse token.</li>
+                <li>Clique com o botão direito no token recém criado e escolha <strong>Copiar Token</strong>.</li>
+            </ol>
+        </div>
+
+        <button id="saveBtn" onclick="saveConfig()">Salvar e Conectar</button>
+        <div id="statusMsg" class="status"></div>
+    </div>
+
+    <script>
+        // Carrega configurações atuais se existirem
+        window.onload = async () => {
+            try {
+                const res = await fetch('/api/config');
+                if(res.ok) {
+                    const data = await res.json();
+                    if(data.connectionCode) document.getElementById('connectionCode').value = data.connectionCode;
+                    if(data.holyricsToken) document.getElementById('holyricsToken').value = data.holyricsToken;
+                    if(data.holyricsPort) document.getElementById('holyricsPort').value = data.holyricsPort;
+                    
+                    // Se já estiver rodando certinho, mostra sucesso
+                    if(data.isRunning) {
+                        showSuccess("Conexão ativa! Feche esta página e deixe a tela preta aberta.");
+                        document.getElementById('saveBtn').innerText = "Atualizar Configurações";
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function saveConfig() {
+            const code = document.getElementById('connectionCode').value.trim();
+            const token = document.getElementById('holyricsToken').value.trim();
+            const port = document.getElementById('holyricsPort').value.trim();
+            const btn = document.getElementById('saveBtn');
+            const status = document.getElementById('statusMsg');
+
+            if(!code || !token || !port) {
+                status.className = "status error";
+                status.innerText = "Por favor, preencha o código, o token e a porta!";
+                return;
+            }
+
+            // UI Loading
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader"></div> Conectando...';
+            status.style.display = "none";
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ connectionCode: code, holyricsToken: token, holyricsPort: port })
+                });
+
+                const data = await res.json();
+
+                if(res.ok && data.success) {
+                    showSuccess("Configuração salva com sucesso! A tela preta agora começará a ouvir as playlists. Você pode fechar esta página.");
+                    btn.innerHTML = 'Atualizar Configurações';
+                } else {
+                    throw new Error(data.message || "Erro ao salvar.");
+                }
+            } catch(e) {
+                status.className = "status error";
+                status.innerText = e.message;
+                btn.innerHTML = 'Tentar Novamente';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showSuccess(msg) {
+            const status = document.getElementById('statusMsg');
+            status.className = "status success";
+            status.innerText = msg;
+        }
+    </script>
+</body>
+</html>

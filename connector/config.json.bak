@@ -1,0 +1,7 @@
+{
+  "supabaseUrl": "https://heydiykcilykfsekdkfe.supabase.co",
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhleWRpeWtjaWx5a2ZzZWtka2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Mzc3NTksImV4cCI6MjA5MDExMzc1OX0.UNe1-t8DWnYPUqBYQ3iY4B4Ev1VI3h7tCwYU1MXiRKc",
+  "connectionCode": "123456",
+  "holyricsUrl": "http://localhost:8091/api/playlist/add",
+  "holyricsToken": "uVswDyfTRfdkqvaj"
+}

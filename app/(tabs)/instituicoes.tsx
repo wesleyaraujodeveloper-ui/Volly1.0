@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { theme, globalStyles } from '../../src/theme';
 import { adminService, Institution } from '../../src/services/adminService';
-import { useAllInstitutions, useCreateInstitution, useUpdateInstitution, useDeleteInstitution } from '../../src/hooks/queries/useInstitutions';
+import { useAllInstitutions, useCreateInstitution, useUpdateInstitution, useDeleteInstitution, useStartTrial } from '../../src/hooks/queries/useInstitutions';
 import { CustomModal } from '../../src/components/CustomModal';
 import { useAppStore } from '../../src/store/useAppStore';
 import { useRouter } from 'expo-router';
@@ -20,6 +20,7 @@ export default function GestaoInstituicoesScreen() {
   const createMutation = useCreateInstitution();
   const updateMutation = useUpdateInstitution();
   const deleteMutation = useDeleteInstitution();
+  const startTrialMutation = useStartTrial();
   
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,7 +29,7 @@ export default function GestaoInstituicoesScreen() {
   const [editingInst, setEditingInst] = useState<Institution | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [userLimit, setUserLimit] = useState('30');
+  const [userLimit, setUserLimit] = useState('15');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState('');
@@ -150,7 +151,7 @@ export default function GestaoInstituicoesScreen() {
     setEditingInst(null);
     setName('');
     setSlug('');
-    setUserLimit('30');
+    setUserLimit('15');
     setLogoBase64(null);
     setLogoPreview(null);
     setAdminEmail('');
@@ -161,7 +162,7 @@ export default function GestaoInstituicoesScreen() {
     setEditingInst(inst);
     setName(inst.name);
     setSlug(inst.slug);
-    setUserLimit(inst.user_limit?.toString() || '30');
+    setUserLimit(inst.user_limit?.toString() || '15');
     setLogoPreview(inst.logo_url);
     setModalVisible(true);
   };
@@ -192,6 +193,31 @@ export default function GestaoInstituicoesScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStartTrialClick = (inst: Institution) => {
+    Alert.alert(
+      'Iniciar Teste Grátis',
+      `Tem certeza que deseja iniciar um período de teste de 30 dias para a instituição "${inst.name}"?\nIsso reativará o acesso e definirá a data de expiração para daqui a 30 dias.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Iniciar 30 Dias', 
+          style: 'default',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await startTrialMutation.mutateAsync(inst.id);
+              Alert.alert('Sucesso', 'Teste de 30 dias iniciado com sucesso!');
+            } catch (err: any) {
+              Alert.alert('Erro', 'Não foi possível iniciar o teste: ' + err.message);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderStatsDashboard = useMemo(() => {
@@ -245,6 +271,16 @@ export default function GestaoInstituicoesScreen() {
     const usage = (userCount / item.user_limit) * 100;
     const isCritical = usage > 90;
 
+    const now = new Date();
+    const trialEnd = item.trial_end_date ? new Date(item.trial_end_date) : null;
+    const isTrialActive = trialEnd && trialEnd > now;
+    const isTrialExpired = trialEnd && trialEnd <= now;
+    let trialDaysRemaining = 0;
+    if (isTrialActive && trialEnd) {
+      const diffTime = Math.abs(trialEnd.getTime() - now.getTime());
+      trialDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    }
+
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -258,7 +294,25 @@ export default function GestaoInstituicoesScreen() {
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.instName}>{item.name}</Text>
             <Text style={styles.instSlug}>/{item.slug}</Text>
+            
+            {/* TAG DE TRIAL */}
+            {trialEnd && (
+              <Text style={[
+                styles.statsSubLabel, 
+                { color: isTrialExpired ? theme.colors.error : theme.colors.warning, fontWeight: 'bold' }
+              ]}>
+                {isTrialExpired ? '⏳ Teste Expirado' : `⏳ Expira em: ${trialDaysRemaining} dias`}
+              </Text>
+            )}
           </View>
+
+          <TouchableOpacity 
+            style={[styles.editBtn, { marginRight: 8, backgroundColor: 'rgba(223, 114, 27, 0.1)' }]} 
+            onPress={() => handleStartTrialClick(item)}
+          >
+            <Ionicons name="hourglass-outline" size={20} color={theme.colors.warning} />
+          </TouchableOpacity>
+
           <TouchableOpacity onPress={() => toggleStatus(item)}>
             <Ionicons 
               name={item.active ? "checkmark-circle" : "pause-circle"} 
@@ -435,12 +489,15 @@ export default function GestaoInstituicoesScreen() {
             <Text style={styles.label}>Limite de Usuários</Text>
             <TextInput 
               style={styles.input} 
-              placeholder="30" 
+              placeholder="15" 
               placeholderTextColor={theme.colors.textSecondary}
               value={userLimit}
               onChangeText={setUserLimit}
               keyboardType="numeric"
             />
+            <Text style={[styles.statsText, { marginTop: 4, marginLeft: 4, fontStyle: 'italic' }]}>
+              💡 Dica: 15 usuários (Plano Teste Grátis).
+            </Text>
           </View>
         </ScrollView>
       </CustomModal>
