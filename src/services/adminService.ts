@@ -93,7 +93,7 @@ export const adminService = {
           body: JSON.stringify({
             email: cleanEmail,
             name: name,
-            inviteUrl: 'https://vollyconnect.vercel.app/login'
+            inviteUrl: 'https://app.vollyconnect.com/login'
           })
         });
 
