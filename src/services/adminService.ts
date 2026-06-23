@@ -90,11 +90,11 @@ export const adminService = {
     if (!error) {
       try {
         const { data: fData, error: fError } = await supabase.functions.invoke('invite-email', {
-          body: {
+          body: JSON.stringify({
             email: cleanEmail,
             name: name,
-            inviteUrl: 'https://vollyconnect.com'
-          }
+            inviteUrl: 'https://vollyconnect.vercel.app/login'
+          })
         });
 
         if (fError) {
