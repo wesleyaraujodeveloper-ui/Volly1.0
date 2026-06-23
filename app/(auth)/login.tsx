@@ -51,7 +51,7 @@ export default function LoginScreen() {
         options: {
           redirectTo,
           skipBrowserRedirect: true,
-          scopes: 'https://www.googleapis.com/auth/calendar.events',
+          scopes: 'https://www.googleapis.com/auth/calendar.app.created',
           queryParams: {
             prompt: 'select_account',
             access_type: 'offline',
