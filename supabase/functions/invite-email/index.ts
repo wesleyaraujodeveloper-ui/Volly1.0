@@ -40,7 +40,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Volly <onboarding@resend.dev>',
+        from: 'Volly <contato@vollyconnect.com>',
         to: email, 
         subject: '✨ Convite: Junte-se à Equipe Volly!',
         html: `
