@@ -58,6 +58,27 @@ async function processarPlaylist(exportId, payload) {
   }
 }
 
+async function verificarPendentes() {
+  try {
+    const { data, error } = await supabase
+      .from('holyrics_exports')
+      .select('id, payload')
+      .eq('connection_code', config.connectionCode)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (data && data.length > 0) {
+      console.log(`Encontradas ${data.length} playlists pendentes na nuvem. Processando...`);
+      for (const row of data) {
+        await supabase.from('holyrics_exports').update({ status: 'processing' }).eq('id', row.id);
+        await processarPlaylist(row.id, row.payload);
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao verificar pendentes iniciais:", err);
+  }
+}
+
 function startPolling() {
   if (isPollingRunning) return;
   isPollingRunning = true;
@@ -70,26 +91,38 @@ function startPolling() {
   console.log('⚙️  Precisa alterar a configuração ou gerar novo código?');
   console.log('👉 Acesse no seu navegador: http://localhost:3050');
   console.log('');
-  console.log('📡 Aguardando playlists na nuvem...');
+  console.log('📡 Aguardando playlists na nuvem (Modo Tempo Real)...');
   console.log('=============================================');
 
-  pollingInterval = setInterval(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('holyrics_exports')
-        .select('id, payload')
-        .eq('connection_code', config.connectionCode)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
-        .limit(1);
+  // Verifica se tem algo pendente que não foi processado enquanto o connector estava desligado
+  verificarPendentes();
 
-      if (data && data.length > 0) {
-        const row = data[0];
-        await supabase.from('holyrics_exports').update({ status: 'processing' }).eq('id', row.id);
-        await processarPlaylist(row.id, row.payload);
+  // Em vez de um setInterval que sobrecarrega o banco, usamos Supabase Realtime
+  pollingInterval = supabase
+    .channel('holyrics_exports_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'holyrics_exports',
+        filter: `connection_code=eq.${config.connectionCode}`
+      },
+      async (payload) => {
+        const row = payload.new;
+        if (row && row.status === 'pending') {
+          await supabase.from('holyrics_exports').update({ status: 'processing' }).eq('id', row.id);
+          await processarPlaylist(row.id, row.payload);
+        }
       }
-    } catch (err) {}
-  }, 2000);
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Conectado ao banco de forma silenciosa. Aguardando Músicas...');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.log('⚠️ Erro de canal no Realtime. Tente reiniciar o connector mais tarde.');
+      }
+    });
 }
 
 // ---------------------------------------------------

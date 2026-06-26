@@ -317,13 +317,21 @@ export const adminService = {
   /**
    * Atualiza nome e descrição de um departamento (Apenas ADMIN).
    */
-  updateDepartment: async (deptId: string, name: string, description: string = '') => {
+  updateDepartment: async (deptId: string, name: string, description: string = '', can_export_holyrics: boolean = false) => {
     const { data, error } = await supabase.rpc('update_department', {
       p_dept_id: deptId,
       p_name: name,
       p_desc: description
     });
-    return { data, error };
+    
+    if (error) return { data, error };
+    
+    const { data: uData, error: uError } = await supabase
+      .from('departments')
+      .update({ can_export_holyrics })
+      .eq('id', deptId);
+      
+    return { data: uData || data, error: uError };
   },
 
   /**

@@ -158,6 +158,8 @@ export default function EventDetailScreen() {
   const isReadonly = readonly === 'true';
   const canEditPlaylist = (user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
   const canEditSchedule = (user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') && !isReadonly;
+  const canExportHolyrics = user?.role === 'MASTER' || user?.role === 'ADMIN' || 
+    (event?.event_departments?.some((ed: any) => ed.departments?.can_export_holyrics) ?? false);
 
   const handleSelectSong = async (globalSong: GlobalSong) => {
     setIsSavingPlaylist(true);
@@ -309,7 +311,7 @@ export default function EventDetailScreen() {
               <View style={styles.section}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                   <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Playlist / Setlist</Text>
-                  {songs && songs.length > 0 && (
+                  {canExportHolyrics && songs && songs.length > 0 && (
                     <TouchableOpacity 
                       onPress={() => setHolyricsModalVisible(true)} 
                       style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}

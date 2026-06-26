@@ -83,7 +83,7 @@ export const eventService = {
   listHistory: async (startDate: string, endDate: string, institutionId?: string | null) => {
     let query = supabase
       .from('events')
-      .select('*, event_departments(departments(id, name))')
+      .select('*, event_departments(departments(id, name, can_export_holyrics))')
       .gte('event_date', `${startDate}T00:00:00Z`)
       .lte('event_date', `${endDate}T23:59:59Z`);
 
@@ -116,7 +116,7 @@ export const eventService = {
     // 2. Monta a query principal
     let query = supabase
       .from('events')
-      .select('*, event_departments(departments(id, name)), schedules(id, status, roles(department_id))');
+      .select('*, event_departments(departments(id, name, can_export_holyrics)), schedules(id, status, roles(department_id))');
 
     // Filtro institucional
     if (filters?.institutionId) {
@@ -160,7 +160,7 @@ export const eventService = {
   listPastEvents: async (limit: number = 10, institutionId?: string | null) => {
     let query = supabase
       .from('events')
-      .select('*, event_departments(departments(id, name))')
+      .select('*, event_departments(departments(id, name, can_export_holyrics))')
       .lt('event_date', new Date().toISOString());
 
     if (institutionId) {
@@ -180,7 +180,7 @@ export const eventService = {
   getEventDetails: async (eventId: string) => {
     const { data, error } = await supabase
       .from('events')
-      .select('*, event_departments(departments(id, name))')
+      .select('*, event_departments(departments(id, name, can_export_holyrics))')
       .eq('id', eventId)
       .single();
 

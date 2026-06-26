@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView, RefreshControl, Switch } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -290,11 +290,11 @@ export default function GestaoMembrosScreen() {
     if (editingDept.new_icon_base64) {
       const { error: iconError } = await adminService.uploadDepartmentIcon(editingDept.id, editingDept.new_icon_base64);
       if (iconError) {
-        Alert.alert('Erro ao enviar ícone', iconError.message || 'Falha ao salvar a imagem');
+        Alert.alert('Erro ao enviar ícone', (iconError as any).message || 'Falha ao salvar a imagem');
       }
     }
 
-    const { error } = await adminService.updateDepartment(editingDept.id, editingDept.name, editingDept.description);
+    const { error } = await adminService.updateDepartment(editingDept.id, editingDept.name, editingDept.description, editingDept.can_export_holyrics);
     setLoading(false);
     if (error) Alert.alert('Erro', error.message);
     else {
@@ -653,7 +653,7 @@ export default function GestaoMembrosScreen() {
                   </View>
                   {isAdminOrMaster && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '', icon_url: item.icon_url || '' })}>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => setEditingDept({ id: item.id, name: item.name, description: item.description || '', icon_url: item.icon_url || '', can_export_holyrics: item.can_export_holyrics || false })}>
                         <PencilSimple size={20} color={theme.colors.primary} weight="regular" />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleUpdateLeader(item.id)}>
@@ -942,6 +942,19 @@ export default function GestaoMembrosScreen() {
                 onChangeText={(text) => setEditingDept({...editingDept, description: text})} 
                 multiline
               />
+              
+              <View style={styles.switchRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.switchTitle}>Pode usar o Holyrics?</Text>
+                  <Text style={styles.switchDesc}>Habilita o botão de exportar playlist no painel do evento e nos cards.</Text>
+                </View>
+                <Switch 
+                  value={editingDept.can_export_holyrics} 
+                  onValueChange={(val) => setEditingDept({...editingDept, can_export_holyrics: val})} 
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  thumbColor="#FFF"
+                />
+              </View>
             </View>
             <TouchableOpacity 
               style={[styles.addButton, loading && { opacity: 0.7 }]} 
@@ -1056,6 +1069,8 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 8, marginBottom: 8 },
   chipSelected: { backgroundColor: '#6BC5A7', borderColor: '#6BC5A7' },
   chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: 'bold' },
-  chipTextSelected: { color: '#FFFFFF' }
+  chipTextSelected: { color: '#FFFFFF' },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderTopWidth: 1, borderTopColor: theme.colors.border, marginTop: 12 },
+  switchTitle: { fontSize: 14, fontWeight: 'bold', color: theme.colors.text },
+  switchDesc: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 4, paddingRight: 10 }
 });
-

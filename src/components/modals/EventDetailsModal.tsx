@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { X, CalendarBlank, Clock, Info, Users } from 'phosphor-react-native';
-import { theme } from '../../../src/theme';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { X, CalendarBlank, Clock, Info, Users, MusicNotes } from 'phosphor-react-native';
+import { theme } from '../../theme';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
+import { songService } from '../../services/songService';
 
 interface EventDetailsModalProps {
   visible: boolean;
@@ -16,6 +17,30 @@ interface EventDetailsModalProps {
 
 export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: EventDetailsModalProps) {
   const router = useRouter();
+  const [songs, setSongs] = useState<any[]>([]);
+  const [loadingSongs, setLoadingSongs] = useState(false);
+
+  useEffect(() => {
+    if (visible && event?.id) {
+      loadSongs();
+    } else {
+      setSongs([]);
+    }
+  }, [visible, event?.id]);
+
+  const loadSongs = async () => {
+    setLoadingSongs(true);
+    try {
+      const { data, error } = await songService.getEventSongs(event.id);
+      if (!error && data) {
+        setSongs(data);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar músicas:', err);
+    } finally {
+      setLoadingSongs(false);
+    }
+  };
 
   if (!event) return null;
 
@@ -65,6 +90,41 @@ export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: E
                 <Text style={styles.descriptionText}>{event.description}</Text>
               </View>
             )}
+
+            {/* Preview da Playlist */}
+            <View style={styles.playlistBox}>
+              <View style={styles.playlistHeader}>
+                <MusicNotes size={18} color={theme.colors.textSecondary} />
+                <Text style={styles.playlistTitle}>Músicas do Evento</Text>
+              </View>
+
+              {loadingSongs ? (
+                <ActivityIndicator size="small" color={theme.colors.primary} style={{ padding: 10 }} />
+              ) : songs.length > 0 ? (
+                <View style={styles.songList}>
+                  {songs.map((song, index) => (
+                    <View key={song.id || index} style={styles.songItem}>
+                      <Text style={styles.songNumber}>{index + 1}.</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.songName} numberOfLines={1}>
+                          {song.global_song?.title || 'Música desconhecida'}
+                        </Text>
+                        <Text style={styles.songArtist} numberOfLines={1}>
+                          {song.global_song?.artist || 'Artista desconhecido'}
+                        </Text>
+                      </View>
+                      {song.tonalidade ? (
+                        <View style={styles.toneTag}>
+                          <Text style={styles.toneText}>{song.tonalidade}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyPlaylistText}>Nenhuma música adicionada ainda.</Text>
+              )}
+            </View>
             
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>
@@ -213,5 +273,64 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  playlistBox: {
+    backgroundColor: theme.colors.surfaceHighlight,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  playlistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  playlistTitle: {
+    color: theme.colors.textSecondary,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  songList: {
+    gap: 8,
+  },
+  songItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
+    padding: 12,
+    borderRadius: 12,
+  },
+  songNumber: {
+    color: theme.colors.textSecondary,
+    fontWeight: 'bold',
+    marginRight: 12,
+    width: 20,
+  },
+  songName: {
+    color: theme.colors.text,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  songArtist: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+  },
+  emptyPlaylistText: {
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  toneTag: {
+    backgroundColor: 'rgba(255, 107, 0, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  toneText: {
+    color: theme.colors.primary,
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 });

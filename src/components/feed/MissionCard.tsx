@@ -7,6 +7,10 @@ import { ptBR } from 'date-fns/locale';
 import { theme } from '../../theme';
 import { EventDetailsModal } from '../modals/EventDetailsModal';
 import { useState } from 'react';
+import { useAppStore } from '../../store/useAppStore';
+import { Desktop } from 'phosphor-react-native';
+import { HolyricsExportModal } from '../modals/HolyricsExportModal';
+import { songService, EventSong } from '../../services/songService';
 
 interface MissionCardProps {
   event: any;
@@ -16,7 +20,21 @@ interface MissionCardProps {
 
 export function MissionCard({ event, role, isGlobal = false }: MissionCardProps) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [holyricsModalVisible, setHolyricsModalVisible] = useState(false);
+  const [songs, setSongs] = useState<EventSong[]>([]);
+  const { user } = useAppStore();
   const eventDate = new Date(event.event_date);
+
+  const canExportHolyrics = user?.role === 'MASTER' || user?.role === 'ADMIN' || 
+    (event?.event_departments?.some((ed: any) => ed.departments?.can_export_holyrics) ?? false);
+
+  const handleOpenHolyrics = async () => {
+    const { data } = await songService.getEventSongs(event.id);
+    if (data) {
+      setSongs(data);
+      setHolyricsModalVisible(true);
+    }
+  };
 
   return (
     <View style={styles.section}>
@@ -67,7 +85,19 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
               }
             </Text>
           </View>
-          <CaretRight size={18} color={theme.colors.primary} weight="bold" />
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {canExportHolyrics && (
+              <TouchableOpacity 
+                style={styles.holyricsSmallBtn}
+                onPress={handleOpenHolyrics}
+              >
+                <Desktop size={14} color="#FFF" weight="bold" />
+                <Text style={styles.holyricsSmallBtnText}>Holyrics</Text>
+              </TouchableOpacity>
+            )}
+            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -77,6 +107,12 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
         event={event} 
         role={role} 
         isGlobal={isGlobal}
+      />
+      
+      <HolyricsExportModal
+        visible={holyricsModalVisible}
+        onClose={() => setHolyricsModalVisible(false)}
+        songs={songs}
       />
     </View>
   );
@@ -150,8 +186,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deptName: {
-    color: theme.colors.textSecondary,
     fontSize: 12,
+    color: theme.colors.textSecondary,
     marginLeft: 6,
+    fontWeight: '500',
   },
+  holyricsSmallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  holyricsSmallBtnText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  }
 });
