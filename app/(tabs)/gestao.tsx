@@ -204,8 +204,8 @@ export default function GestaoMembrosScreen() {
   };
 
   const handleAddDepartment = async () => {
-    if (!newDeptName.trim() || !selectedLeaderId) {
-      Alert.alert('Erro', 'Nome e Líder são obrigatórios.');
+    if (!newDeptName.trim()) {
+      Alert.alert('Erro', 'Nome da equipe é obrigatório.');
       return;
     }
     setLoading(true);
@@ -596,9 +596,17 @@ export default function GestaoMembrosScreen() {
               isAdminOrMaster ? (
                 <View style={styles.formCard}>
                   <TextInput style={styles.input} placeholder="Nome da Equipe" placeholderTextColor={theme.colors.textSecondary} value={newDeptName} onChangeText={setNewDeptName} />
-                  <Text style={styles.inputLabel}>Selecionar Líder:</Text>
+                  <Text style={styles.inputLabel}>Selecionar Líder (Opcional):</Text>
                   <View style={[styles.leaderPickerGrid, { maxHeight: 150 }]}>
                     <ScrollView nestedScrollEnabled>
+                      <TouchableOpacity style={[styles.leaderPickerItem, !selectedLeaderId && styles.leaderPickerItemSelected]} onPress={() => setSelectedLeaderId(null)}>
+                        {!selectedLeaderId ? (
+                           <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                         ) : (
+                           <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                         )}
+                        <Text style={[styles.leaderPickerLabel, !selectedLeaderId && { color: theme.colors.primary }]}>Nenhum</Text>
+                      </TouchableOpacity>
                       {volunteers.filter(v => v.role === 'LÍDER').map(l => (
                         <TouchableOpacity key={l.id} style={[styles.leaderPickerItem, selectedLeaderId === l.id && styles.leaderPickerItemSelected]} onPress={() => setSelectedLeaderId(l.id || null)}>
                           {selectedLeaderId === l.id ? (
@@ -636,7 +644,7 @@ export default function GestaoMembrosScreen() {
                       ))}
                     </ScrollView>
                   </View>
-                  <TouchableOpacity style={[styles.addButton, (loading || !selectedLeaderId) && { opacity: 0.7 }]} onPress={handleAddDepartment} disabled={loading || !selectedLeaderId}>
+                  <TouchableOpacity style={[styles.addButton, (loading || !newDeptName.trim()) && { opacity: 0.7 }]} onPress={handleAddDepartment} disabled={loading || !newDeptName.trim()}>
                     <Text style={styles.addButtonText}>Criar Equipe</Text>
                   </TouchableOpacity>
                 </View>
