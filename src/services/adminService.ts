@@ -538,8 +538,11 @@ export const adminService = {
     const { data: profile } = await supabase.from('profiles').select('id').eq('email', cleanEmail).maybeSingle();
     
     if (profile) {
-      // Já tem conta, só promove
-      const { error } = await supabase.from('profiles').update({ access_level: 'ADMIN', institution_id: institutionId }).eq('id', profile.id);
+      // Já tem conta, promove usando RPC para contornar RLS
+      const { error } = await supabase.rpc('promote_user_to_admin_with_institution', {
+        p_user_id: profile.id,
+        p_institution_id: institutionId
+      });
       return { error };
     } else {
       // Cria convite
@@ -556,7 +559,13 @@ export const adminService = {
       const { error } = await supabase.from('invitations').delete().eq('institution_id', institutionId).eq('email', email).eq('role', 'ADMIN');
       return { error };
     } else {
-      const { error } = await supabase.from('profiles').update({ access_level: 'VOLUNTÁRIO' }).eq('institution_id', institutionId).eq('email', email);
+      // Busca o ID do profile
+      const { data: profile } = await supabase.from('profiles').select('id').eq('institution_id', institutionId).eq('email', email).maybeSingle();
+      if (!profile) return { error: { message: 'Administrador não encontrado.' } };
+
+      const { error } = await supabase.rpc('demote_admin_to_volunteer', {
+        p_user_id: profile.id
+      });
       return { error };
     }
   },
@@ -610,36 +619,40 @@ export const adminService = {
    */
   updatePrimaryAdmin: async (institutionId: string, oldEmail: string | null, newEmail: string) => {
     const cleanNew = newEmail.toLowerCase().trim();
-    const cleanOld = oldEmail ? oldEmail.toLowerCase().trim() : null;
 
-    if (!cleanNew || cleanNew === cleanOld) return { error: null };
+    if (!cleanNew) return { error: { message: 'Novo e-mail inválido' } };
 
     // 1. Rebaixa o antigo admin, se houver
-    if (cleanOld) {
-      await supabase.from('profiles')
-        .update({ access_level: 'VOLUNTÁRIO' })
-        .eq('institution_id', institutionId)
-        .eq('email', cleanOld);
-        
-      await supabase.from('invitations')
-        .delete()
-        .eq('institution_id', institutionId)
-        .eq('email', cleanOld)
-        .eq('role', 'ADMIN');
+    if (oldEmail) {
+      const cleanOld = oldEmail.toLowerCase().trim();
+      const { data: oldProfile } = await supabase.from('profiles').select('id').eq('email', cleanOld).maybeSingle();
+      
+      if (oldProfile) {
+        const { error: demoteError } = await supabase.rpc('demote_admin_to_volunteer', {
+          p_user_id: oldProfile.id
+        });
+        if (demoteError) throw demoteError;
+      } else {
+        // Pode ser um convite
+        const { error: demoteError } = await supabase
+          .from('invitations')
+          .delete()
+          .eq('institution_id', institutionId)
+          .eq('email', cleanOld)
+          .eq('role', 'ADMIN');
+        if (demoteError) throw demoteError;
+      }
     }
 
     // 2. Promove ou convida o novo admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', cleanNew)
-      .maybeSingle();
+    const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', cleanNew).maybeSingle();
     
-    if (profile) {
+    if (existingProfile) {
       // Atualiza usuário existente
-      const { error } = await supabase.from('profiles')
-        .update({ access_level: 'ADMIN', institution_id: institutionId })
-        .eq('id', profile.id);
+      const { error } = await supabase.rpc('promote_user_to_admin_with_institution', {
+        p_user_id: existingProfile.id,
+        p_institution_id: institutionId
+      });
       return { error };
     } else {
       // Cria convite novo
