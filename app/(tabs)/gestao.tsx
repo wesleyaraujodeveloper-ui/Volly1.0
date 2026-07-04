@@ -3,7 +3,7 @@ import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
-import { useVolunteers, useDepartments, useRoles, useLeaderDepartments } from '../../src/hooks/queries/useAdmin';
+import { useVolunteers, useDepartments, useRoles, useLeaderDepartments, useDeleteVolunteer, useRequestVolunteerDeletion } from '../../src/hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -57,6 +57,9 @@ export default function GestaoMembrosScreen() {
   const { data: roles = [], isLoading: loadingRoles } = useRoles();
   const { data: leaderTeamsData = [] } = useLeaderDepartments(user?.id);
   const leaderTeams = leaderTeamsData.map(d => d.id);
+  
+  const { mutateAsync: deleteVolunteer, isPending: isDeleting } = useDeleteVolunteer();
+  const { mutateAsync: requestVolunteerDeletion, isPending: isRequestingDelete } = useRequestVolunteerDeletion();
   const [allInstitutions, setAllInstitutions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -422,6 +425,51 @@ export default function GestaoMembrosScreen() {
            (v.teams && v.teams.some(team => team.toLowerCase().includes(search)));
   });
 
+  const handleDeleteVolunteer = (item: Profile) => {
+    if (isAdminOrMaster) {
+      setModalData({
+        title: 'Excluir Voluntário',
+        message: `Deseja realmente excluir o voluntário ${item.name || item.email}? Esta ação é irreversível e apagará todos os dados dele.`,
+        type: 'danger',
+        onConfirm: async () => {
+          try {
+            setLoading(true);
+            await deleteVolunteer(item.id!);
+            setModalVisible(false);
+          } catch (err: any) {
+            Alert.alert('Erro', err.message);
+          } finally {
+            setLoading(false);
+          }
+        }
+      });
+      setModalVisible(true);
+    } else if (user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') {
+      setModalData({
+        title: 'Solicitar Exclusão',
+        message: `Deseja solicitar ao administrador a exclusão de ${item.name || item.email} da instituição por inatividade?`,
+        type: 'info',
+        onConfirm: async () => {
+          try {
+            setLoading(true);
+            await requestVolunteerDeletion({
+              volunteerName: item.name || item.email,
+              leaderName: user.name || 'Um líder',
+              institutionId: filterInstId!
+            });
+            setModalVisible(false);
+            Alert.alert('Sucesso', 'Solicitação enviada aos administradores.');
+          } catch (err: any) {
+            Alert.alert('Erro', err.message);
+          } finally {
+            setLoading(false);
+          }
+        }
+      });
+      setModalVisible(true);
+    }
+  };
+
   return (
     <View style={globalStyles.container}>
       {/* HEADER */}
@@ -573,6 +621,9 @@ export default function GestaoMembrosScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserTeams(item)}>
                       <Users size={18} color={theme.colors.primary} weight="regular" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteVolunteer(item)}>
+                      <Trash size={18} color={theme.colors.error} weight="regular" />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={[styles.roleBadge, isAdminOrMaster && { borderColor: theme.colors.primary, borderWidth: 1 }]}

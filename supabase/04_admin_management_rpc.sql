@@ -49,3 +49,32 @@ BEGIN
     RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RPC para excluir um voluntário completamente (Admin e Master)
+CREATE OR REPLACE FUNCTION delete_volunteer(p_user_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_admin_count INT;
+    v_target_institution UUID;
+    v_caller_institution UUID;
+BEGIN
+    SELECT COUNT(*), MAX(institution_id) INTO v_admin_count, v_caller_institution 
+    FROM public.profiles 
+    WHERE id = auth.uid() AND access_level IN ('MASTER', 'ADMIN');
+
+    IF v_admin_count = 0 THEN
+        RAISE EXCEPTION 'Acesso negado. Apenas ADMINS e MASTER podem excluir voluntários.';
+    END IF;
+
+    SELECT institution_id INTO v_target_institution FROM public.profiles WHERE id = p_user_id;
+    
+    IF v_target_institution != v_caller_institution AND NOT EXISTS(SELECT 1 FROM public.profiles WHERE id = auth.uid() AND access_level = 'MASTER') THEN
+        RAISE EXCEPTION 'Acesso negado. Você só pode excluir voluntários da sua instituição.';
+    END IF;
+
+    -- Deleta o usuário da auth.users (isso vai disparar o CASCADE para public.profiles)
+    DELETE FROM auth.users WHERE id = p_user_id;
+
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

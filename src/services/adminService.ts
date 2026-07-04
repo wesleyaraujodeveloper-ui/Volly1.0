@@ -147,12 +147,41 @@ export const adminService = {
    * Remove um voluntário da base de acessos.
    */
   removeVolunteer: async (id: string) => {
-    const { error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', id);
-
+    const { error } = await supabase.rpc('delete_volunteer', { p_user_id: id });
     return { error };
+  },
+
+  /**
+   * Envia uma notificação para todos os administradores solicitando a exclusão de um voluntário.
+   */
+  requestVolunteerDeletion: async (volunteerName: string, leaderName: string, institutionId: string) => {
+    try {
+      // 1. Busca os administradores da instituição
+      const { data: admins, error: adminErr } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('institution_id', institutionId)
+        .eq('access_level', 'ADMIN');
+        
+      if (adminErr) throw adminErr;
+      if (!admins || admins.length === 0) return { error: null }; // Sem admins para notificar
+      
+      const { notificationService } = require('./notificationService');
+      
+      const title = 'Exclusão de Voluntário Solicitada';
+      const body = `O líder ${leaderName} solicitou a exclusão do voluntário ${volunteerName}. Por favor, avalie as equipes e confirme a exclusão na Gestão.`;
+      
+      const promises = admins.map(admin => 
+        notificationService.notifySpecificUser(admin.id, title, body, { type: 'SYSTEM' })
+      );
+      
+      await Promise.all(promises);
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Erro ao solicitar exclusão de voluntário:', error);
+      return { error };
+    }
   },
 
   /**
@@ -555,12 +584,13 @@ export const adminService = {
    * Remove um administrador (rebaixa para voluntário ou exclui o convite)
    */
   removeAdmin: async (institutionId: string, email: string, isPending: boolean) => {
+    const cleanEmail = email.toLowerCase().trim();
     if (isPending) {
-      const { error } = await supabase.from('invitations').delete().eq('institution_id', institutionId).eq('email', email).eq('role', 'ADMIN');
+      const { error } = await supabase.from('invitations').delete().eq('institution_id', institutionId).eq('email', cleanEmail).eq('role', 'ADMIN');
       return { error };
     } else {
       // Busca o ID do profile
-      const { data: profile } = await supabase.from('profiles').select('id').eq('institution_id', institutionId).eq('email', email).maybeSingle();
+      const { data: profile } = await supabase.from('profiles').select('id').eq('institution_id', institutionId).eq('email', cleanEmail).maybeSingle();
       if (!profile) return { error: { message: 'Administrador não encontrado.' } };
 
       const { error } = await supabase.rpc('demote_admin_to_volunteer', {

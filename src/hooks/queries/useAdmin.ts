@@ -162,3 +162,27 @@ export const useUpdateVolunteerRole = () => {
     },
   });
 };
+
+export const useDeleteVolunteer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await adminService.removeVolunteer(userId);
+      if (error) throw error;
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['volunteers'] });
+    },
+  });
+};
+
+export const useRequestVolunteerDeletion = () => {
+  return useMutation({
+    mutationFn: async ({ volunteerName, leaderName, institutionId }: { volunteerName: string, leaderName: string, institutionId: string }) => {
+      const { error } = await adminService.requestVolunteerDeletion(volunteerName, leaderName, institutionId);
+      if (error) throw error;
+      return true;
+    },
+  });
+};
