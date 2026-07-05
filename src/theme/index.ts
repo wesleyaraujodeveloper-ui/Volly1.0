@@ -12,6 +12,8 @@ export const theme = {
     textSecondary: '#A0A0A0', // Texto secundário acinzentado
     error: '#FF5252',
     success: '#6BC5A7', // Verde menta sugerido
+    accent: '#6BC5A7', // Menta como cor de destaque
+    accentDark: '#4A9E82',
     border: '#333333',
   },
   spacing: {
