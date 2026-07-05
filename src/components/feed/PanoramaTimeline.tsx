@@ -14,7 +14,7 @@ interface PanoramaTimelineProps {
 
 export function PanoramaTimeline({ loading, data, user, onRequestSwap }: PanoramaTimelineProps) {
   if (loading) {
-    return <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />;
+    return <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />;
   }
 
   if (data.length === 0) {
@@ -81,7 +81,7 @@ export function PanoramaTimeline({ loading, data, user, onRequestSwap }: Panoram
                                style={styles.requestSwapBtn} 
                                onPress={() => onRequestSwap(sch.id)}
                              >
-                               <ArrowsLeftRight size={14} color={theme.colors.primary} weight="bold" />
+                               <ArrowsLeftRight size={14} color={theme.colors.accent} weight="bold" />
                                <Text style={styles.requestSwapBtnText}>Trocar</Text>
                              </TouchableOpacity>
                            ) : null}
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 12,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.accent,
     marginRight: 8,
   },
   panoramaDeptName: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   requestSwapBtnText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 11,
     fontWeight: 'bold',
   },

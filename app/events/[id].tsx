@@ -665,14 +665,14 @@ const styles = StyleSheet.create({
   },
   activeTabItem: {
     borderBottomWidth: 2,
-    borderBottomColor: theme.colors.primary,
+    borderBottomColor: theme.colors.accent,
   },
   tabText: {
     color: theme.colors.textSecondary,
     fontWeight: 'bold',
   },
   activeTabText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
   },
   infoContent: {},
   section: {
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   deptText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 11,
     fontWeight: 'bold',
     marginLeft: 4,
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.background,
   },
   addSongTitle: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 10,
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   confirmAddSong: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.accent,
     padding: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -901,14 +901,14 @@ const styles = StyleSheet.create({
   },
   emptyAssignButton: {
     borderWidth: 1,
-    borderColor: theme.colors.primary,
+    borderColor: theme.colors.accent,
     borderStyle: 'dashed',
     padding: 8,
     borderRadius: 8,
     alignItems: 'center',
   },
   emptyAssignText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -1045,10 +1045,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.primary + '40',
+    borderColor: theme.colors.accent + '40',
   },
   downloadChatText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 11,
     fontWeight: 'bold',
     marginLeft: 6,
