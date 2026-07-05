@@ -539,8 +539,7 @@ export default function EventDetailScreen() {
               renderItem={({ item }) => (
                 <View style={[
                   styles.messageBubble, 
-                  item.user_id === user?.id && styles.myMessage,
-                  Platform.OS === 'web' && { transform: [{ scaleY: -1 }] }
+                  item.user_id === user?.id && styles.myMessage
                 ]}>
                    <Text style={[styles.messageUser, item.user_id === user?.id && { color: '#FFFFFF' }]}>
                      {item.profiles?.full_name || 'Usuário'}
@@ -554,7 +553,7 @@ export default function EventDetailScreen() {
                 </View>
               )}
               ListEmptyComponent={
-                <View style={[styles.emptyContainer, Platform.OS === 'web' && { transform: [{ scaleY: -1 }] }]}>
+                <View style={styles.emptyContainer}>
                   <Text style={styles.emptyTextSmaller}>Nenhuma mensagem ainda.</Text>
                 </View>
               }
