@@ -14,6 +14,7 @@ export const theme = {
     success: '#6BC5A7', // Verde menta sugerido
     accent: '#6BC5A7', // Menta como cor de destaque
     accentDark: '#4A9E82',
+    warning: '#FFC107', // Amarelo
     border: '#333333',
   },
   spacing: {

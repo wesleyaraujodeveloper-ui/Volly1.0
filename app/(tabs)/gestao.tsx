@@ -611,201 +611,6 @@ export default function GestaoMembrosScreen() {
                     <Text style={styles.memberEmail}>{item.email}</Text>
                     {item.teams && item.teams.length > 0 && (
                       <Text style={{ color: theme.colors.primary, fontSize: 10, marginTop: 4, fontWeight: 'bold' }}>
-  };
-
-  const filteredVolunteers = volunteers.filter(v => {
-    const search = searchTerm.toLowerCase();
-    return (v.name?.toLowerCase() || '').includes(search) || 
-           v.email.toLowerCase().includes(search) ||
-           (v.teams && v.teams.some(team => team.toLowerCase().includes(search)));
-  });
-
-  const handleDeleteVolunteer = (item: Profile) => {
-    if (isAdminOrMaster) {
-      setModalData({
-        title: 'Excluir Voluntário',
-        message: `Deseja realmente excluir o voluntário ${item.name || item.email}? Esta ação é irreversível e apagará todos os dados dele.`,
-        type: 'danger',
-        onConfirm: async () => {
-          try {
-            setLoading(true);
-            await deleteVolunteer(item.id!);
-            setModalVisible(false);
-          } catch (err: any) {
-            Alert.alert('Erro', err.message);
-          } finally {
-            setLoading(false);
-          }
-        }
-      });
-      setModalVisible(true);
-    } else if (user?.role === 'LÍDER' || user?.role === 'CO-LÍDER') {
-      setModalData({
-        title: 'Solicitar Exclusão',
-        message: `Deseja solicitar ao administrador a exclusão de ${item.name || item.email} da instituição por inatividade?`,
-        type: 'info',
-        onConfirm: async () => {
-          try {
-            setLoading(true);
-            await requestVolunteerDeletion({
-              volunteerName: item.name || item.email,
-              leaderName: user.name || 'Um líder',
-              institutionId: filterInstId!
-            });
-            setModalVisible(false);
-            Alert.alert('Sucesso', 'Solicitação enviada aos administradores.');
-          } catch (err: any) {
-            Alert.alert('Erro', err.message);
-          } finally {
-            setLoading(false);
-          }
-        }
-      });
-      setModalVisible(true);
-    }
-  };
-
-  return (
-    <View style={globalStyles.container}>
-      {/* HEADER */}
-      <View style={styles.headerArea}>
-        <Text style={globalStyles.textTitle}>Gestão de Equipes</Text>
-        <Text style={globalStyles.textBody}>Administre membros e departamentos.</Text>
-      </View>
-
-      {/* FILTROS MASTER */}
-      {user?.role === 'MASTER' && allInstitutions.length > 0 && (
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filterContainer}
-        >
-          <TouchableOpacity 
-            style={[styles.filterChip, selectedInstitutionId === null && styles.filterChipActive]}
-            onPress={() => setSelectedInstitutionId(null)}
-          >
-            <Text style={[styles.filterText, selectedInstitutionId === null && styles.filterTextActive]}>Tudo</Text>
-          </TouchableOpacity>
-          {allInstitutions.map((inst) => (
-            <TouchableOpacity 
-              key={inst.id}
-              style={[styles.filterChip, selectedInstitutionId === inst.id && styles.filterChipActive]}
-              onPress={() => setSelectedInstitutionId(inst.id)}
-            >
-              <Text style={[styles.filterText, selectedInstitutionId === inst.id && styles.filterTextActive]}>{inst.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-
-      {/* TABS */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={[styles.tabItem, activeTab === 'MEMBROS' && styles.activeTabItem]} onPress={() => setActiveTab('MEMBROS')}>
-          <Text style={[styles.tabText, activeTab === 'MEMBROS' && styles.activeTabText]}>MEMBROS</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabItem, activeTab === 'EQUIPES' && styles.activeTabItem]} onPress={() => setActiveTab('EQUIPES')}>
-          <Text style={[styles.tabText, activeTab === 'EQUIPES' && styles.activeTabText]}>EQUIPES</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tabItem, activeTab === 'FUNÇÕES' && styles.activeTabItem]} onPress={() => setActiveTab('FUNÇÕES')}>
-          <Text style={[styles.tabText, activeTab === 'FUNÇÕES' && styles.activeTabText]}>FUNÇÕES</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* CONTENT */}
-      <View style={{ flex: 1 }}>
-        {activeTab === 'MEMBROS' && (
-          <FlatList
-            data={filteredVolunteers}
-            keyExtractor={(item) => item.id || item.email}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
-            ListEmptyComponent={
-              <EmptyState 
-                title={STRINGS.gestao.emptyState} 
-                description={STRINGS.gestao.emptyStateSub} 
-                image={require('../../assets/empty_state.jpg')} 
-              />
-            }
-            ListHeaderComponent={
-              <View style={styles.formCard}>
-                <View style={styles.searchArea}>
-                  <MagnifyingGlass size={20} color={theme.colors.textSecondary} weight="bold" />
-                  <TextInput style={styles.searchInput} placeholder="Buscar membro..." placeholderTextColor={theme.colors.textSecondary} value={searchTerm} onChangeText={setSearchTerm} />
-                </View>
-                <View style={styles.inputWithIcon}>
-                  <TextInput 
-                    style={[styles.input, { flex: 1, marginBottom: 0 }]} 
-                    placeholder="Nome do usuário ou e-mail" 
-                    placeholderTextColor={theme.colors.textSecondary} 
-                    value={email} 
-                    onChangeText={handleEmailChange} 
-                    autoCapitalize="none" 
-                    keyboardType="email-address"
-                  />
-                  {email.length > 0 && (
-                     isGmail ? (
-                       <CheckCircle size={20} color={theme.colors.accent} weight="fill" style={{ marginLeft: 8 }} />
-                     ) : (
-                       <WarningCircle size={20} color={theme.colors.error} weight="fill" style={{ marginLeft: 8 }} />
-                     )
-                   )}
-                </View>
-                {!isGmail && email.length > 0 && (
-                  <TouchableOpacity onPress={() => handleEmailChange(email + '@')}>
-                    <Text style={{ color: theme.colors.primary, fontSize: 12, marginBottom: 12, fontWeight: 'bold' }}>
-                      Clique para completar com @gmail.com
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                
-                {(isAdminOrMaster || leaderTeams.length > 0) && (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={styles.inputLabel}>Vincular à Equipe:</Text>
-                    <View style={styles.chipsContainer}>
-                      {(isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
-                        <TouchableOpacity 
-                          key={dept.id} 
-                          style={[
-                            styles.chip, 
-                            selectedInviteDeptId === dept.id && styles.chipSelected
-                          ]} 
-                          onPress={() => setSelectedInviteDeptId(selectedInviteDeptId === dept.id ? null : dept.id)}
-                        >
-                          <Text style={[
-                            styles.chipText, 
-                            selectedInviteDeptId === dept.id && styles.chipTextSelected
-                          ]}>
-                            {dept.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={[styles.addButton, !canInvite && { backgroundColor: theme.colors.border, opacity: 0.5 }]} 
-                  onPress={handleAddVolunteer} 
-                  disabled={!canInvite}
-                >
-                  {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.addButtonText}>Convidar Membro</Text>}
-                </TouchableOpacity>
-
-                {!canInvite && !loading && (
-                  <Text style={styles.inviteInstruction}>
-                    {!isDeptSelected ? '• Selecione uma equipe acima' : ''}
-                    {!isGmail ? '\n• Use um e-mail @gmail.com' : ''}
-                  </Text>
-                )}
-              </View>
-            }
-            renderItem={({ item }) => (
-                <View style={styles.memberCard}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>{item.name || 'Sem Nome'}</Text>
-                    <Text style={styles.memberEmail}>{item.email}</Text>
-                    {item.teams && item.teams.length > 0 && (
-                      <Text style={{ color: theme.colors.primary, fontSize: 10, marginTop: 4, fontWeight: 'bold' }}>
                         EQUIPES: {item.teams.join(', ')}
                       </Text>
                     )}
@@ -902,12 +707,10 @@ export default function GestaoMembrosScreen() {
                 <View style={styles.memberCard}>
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>{item.name}</Text>
-                    <View style={{ marginTop: 8 }}>
-                      <Text style={styles.memberEmail}>Líder: <Text style={{ color: theme.colors.accent }}>{item.leader?.full_name || 'N/A'}</Text></Text>
-                      {item.co_leader && (
-                        <Text style={styles.memberEmail}>Co-Líder: <Text style={{ color: theme.colors.accent }}>{item.co_leader?.full_name}</Text></Text>
-                      )}
-                    </View>
+                    <Text style={styles.memberEmail}>Líder: <Text style={{ color: theme.colors.accent }}>{item.leader?.full_name || 'N/A'}</Text></Text>
+                    {item.co_leader && (
+                      <Text style={styles.memberEmail}>Co-Líder: <Text style={{ color: theme.colors.accent }}>{item.co_leader?.full_name}</Text></Text>
+                    )}
                   </View>
                   {isAdminOrMaster && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1002,14 +805,14 @@ export default function GestaoMembrosScreen() {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('LÍDER')}>
-                <Star size={20} color={theme.colors.accent} weight="fill" />
+                <Star size={20} color={theme.colors.primary} weight="fill" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>LÍDER</Text>
                   <Text style={styles.roleOptionDesc}>Gestão das próprias equipes.</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.roleOptionRow} onPress={() => updateRole('CO-LÍDER')}>
-                <Star size={20} color={theme.colors.accent} weight="regular" />
+                <Star size={20} color={theme.colors.primary} weight="regular" />
                 <View style={{ marginLeft: 12 }}>
                   <Text style={styles.roleOptionTitle}>CO-LÍDER</Text>
                   <Text style={styles.roleOptionDesc}>Mesmos direitos do Líder.</Text>
@@ -1086,7 +889,7 @@ export default function GestaoMembrosScreen() {
                     disabled={!canManage}
                   >
                     {isAssigned ? (
-                       <CheckSquare size={24} color={theme.colors.accent} weight="fill" />
+                       <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
                      ) : (
                        <Square size={24} color={theme.colors.textSecondary} weight="regular" />
                      )}
@@ -1122,7 +925,7 @@ export default function GestaoMembrosScreen() {
                   style={styles.roleOptionRow} 
                   onPress={() => confirmUpdateLeader(l.id!)}
                 >
-                  <UserCircle size={24} color={theme.colors.accent} weight="regular" />
+                  <UserCircle size={24} color={theme.colors.primary} weight="regular" />
                   <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
                 </TouchableOpacity>
               ))}
@@ -1152,7 +955,7 @@ export default function GestaoMembrosScreen() {
                   style={styles.roleOptionRow} 
                   onPress={() => confirmUpdateCoLeader(l.id!)}
                 >
-                  <UserCircle size={24} color={theme.colors.accent} weight="regular" />
+                  <UserCircle size={24} color={theme.colors.primary} weight="regular" />
                   <Text style={[styles.roleOptionTitle, { marginLeft: 12 }]}>{l.name || l.email}</Text>
                 </TouchableOpacity>
               ))}
@@ -1179,7 +982,7 @@ export default function GestaoMembrosScreen() {
                       <Camera size={32} color={theme.colors.textSecondary} weight="regular" />
                     </View>
                   )}
-                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.colors.accent, borderRadius: 12, padding: 4 }}>
+                  <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.colors.primary, borderRadius: 12, padding: 4 }}>
                     <PencilSimple size={12} color="#FFF" weight="fill" />
                   </View>
                 </TouchableOpacity>
@@ -1209,7 +1012,7 @@ export default function GestaoMembrosScreen() {
                 <Switch 
                   value={editingDept.can_export_holyrics} 
                   onValueChange={(val) => setEditingDept({...editingDept, can_export_holyrics: val})} 
-                  trackColor={{ false: theme.colors.border, true: theme.colors.accent }}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                   thumbColor="#FFF"
                 />
               </View>
@@ -1259,7 +1062,7 @@ const styles = StyleSheet.create({
   roleText: { color: theme.colors.accent, fontSize: 10, fontWeight: 'bold' },
   inputWithIcon: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   inviteInstruction: {
-    color: theme.colors.accent,
+    color: theme.colors.primary,
     fontSize: 11,
     marginTop: 12,
     fontStyle: 'italic',
@@ -1302,8 +1105,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   filterChipActive: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   filterText: {
     color: theme.colors.textSecondary,

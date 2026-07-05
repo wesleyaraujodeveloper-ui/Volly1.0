@@ -48,7 +48,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
       >
         <View style={styles.missionHeader}>
           <View style={[styles.missionTag, isGlobal && { backgroundColor: theme.colors.surfaceHighlight }]}>
-            <Text style={[styles.missionTagText, isGlobal && { color: theme.colors.primary }]}>
+            <Text style={[styles.missionTagText, isGlobal && { color: theme.colors.accent }]}>
               {isGlobal ? 'GERAL' : 'EM BREVE'}
             </Text>
           </View>
@@ -63,7 +63,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
           </Text>
         ) : (
           <Text style={styles.missionRole}>
-            Sua função: <Text style={{ color: theme.colors.primary }}>{role?.name || 'Geral'}</Text>
+            Sua função: <Text style={{ color: theme.colors.accent }}>{role?.name || 'Geral'}</Text>
           </Text>
         )}
         
@@ -96,7 +96,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
                 <Text style={styles.holyricsSmallBtnText}>Holyrics</Text>
               </TouchableOpacity>
             )}
-            <CaretRight size={18} color={theme.colors.primary} weight="bold" />
+            <CaretRight size={18} color={theme.colors.accent} weight="bold" />
           </View>
         </View>
       </TouchableOpacity>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 20,
     borderLeftWidth: 5,
-    borderLeftColor: theme.colors.primary,
+    borderLeftColor: theme.colors.accent,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   missionTagText: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontSize: 10,
     fontWeight: 'bold',
   },

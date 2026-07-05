@@ -176,14 +176,16 @@ app.post('/api/config', (req, res) => {
   try {
     const { execSync } = require('child_process');
     const startupPath = path.join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'VollyConnector.lnk');
-    const targetPath = path.join(__dirname, 'iniciar_vollyconnector.bat');
+    const isPkg = typeof process.pkg !== 'undefined';
+    const exeDir = isPkg ? path.dirname(process.execPath) : __dirname;
+    const targetPath = isPkg ? process.execPath : path.join(__dirname, 'iniciar_vollyconnector.bat');
     
     const vbsScript = `
 Set oWS = WScript.CreateObject("WScript.Shell")
 sLinkFile = "${startupPath}"
 Set oLink = oWS.CreateShortcut(sLinkFile)
 oLink.TargetPath = "${targetPath}"
-oLink.WorkingDirectory = "${__dirname}"
+oLink.WorkingDirectory = "${exeDir}"
 oLink.Description = "Inicializacao Automatica do Volly Connector"
 oLink.Save
 `;
