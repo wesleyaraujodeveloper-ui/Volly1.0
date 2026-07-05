@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Alert, ActivityIndicator, Linking, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Alert, ActivityIndicator, Linking, RefreshControl, Platform } from 'react-native';
 import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -533,7 +533,11 @@ export default function EventDetailScreen() {
               contentContainerStyle={{ padding: 10 }}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
               renderItem={({ item }) => (
-                <View style={[styles.messageBubble, item.user_id === user?.id && styles.myMessage]}>
+                <View style={[
+                  styles.messageBubble, 
+                  item.user_id === user?.id && styles.myMessage,
+                  Platform.OS === 'web' && { transform: [{ scaleY: -1 }] }
+                ]}>
                    <Text style={[styles.messageUser, item.user_id === user?.id && { color: '#FFFFFF' }]}>
                      {item.profiles?.full_name || 'Usuário'}
                    </Text>
@@ -546,7 +550,7 @@ export default function EventDetailScreen() {
                 </View>
               )}
               ListEmptyComponent={
-                <View style={styles.emptyContainer}>
+                <View style={[styles.emptyContainer, Platform.OS === 'web' && { transform: [{ scaleY: -1 }] }]}>
                   <Text style={styles.emptyTextSmaller}>Nenhuma mensagem ainda.</Text>
                 </View>
               }
