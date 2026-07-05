@@ -615,16 +615,7 @@ export default function GestaoMembrosScreen() {
                       </Text>
                     )}
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserRoles(item)}>
-                      <Wrench size={18} color={theme.colors.primary} weight="regular" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserTeams(item)}>
-                      <Users size={18} color={theme.colors.primary} weight="regular" />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteVolunteer(item)}>
-                      <Trash size={18} color={theme.colors.error} weight="regular" />
-                    </TouchableOpacity>
+                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
                     <TouchableOpacity 
                       style={[styles.roleBadge, isAdminOrMaster && { borderColor: theme.colors.primary, borderWidth: 1 }]}
                       disabled={!isAdminOrMaster}
@@ -632,6 +623,17 @@ export default function GestaoMembrosScreen() {
                     >
                       <Text style={styles.roleText}>{item.role}</Text>
                     </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserTeams(item)}>
+                        <Users size={18} color={theme.colors.primary} weight="regular" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleManageUserRoles(item)}>
+                        <Wrench size={18} color={theme.colors.primary} weight="regular" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.manageTeamBtn} onPress={() => handleDeleteVolunteer(item)}>
+                        <Trash size={18} color={theme.colors.error} weight="regular" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               )}
