@@ -11,6 +11,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Desktop } from 'phosphor-react-native';
 import { HolyricsExportModal } from '../modals/HolyricsExportModal';
 import { songService, EventSong } from '../../services/songService';
+import { RoleIcon } from '../ui/RoleIcon';
 
 interface MissionCardProps {
   event: any;
@@ -62,9 +63,11 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
             Data: <Text style={{ color: theme.colors.textSecondary }}>{format(eventDate, "dd 'de' MMMM", { locale: ptBR })}</Text>
           </Text>
         ) : (
-          <Text style={styles.missionRole}>
-            Sua função: <Text style={{ color: theme.colors.accent }}>{role?.name || 'Geral'}</Text>
-          </Text>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <Text style={styles.missionRole}>Sua função: </Text>
+            <RoleIcon name={role?.icon_name} size={14} color={theme.colors.accent} />
+            <Text style={[styles.missionRole, { color: theme.colors.accent, marginLeft: 4 }]}>{role?.name || 'Geral'}</Text>
+          </View>
         )}
         
         <View style={styles.missionFooter}>

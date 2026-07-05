@@ -21,6 +21,8 @@ import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
 import { availabilityService, Availability, Absence, UserDepartment } from '../../src/services/availabilityService';
+import { adminService } from '../../src/services/adminService';
+import { RoleIcon } from '../../src/components/ui/RoleIcon';
 import { eventService, Event } from '../../src/services/eventService';
 import { scheduleService } from '../../src/services/scheduleService';
 import { useQueryClient } from '@tanstack/react-query';
@@ -368,7 +370,8 @@ export default function EscalasTabsScreen() {
 
               {roles.map((role) => (
                 <View key={role.id} style={styles.exportTableRow}>
-                  <View style={[styles.exportCell, { width: 180, backgroundColor: '#FFF' }]}>
+                  <View style={styles.exportRoleCell}>
+                    <RoleIcon name={role.icon_name} size={14} color="#000" />
                     <Text style={[styles.exportRoleText, { color: '#000' }]}>{role.name}</Text>
                   </View>
                   {monthlyEvents.map(ev => {
@@ -697,6 +700,7 @@ export default function EscalasTabsScreen() {
                     eventSchedules.map((sch, index) => (
                       <View key={index} style={styles.tableRow}>
                         <View style={styles.roleCellSmall}>
+                          <RoleIcon name={sch.roles?.icon_name} size={14} color={theme.colors.text} />
                           <Text style={styles.roleTextSmall}>{sch.roles?.name}</Text>
                         </View>
                         <View style={styles.volunteerCell}>
@@ -796,6 +800,7 @@ export default function EscalasTabsScreen() {
           {roles.map((role) => (
             <View key={role.id} style={styles.tableRow}>
               <View style={styles.roleCell}>
+                <RoleIcon name={role.icon_name} size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.roleText} numberOfLines={3}>{role.name}</Text>
               </View>
               
@@ -1149,6 +1154,8 @@ const styles = StyleSheet.create({
   },
   roleCellSmall: {
     width: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   roleTextSmall: {
     fontSize: 12,
@@ -1246,7 +1253,9 @@ const styles = StyleSheet.create({
   },
   roleCell: {
     width: 100,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingRight: 5,
   },
   roleText: {
@@ -1558,14 +1567,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   exportNameCell: {
-    flex: 1,
-    padding: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    borderLeftWidth: 1,
-    borderLeftColor: '#DDD',
+    paddingVertical: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#E0E0E0',
+    flex: 1,
     minWidth: 100,
     backgroundColor: '#FFF',
+  },
+  exportRoleCell: {
+    width: 180,
+    backgroundColor: '#FFF',
+    justifyContent: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#E0E0E0',
+    paddingLeft: 10,
   },
   exportNameText: {
     fontSize: 16,

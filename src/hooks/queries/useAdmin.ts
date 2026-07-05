@@ -138,8 +138,8 @@ export const useUpdateCoLeader = () => {
 export const useCreateRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ deptId, name }: { deptId: string; name: string }) => {
-      const { data, error } = await adminService.createDepartmentRole(deptId, name);
+    mutationFn: async ({ deptId, name, iconName }: { deptId: string; name: string; iconName?: string }) => {
+      const { data, error } = await adminService.createDepartmentRole(deptId, name, iconName);
       if (error) throw error;
       return data;
     },

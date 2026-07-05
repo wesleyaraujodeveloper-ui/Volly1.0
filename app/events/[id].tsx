@@ -14,6 +14,7 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { chatService } from '../../src/services/chatService';
 import { useRef } from 'react';
 import { HolyricsExportModal } from '../../src/components/modals/HolyricsExportModal';
+import { RoleIcon } from '../../src/components/ui/RoleIcon';
 import { Desktop } from 'phosphor-react-native';
 
 const TONALIDADES_GROUPS = [
@@ -470,7 +471,10 @@ export default function EventDetailScreen() {
                   const assigned = schedules.find(s => s.role_id === role.id);
                   return (
                     <View key={role.id} style={styles.roleAssignmentRow}>
-                      <View style={styles.roleLabelArea}><Text style={styles.roleLabel}>{role.name}</Text></View>
+                      <View style={styles.roleLabelArea}>
+                        <RoleIcon name={role.icon_name} size={16} color={theme.colors.text} />
+                        <Text style={styles.roleLabel}>{role.name}</Text>
+                      </View>
                       <View style={styles.assigneeArea}>
                         {assigned ? (
                           <View style={[
@@ -857,6 +861,8 @@ const styles = StyleSheet.create({
   },
   roleLabelArea: {
     width: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   roleLabel: {
     color: theme.colors.text,

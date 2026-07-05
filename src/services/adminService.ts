@@ -302,10 +302,11 @@ export const adminService = {
   /**
    * Cria uma nova função atrelada a um departamento (RPC).
    */
-  createDepartmentRole: async (deptId: string, name: string) => {
+  createDepartmentRole: async (deptId: string, name: string, iconName?: string) => {
     const { data, error } = await supabase.rpc('create_department_role', {
       p_dept_id: deptId,
-      p_name: name
+      p_name: name,
+      p_icon_name: iconName || null
     });
     return { data, error };
   },

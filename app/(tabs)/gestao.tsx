@@ -3,6 +3,7 @@ import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
+import { RoleIcon } from '../../src/components/ui/RoleIcon';
 import { useVolunteers, useDepartments, useRoles, useLeaderDepartments, useDeleteVolunteer, useRequestVolunteerDeletion } from '../../src/hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,6 +33,13 @@ import {
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
 import { CustomModal } from '../../src/components/CustomModal';
+
+const ICON_OPTIONS = [
+  'Star', 'Guitar', 'PianoKeys', 'Microphone', 'MusicNotes',
+  'Faders', 'SpeakerHifi', 'ProjectorScreen', 'Monitor',
+  'Broadcast', 'VideoCamera', 'MonitorPlay', 'Lightbulb',
+  'Users', 'Handshake', 'UserFocus', 'Heart', 'Wrench', 'Desktop'
+];
 
 export default function GestaoMembrosScreen() {
   const { user, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
@@ -87,6 +95,7 @@ export default function GestaoMembrosScreen() {
 
 
   const [newRoleName, setNewRoleName] = useState('');
+  const [newRoleIcon, setNewRoleIcon] = useState<string>('Star');
   const [selectedDeptIdForRule, setSelectedDeptIdForRule] = useState<string>('');
   
   const [managingRoleProfile, setManagingRoleProfile] = useState<Profile | null>(null);
@@ -394,12 +403,14 @@ export default function GestaoMembrosScreen() {
   const handleAddRole = async () => {
     if (!newRoleName.trim() || !selectedDeptIdForRule) return;
     setLoading(true);
-    const { error } = await adminService.createDepartmentRole(selectedDeptIdForRule, newRoleName);
+    const { error } = await adminService.createDepartmentRole(selectedDeptIdForRule, newRoleName, newRoleIcon);
     setLoading(false);
     if (error) {
       Alert.alert('Erro ao criar Função', error.message);
     } else {
+      Alert.alert('Sucesso', 'Função criada!');
       setNewRoleName('');
+      setNewRoleIcon('Star');
       refreshAll();
     }
   };
@@ -767,6 +778,26 @@ export default function GestaoMembrosScreen() {
                       )}
                     </ScrollView>
                   </View>
+                  <Text style={{fontWeight: 'bold', fontSize: 13, color: theme.colors.textSecondary, marginTop: 15, marginBottom: 5}}>Selecione o Ícone:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 15, opacity: selectedDeptIdForRule ? 1 : 0.5}} pointerEvents={selectedDeptIdForRule ? 'auto' : 'none'}>
+                    {ICON_OPTIONS.map(icon => (
+                      <TouchableOpacity 
+                        key={icon} 
+                        style={{
+                          padding: 10, 
+                          marginRight: 10, 
+                          borderRadius: 8, 
+                          borderWidth: 1, 
+                          borderColor: newRoleIcon === icon ? theme.colors.primary : theme.colors.border,
+                          backgroundColor: newRoleIcon === icon ? theme.colors.primary + '20' : theme.colors.surfaceHighlight
+                        }}
+                        onPress={() => setNewRoleIcon(icon)}
+                      >
+                        <RoleIcon name={icon} size={24} color={newRoleIcon === icon ? theme.colors.primary : theme.colors.textSecondary} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
                   <TextInput style={[styles.input, !selectedDeptIdForRule && { opacity: 0.5 }]} placeholder="Nome da Função (ex: Guitarrista)" placeholderTextColor={theme.colors.textSecondary} value={newRoleName} onChangeText={setNewRoleName} editable={!!selectedDeptIdForRule} />
                   <TouchableOpacity style={[styles.addButton, (loading || !selectedDeptIdForRule) && { opacity: 0.5 }]} onPress={handleAddRole} disabled={loading || !selectedDeptIdForRule}>
                     <Text style={styles.addButtonText}>Criar Função</Text>
@@ -778,7 +809,10 @@ export default function GestaoMembrosScreen() {
             renderItem={({ item }) => (
                 <View style={styles.memberCard}>
                    <View style={styles.memberInfo}>
-                     <Text style={styles.memberName}>{item.name}</Text>
+                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                       <RoleIcon name={item.icon_name} size={16} color={theme.colors.primary} />
+                       <Text style={styles.memberName}>{item.name}</Text>
+                     </View>
                      <Text style={styles.memberEmail}>{item.departments?.name}</Text>
                    </View>
                 </View>

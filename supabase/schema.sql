@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS public.departments (
 CREATE TABLE IF NOT EXISTS public.roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
+    icon_name TEXT,
     department_id UUID REFERENCES public.departments(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(name, department_id)
@@ -421,7 +422,7 @@ ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Qualquer um vê funções" ON public.roles FOR SELECT USING (true);
 
 -- RPC: Criar função atrelada ao departamento
-CREATE OR REPLACE FUNCTION create_department_role(p_dept_id UUID, p_name TEXT)
+CREATE OR REPLACE FUNCTION create_department_role(p_dept_id UUID, p_name TEXT, p_icon_name TEXT DEFAULT NULL)
 RETURNS public.roles AS $$
 DECLARE
     v_admin_count INT;
@@ -434,8 +435,8 @@ BEGIN
         RAISE EXCEPTION 'Acesso negado. Apenas MASTER, ADMINS, LÍDERES e CO-LÍDERES podem criar funções departamentais.';
     END IF;
 
-    INSERT INTO public.roles (name, department_id) 
-    VALUES (p_name, p_dept_id)
+    INSERT INTO public.roles (name, department_id, icon_name) 
+    VALUES (p_name, p_dept_id, p_icon_name)
     RETURNING * INTO v_new_role;
 
     RETURN v_new_role;
