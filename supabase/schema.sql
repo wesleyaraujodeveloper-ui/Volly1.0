@@ -552,3 +552,26 @@ ALTER TABLE public.post_comments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Coment√°rios s√£o vis√≠veis para todos" ON public.post_comments FOR SELECT USING (true);
 CREATE POLICY "Usu√°rios podem comentar" ON public.post_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Usu√°rios podem deletar seus coment√°rios" ON public.post_comments FOR DELETE USING (auth.uid() = user_id);
+- -   R P C :   A t u a l i z a r   f u n √ ß √ £ o   a t r e l a d a   a o   d e p a r t a m e n t o  
+ C R E A T E   O R   R E P L A C E   F U N C T I O N   u p d a t e _ d e p a r t m e n t _ r o l e ( p _ r o l e _ i d   U U I D ,   p _ n a m e   T E X T ,   p _ i c o n _ n a m e   T E X T   D E F A U L T   N U L L )  
+ R E T U R N S   p u b l i c . r o l e s   A S   $ $  
+ D E C L A R E  
+         v _ a d m i n _ c o u n t   I N T ;  
+         v _ u p d a t e d _ r o l e   p u b l i c . r o l e s ;  
+ B E G I N  
+         S E L E C T   C O U N T ( * )   I N T O   v _ a d m i n _ c o u n t   F R O M   p u b l i c . p r o f i l e s    
+         W H E R E   i d   =   a u t h . u i d ( )   A N D   a c c e s s _ l e v e l   I N   ( ' M A S T E R ' ,   ' A D M I N ' ,   ' L √ ç D E R ' ,   ' C O - L √ ç D E R ' ) ;  
+  
+         I F   v _ a d m i n _ c o u n t   =   0   T H E N  
+                 R A I S E   E X C E P T I O N   ' A c e s s o   n e g a d o .   A p e n a s   M A S T E R ,   A D M I N S ,   L √ ç D E R E S   e   C O - L √ ç D E R E S   p o d e m   e d i t a r   f u n √ ß √ µ e s   d e p a r t a m e n t a i s . ' ;  
+         E N D   I F ;  
+  
+         U P D A T E   p u b l i c . r o l e s    
+         S E T   n a m e   =   p _ n a m e ,   i c o n _ n a m e   =   p _ i c o n _ n a m e  
+         W H E R E   i d   =   p _ r o l e _ i d  
+         R E T U R N I N G   *   I N T O   v _ u p d a t e d _ r o l e ;  
+  
+         R E T U R N   v _ u p d a t e d _ r o l e ;  
+ E N D ;  
+ $ $   L A N G U A G E   p l p g s q l   S E C U R I T Y   D E F I N E R ;  
+ 

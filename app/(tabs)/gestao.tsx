@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
 import { RoleIcon } from '../../src/components/ui/RoleIcon';
-import { useVolunteers, useDepartments, useRoles, useLeaderDepartments, useDeleteVolunteer, useRequestVolunteerDeletion } from '../../src/hooks/queries/useAdmin';
+import { useVolunteers, useDepartments, useRoles, useLeaderDepartments, useDeleteVolunteer, useRequestVolunteerDeletion, useUpdateRole } from '../../src/hooks/queries/useAdmin';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -83,6 +83,9 @@ export default function GestaoMembrosScreen() {
   const [selectedLeaderId, setSelectedLeaderId] = useState<string | null>(null);
   const [selectedCoLeaderId, setSelectedCoLeaderId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+
+  const { mutateAsync: updateRoleMutation } = useUpdateRole();
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState(''); 
   const [selectedInviteDeptId, setSelectedInviteDeptId] = useState<string | null>(null);
@@ -400,19 +403,43 @@ export default function GestaoMembrosScreen() {
     if (error) Alert.alert('Erro', error.message);
   };
 
-  const handleAddRole = async () => {
-    if (!newRoleName.trim() || !selectedDeptIdForRule) return;
+  const handleSaveRole = async () => {
+    if (!newRoleName.trim() || (!selectedDeptIdForRule && !editingRoleId)) return;
     setLoading(true);
-    const { error } = await adminService.createDepartmentRole(selectedDeptIdForRule, newRoleName, newRoleIcon);
-    setLoading(false);
-    if (error) {
-      Alert.alert('Erro ao criar Função', error.message);
-    } else {
-      Alert.alert('Sucesso', 'Função criada!');
+
+    try {
+      if (editingRoleId) {
+        await updateRoleMutation({ roleId: editingRoleId, name: newRoleName, iconName: newRoleIcon });
+        Alert.alert('Sucesso', 'Função atualizada!');
+        setEditingRoleId(null);
+      } else if (selectedDeptIdForRule) {
+        const { error } = await adminService.createDepartmentRole(selectedDeptIdForRule, newRoleName, newRoleIcon);
+        if (error) throw error;
+        Alert.alert('Sucesso', 'Função criada!');
+      }
       setNewRoleName('');
       setNewRoleIcon('Star');
       refreshAll();
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Falha ao salvar função.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleEditRole = (role: any) => {
+    setEditingRoleId(role.id);
+    setNewRoleName(role.name);
+    setNewRoleIcon(role.icon_name || 'Star');
+    setSelectedDeptIdForRule(role.department_id);
+    // Scroll to top or just allow them to edit where the form is
+  };
+
+  const cancelEditRole = () => {
+    setEditingRoleId(null);
+    setNewRoleName('');
+    setNewRoleIcon('Star');
+    setSelectedDeptIdForRule('');
   };
 
   const updateRole = async (newRole: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO') => {
@@ -798,10 +825,21 @@ export default function GestaoMembrosScreen() {
                     ))}
                   </ScrollView>
 
-                  <TextInput style={[styles.input, !selectedDeptIdForRule && { opacity: 0.5 }]} placeholder="Nome da Função (ex: Guitarrista)" placeholderTextColor={theme.colors.textSecondary} value={newRoleName} onChangeText={setNewRoleName} editable={!!selectedDeptIdForRule} />
-                  <TouchableOpacity style={[styles.addButton, (loading || !selectedDeptIdForRule) && { opacity: 0.5 }]} onPress={handleAddRole} disabled={loading || !selectedDeptIdForRule}>
-                    <Text style={styles.addButtonText}>Criar Função</Text>
-                  </TouchableOpacity>
+                  <TextInput style={[styles.input, !selectedDeptIdForRule && !editingRoleId && { opacity: 0.5 }]} placeholder="Nome da Função (ex: Guitarrista)" placeholderTextColor={theme.colors.textSecondary} value={newRoleName} onChangeText={setNewRoleName} editable={!!selectedDeptIdForRule || !!editingRoleId} />
+                  {editingRoleId ? (
+                    <View style={{flexDirection: 'row', gap: 10}}>
+                      <TouchableOpacity style={[styles.addButton, {flex: 1, backgroundColor: theme.colors.surfaceHighlight}]} onPress={cancelEditRole}>
+                        <Text style={[styles.addButtonText, {color: theme.colors.text}]}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.addButton, {flex: 1}]} onPress={handleSaveRole} disabled={loading}>
+                        <Text style={styles.addButtonText}>Salvar Edição</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={[styles.addButton, (loading || !selectedDeptIdForRule) && { opacity: 0.5 }]} onPress={handleSaveRole} disabled={loading || !selectedDeptIdForRule}>
+                      <Text style={styles.addButtonText}>Criar Função</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={styles.listHeader}><Text style={styles.listTitle}>Funções Catalogadas ({roles.length})</Text></View>
               </>
@@ -811,9 +849,14 @@ export default function GestaoMembrosScreen() {
                    <View style={styles.memberInfo}>
                      <View style={{flexDirection: 'row', alignItems: 'center'}}>
                        <RoleIcon name={item.icon_name} size={16} color={theme.colors.primary} />
-                       <Text style={styles.memberName}>{item.name}</Text>
+                       <Text style={[styles.memberName, {marginLeft: 5}]}>{item.name}</Text>
                      </View>
                      <Text style={styles.memberEmail}>{item.departments?.name}</Text>
+                   </View>
+                   <View style={{flexDirection: 'row', gap: 15, alignItems: 'center'}}>
+                     <TouchableOpacity onPress={() => handleEditRole(item)}>
+                       <PencilSimple size={20} color={theme.colors.primary} weight="regular" />
+                     </TouchableOpacity>
                    </View>
                 </View>
               )}

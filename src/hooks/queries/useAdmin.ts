@@ -149,6 +149,20 @@ export const useCreateRole = () => {
   });
 };
 
+export const useUpdateRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ roleId, name, iconName }: { roleId: string; name: string; iconName?: string }) => {
+      const { data, error } = await adminService.updateDepartmentRole(roleId, name, iconName);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+    },
+  });
+};
+
 export const useUpdateVolunteerRole = () => {
   const queryClient = useQueryClient();
   return useMutation({

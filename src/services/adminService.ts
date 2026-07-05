@@ -312,6 +312,18 @@ export const adminService = {
   },
 
   /**
+   * Atualiza uma função atrelada a um departamento (RPC).
+   */
+  updateDepartmentRole: async (roleId: string, name: string, iconName?: string) => {
+    const { data, error } = await supabase.rpc('update_department_role', {
+      p_role_id: roleId,
+      p_name: name,
+      p_icon_name: iconName || null
+    });
+    return { data, error };
+  },
+
+  /**
    * Pega os IDs de todas as funções atreladas a um usuário.
    */
   getUserRoles: async (userId: string) => {
