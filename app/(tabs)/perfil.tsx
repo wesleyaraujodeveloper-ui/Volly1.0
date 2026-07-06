@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl, Switch, Linking, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useFocusEffect } from 'expo-router';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
 import { useUserDepartmentsProfile, useUserInstitution } from '../../src/hooks/queries/useProfile';
@@ -66,6 +66,12 @@ export default function PerfilScreen() {
       refetchInst()
     ]);
   };
+  
+  useFocusEffect(
+    useCallback(() => {
+      onRefresh();
+    }, [])
+  );
   
   const refreshing = isFetchingDepts || isFetchingInst;
 

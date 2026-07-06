@@ -104,6 +104,7 @@ export default function GestaoMembrosScreen() {
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleIcon, setNewRoleIcon] = useState<string>('Star');
   const [selectedDeptIdForRule, setSelectedDeptIdForRule] = useState<string>('');
+  const [roleModalVisible, setRoleModalVisible] = useState(false);
   
   const [managingRoleProfile, setManagingRoleProfile] = useState<Profile | null>(null);
   const [userAssignedRoles, setUserAssignedRoles] = useState<string[]>([]);
@@ -423,6 +424,7 @@ export default function GestaoMembrosScreen() {
       }
       setNewRoleName('');
       setNewRoleIcon('Star');
+      setRoleModalVisible(false);
       refreshAll();
     } catch (error: any) {
       Alert.alert('Erro', error.message || 'Falha ao salvar função.');
@@ -436,7 +438,7 @@ export default function GestaoMembrosScreen() {
     setNewRoleName(role.name);
     setNewRoleIcon(role.icon_name || 'Star');
     setSelectedDeptIdForRule(role.department_id);
-    // Scroll to top or just allow them to edit where the form is
+    setRoleModalVisible(true);
   };
 
   const cancelEditRole = () => {
@@ -444,6 +446,7 @@ export default function GestaoMembrosScreen() {
     setNewRoleName('');
     setNewRoleIcon('Star');
     setSelectedDeptIdForRule('');
+    setRoleModalVisible(false);
   };
 
   const updateRole = async (newRole: 'ADMIN' | 'LÍDER' | 'CO-LÍDER' | 'VOLUNTÁRIO') => {
@@ -785,67 +788,10 @@ export default function GestaoMembrosScreen() {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
             ListHeaderComponent={
               <>
-                <View style={styles.formCard}>
-                  <Text style={styles.inputLabel}>Vincular a qual Departamento?</Text>
-                  <View style={[styles.leaderPickerGrid, { maxHeight: 150 }]}>
-                    <ScrollView nestedScrollEnabled>
-                      {departments.length === 0 ? (
-                         <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', padding: 10 }}>Nenhum departamento disponível.</Text>
-                      ) : (
-                        availableInviteDepartments.map(dept => (
-                          <TouchableOpacity 
-                            key={dept.id} 
-                            style={[styles.leaderPickerItem, selectedDeptIdForRule === dept.id && styles.leaderPickerItemSelected]} 
-                            onPress={() => setSelectedDeptIdForRule(dept.id)}
-                          >
-                            {selectedDeptIdForRule === dept.id ? (
-                               <RadioButton size={16} color={theme.colors.primary} weight="fill" />
-                             ) : (
-                               <Square size={16} color={theme.colors.textSecondary} weight="regular" />
-                             )}
-                            <Text style={[styles.leaderPickerLabel, selectedDeptIdForRule === dept.id && { color: theme.colors.primary }]}>
-                              {dept.name}
-                            </Text>
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                  <Text style={{fontWeight: 'bold', fontSize: 13, color: theme.colors.textSecondary, marginTop: 15, marginBottom: 5}}>Selecione o Ícone:</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 15, opacity: selectedDeptIdForRule ? 1 : 0.5}} pointerEvents={selectedDeptIdForRule ? 'auto' : 'none'}>
-                    {ICON_OPTIONS.map(icon => (
-                      <TouchableOpacity 
-                        key={icon} 
-                        style={{
-                          padding: 10, 
-                          marginRight: 10, 
-                          borderRadius: 8, 
-                          borderWidth: 1, 
-                          borderColor: newRoleIcon === icon ? theme.colors.primary : theme.colors.border,
-                          backgroundColor: newRoleIcon === icon ? theme.colors.primary + '20' : theme.colors.surfaceHighlight
-                        }}
-                        onPress={() => setNewRoleIcon(icon)}
-                      >
-                        <RoleIcon name={icon} size={24} color={newRoleIcon === icon ? theme.colors.primary : theme.colors.textSecondary} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-
-                  <TextInput style={[styles.input, !selectedDeptIdForRule && !editingRoleId && { opacity: 0.5 }]} placeholder="Nome da Função (ex: Guitarrista)" placeholderTextColor={theme.colors.textSecondary} value={newRoleName} onChangeText={setNewRoleName} editable={!!selectedDeptIdForRule || !!editingRoleId} />
-                  {editingRoleId ? (
-                    <View style={{flexDirection: 'row', gap: 10}}>
-                      <TouchableOpacity style={[styles.addButton, {flex: 1, backgroundColor: theme.colors.surfaceHighlight}]} onPress={cancelEditRole}>
-                        <Text style={[styles.addButtonText, {color: theme.colors.text}]}>Cancelar</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.addButton, {flex: 1}]} onPress={handleSaveRole} disabled={loading}>
-                        <Text style={styles.addButtonText}>Salvar Edição</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={[styles.addButton, (loading || !selectedDeptIdForRule) && { opacity: 0.5 }]} onPress={handleSaveRole} disabled={loading || !selectedDeptIdForRule}>
-                      <Text style={styles.addButtonText}>Criar Função</Text>
-                    </TouchableOpacity>
-                  )}
+                <View style={[styles.formCard, { padding: 16, alignItems: 'center' }]}>
+                  <TouchableOpacity style={styles.addButton} onPress={() => { cancelEditRole(); setRoleModalVisible(true); }}>
+                    <Text style={styles.addButtonText}>+ Adicionar Função</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.listHeader}><Text style={styles.listTitle}>Funções Catalogadas ({roles.length})</Text></View>
               </>
@@ -1107,6 +1053,79 @@ export default function GestaoMembrosScreen() {
             >
               {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.addButtonText}>SALVAR ALTERAÇÕES</Text>}
             </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {roleModalVisible && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{editingRoleId ? 'Editar Função' : 'Adicionar Função'}</Text>
+              <TouchableOpacity onPress={() => { cancelEditRole(); setRoleModalVisible(false); }}><X size={24} color={theme.colors.text} weight="bold" /></TouchableOpacity>
+            </View>
+            <ScrollView>
+              <Text style={styles.inputLabel}>Vincular a qual Departamento?</Text>
+              <View style={[styles.leaderPickerGrid, { maxHeight: 150 }]}>
+                <ScrollView nestedScrollEnabled>
+                  {departments.length === 0 ? (
+                      <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', padding: 10 }}>Nenhum departamento disponível.</Text>
+                  ) : (
+                    availableInviteDepartments.map(dept => (
+                      <TouchableOpacity 
+                        key={dept.id} 
+                        style={[styles.leaderPickerItem, selectedDeptIdForRule === dept.id && styles.leaderPickerItemSelected]} 
+                        onPress={() => setSelectedDeptIdForRule(dept.id)}
+                      >
+                        {selectedDeptIdForRule === dept.id ? (
+                            <RadioButton size={16} color={theme.colors.primary} weight="fill" />
+                          ) : (
+                            <Square size={16} color={theme.colors.textSecondary} weight="regular" />
+                          )}
+                        <Text style={[styles.leaderPickerLabel, selectedDeptIdForRule === dept.id && { color: theme.colors.primary }]}>
+                          {dept.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+              </View>
+              <Text style={{fontWeight: 'bold', fontSize: 13, color: theme.colors.textSecondary, marginTop: 15, marginBottom: 5}}>Selecione o Ícone:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 15, opacity: selectedDeptIdForRule ? 1 : 0.5}} pointerEvents={selectedDeptIdForRule ? 'auto' : 'none'}>
+                {ICON_OPTIONS.map(icon => (
+                  <TouchableOpacity 
+                    key={icon} 
+                    style={{
+                      padding: 10, 
+                      marginRight: 10, 
+                      borderRadius: 8, 
+                      borderWidth: 1, 
+                      borderColor: newRoleIcon === icon ? theme.colors.primary : theme.colors.border,
+                      backgroundColor: newRoleIcon === icon ? theme.colors.primary + '20' : theme.colors.surfaceHighlight
+                    }}
+                    onPress={() => setNewRoleIcon(icon)}
+                  >
+                    <RoleIcon name={icon} size={24} color={newRoleIcon === icon ? theme.colors.primary : theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TextInput style={[styles.input, !selectedDeptIdForRule && !editingRoleId && { opacity: 0.5 }]} placeholder="Nome da Função (ex: Guitarrista)" placeholderTextColor={theme.colors.textSecondary} value={newRoleName} onChangeText={setNewRoleName} editable={!!selectedDeptIdForRule || !!editingRoleId} />
+            </ScrollView>
+            {editingRoleId ? (
+              <View style={{flexDirection: 'row', gap: 10, marginTop: 10}}>
+                <TouchableOpacity style={[styles.addButton, {flex: 1, backgroundColor: theme.colors.surfaceHighlight}]} onPress={cancelEditRole}>
+                  <Text style={[styles.addButtonText, {color: theme.colors.text}]}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.addButton, {flex: 1}]} onPress={handleSaveRole} disabled={loading}>
+                  <Text style={styles.addButtonText}>Salvar Edição</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={[styles.addButton, (loading || !selectedDeptIdForRule) && { opacity: 0.5 }, {marginTop: 10}]} onPress={handleSaveRole} disabled={loading || !selectedDeptIdForRule}>
+                <Text style={styles.addButtonText}>Criar Função</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}

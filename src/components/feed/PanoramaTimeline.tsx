@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } fr
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WarningCircle, ArrowsLeftRight } from 'phosphor-react-native';
+import { RoleIcon } from '../ui/RoleIcon';
 
 interface PanoramaTimelineProps {
   loading: boolean;
@@ -69,10 +70,15 @@ export function PanoramaTimeline({ loading, data, user, onRequestSwap }: Panoram
                              source={{ uri: sch.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${sch.profiles?.full_name}&background=1A1A1A&color=fff` }} 
                              style={styles.panoramaAvatar} 
                            />
-                           <View style={{ flex: 1 }}>
-                             <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
-                             <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
-                           </View>
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.panoramaSchName}>{sch.profiles?.full_name || 'Voluntário'}</Text>
+                                <Text style={styles.panoramaSchRole}>{sch.roles?.name || 'Membro'}</Text>
+                              </View>
+                              <View style={{ paddingRight: 15 }}>
+                                <RoleIcon name={sch.roles?.icon_name} size={18} color={theme.colors.primary} />
+                              </View>
+                            </View>
 
                            {sch.status === 'TROCA_SOLICITADA' ? (
                              <View style={styles.swapRequestedBadge}>
