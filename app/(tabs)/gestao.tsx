@@ -508,6 +508,8 @@ export default function GestaoMembrosScreen() {
     }
   };
 
+  const availableInviteDepartments = isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id));
+
   return (
     <View style={globalStyles.container}>
       {/* HEADER */}
@@ -605,7 +607,7 @@ export default function GestaoMembrosScreen() {
                   <View style={{ marginBottom: 12 }}>
                     <Text style={styles.inputLabel}>Vincular à Equipe:</Text>
                     <View style={styles.chipsContainer}>
-                      {(isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
+                      {availableInviteDepartments.map(dept => (
                         <TouchableOpacity 
                           key={dept.id} 
                           style={[
@@ -786,7 +788,7 @@ export default function GestaoMembrosScreen() {
                       {departments.length === 0 ? (
                          <Text style={{ color: theme.colors.textSecondary, fontStyle: 'italic', padding: 10 }}>Nenhum departamento disponível.</Text>
                       ) : (
-                        (isAdminOrMaster ? departments : departments.filter(d => leaderTeams.includes(d.id))).map(dept => (
+                        availableInviteDepartments.map(dept => (
                           <TouchableOpacity 
                             key={dept.id} 
                             style={[styles.leaderPickerItem, selectedDeptIdForRule === dept.id && styles.leaderPickerItemSelected]} 
