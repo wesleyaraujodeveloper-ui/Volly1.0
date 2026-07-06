@@ -17,10 +17,9 @@ export const RoleIcon: React.FC<RoleIconProps> = ({
   weight = 'bold' 
 }) => {
   const { theme, globalStyles } = useTheme();
-  if (!name) return null;
-
   // Usa o ícone passado pelo nome ou um fallback (Star) se não encontrar
-  const IconComponent = (PhosphorIcons as any)[name] || PhosphorIcons.Star;
+  const iconName = name || 'Star';
+  const IconComponent = (PhosphorIcons as any)[iconName] || PhosphorIcons.Star;
 
   return (
     <View style={{ marginRight: 4, justifyContent: 'center', alignItems: 'center' }}>
