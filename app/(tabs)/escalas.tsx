@@ -701,7 +701,7 @@ export default function EscalasTabsScreen() {
                     <Text style={styles.columnHeader}>Voluntário</Text>
                   </View>
                   {eventSchedules.length > 0 ? (
-                    eventSchedules.map((sch, index) => (
+                    [...eventSchedules].sort((a: any, b: any) => (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '')).map((sch, index) => (
                       <View key={index} style={styles.tableRow}>
                         <View style={styles.roleCellSmall}>
                           <RoleIcon name={sch.roles?.icon_name} size={14} color={theme.colors.text} />

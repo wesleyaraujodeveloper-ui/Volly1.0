@@ -64,7 +64,7 @@ export function PanoramaTimeline({ loading, data, user, onRequestSwap }: Panoram
                      </View>
                      
                      <View style={styles.panoramaVolunteersList}>
-                       {group.schedules.map((sch: any) => (
+                       {group.schedules.sort((a: any, b: any) => (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '')).map((sch: any) => (
                          <View key={sch.id} style={styles.panoramaVolunteerCard}>
                            <Image 
                              source={{ uri: sch.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${sch.profiles?.full_name}&background=1A1A1A&color=fff` }} 

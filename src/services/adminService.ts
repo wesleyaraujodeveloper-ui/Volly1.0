@@ -128,7 +128,7 @@ export const adminService = {
       query = query.eq('institution_id', institutionId);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('full_name', { ascending: true });
 
     const mappedData = data?.map(p => ({
       id: p.id,
