@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { Camera, ImageSquare, Globe, PaperPlaneTilt, XCircle } from 'phosphor-react-native';
-import { theme } from '../../theme';
 
 interface PostInputBoxProps {
   user: any;
@@ -30,6 +31,8 @@ export function PostInputBox({
   handleCameraPick,
   handleCreatePost,
 }: PostInputBoxProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <>
       <View style={styles.postInputCard}>
@@ -93,7 +96,7 @@ export function PostInputBox({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   postInputCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: 16,

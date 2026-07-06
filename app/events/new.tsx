@@ -1,5 +1,7 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
@@ -20,6 +22,8 @@ LocaleConfig.locales['pt-br'] = {
 LocaleConfig.defaultLocale = 'pt-br';
 
 export default function EventsScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { user } = useAppStore();
   const [activeMode, setActiveMode] = useState<'NOVO' | 'GERENCIAR'>('NOVO');
@@ -410,7 +414,7 @@ export default function EventsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   backButton: { marginRight: 12 },
   question: { color: theme.colors.textSecondary, fontSize: 16, marginBottom: 20 },

@@ -1,5 +1,7 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
@@ -8,6 +10,8 @@ import { format, parseISO, subDays } from 'date-fns';
 import { useAppStore } from '../../src/store/useAppStore';
 
 export default function HistoryScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { user } = useAppStore();
   const [loading, setLoading] = useState(false);
@@ -123,7 +127,7 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backButton: { marginRight: 12 },
   filterCard: { backgroundColor: theme.colors.surface, padding: 16, borderRadius: 16, marginBottom: 20 },

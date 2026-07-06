@@ -1,8 +1,9 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Trash, Heart, ChatCircleText } from 'phosphor-react-native';
 import { format } from 'date-fns';
-import { theme } from '../../theme';
 
 interface PostCardProps {
   post: any;
@@ -13,6 +14,8 @@ interface PostCardProps {
 }
 
 export const PostCard = memo(function PostCard({ post, user, onDelete, onLike, onComment }: PostCardProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const authorName = post.profiles?.full_name || 'Usuário';
   const authorAvatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}`;
   let displayDate = 'Recentemente';
@@ -70,7 +73,7 @@ export const PostCard = memo(function PostCard({ post, user, onDelete, onLike, o
   );
 });
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   postCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: 20,

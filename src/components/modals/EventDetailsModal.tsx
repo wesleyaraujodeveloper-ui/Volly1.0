@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { X, CalendarBlank, Clock, Info, Users, MusicNotes } from 'phosphor-react-native';
-import { theme } from '../../theme';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,8 @@ interface EventDetailsModalProps {
 }
 
 export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: EventDetailsModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const [songs, setSongs] = useState<any[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
@@ -157,7 +160,7 @@ export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: E
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

@@ -1,10 +1,13 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { theme } from '../../src/theme';
 import { songService, GlobalSong } from '../../src/services/songService';
 import { MagnifyingGlass, MusicNotes, Hash } from 'phosphor-react-native';
 
 export default function PlaylistScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const [songs, setSongs] = useState<GlobalSong[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -81,7 +84,7 @@ export default function PlaylistScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

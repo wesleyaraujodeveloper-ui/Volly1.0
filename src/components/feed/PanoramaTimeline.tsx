@@ -1,8 +1,9 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { theme } from '../../theme';
 import { WarningCircle, ArrowsLeftRight } from 'phosphor-react-native';
 
 interface PanoramaTimelineProps {
@@ -13,6 +14,8 @@ interface PanoramaTimelineProps {
 }
 
 export function PanoramaTimeline({ loading, data, user, onRequestSwap }: PanoramaTimelineProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   if (loading) {
     return <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />;
   }
@@ -99,7 +102,7 @@ export function PanoramaTimeline({ loading, data, user, onRequestSwap }: Panoram
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   panoramaTimelineCard: {
     marginBottom: 30,
     backgroundColor: theme.colors.surface,

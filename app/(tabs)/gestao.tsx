@@ -1,5 +1,7 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, ActivityIndicator, ScrollView, RefreshControl, Switch } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
+
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../src/store/useAppStore';
 import { adminService, Profile } from '../../src/services/adminService';
@@ -42,6 +44,8 @@ const ICON_OPTIONS = [
 ];
 
 export default function GestaoMembrosScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const { user, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -1122,7 +1126,7 @@ export default function GestaoMembrosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   headerArea: { marginBottom: 20 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: theme.colors.border, marginBottom: 20 },
   tabItem: { flex: 1, paddingVertical: 12, alignItems: 'center' },

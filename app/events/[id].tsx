@@ -1,5 +1,6 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Alert, ActivityIndicator, Linking, RefreshControl, Platform } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { eventService, Event } from '../../src/services/eventService';
@@ -25,6 +26,8 @@ const TONALIDADES_GROUPS = [
 type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
 
 export default function EventDetailScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const { id, tab, readonly } = useLocalSearchParams<{ id: string, tab?: string, readonly?: string }>();
   const router = useRouter();
   const { user, providerToken } = useAppStore();
@@ -280,9 +283,9 @@ export default function EventDetailScreen() {
       </View>
 
       <View style={styles.tabBar}>
-        <TabButton title="Info" active={activeTab === 'INFO'} onPress={() => setActiveTab('INFO')} />
-        <TabButton title="Escalas" active={activeTab === 'ESCALAS'} onPress={() => setActiveTab('ESCALAS')} />
-        <TabButton title="Chat" active={activeTab === 'CHAT'} onPress={() => setActiveTab('CHAT')} />
+        <TabButton styles={styles} title="Info" active={activeTab === 'INFO'} onPress={() => setActiveTab('INFO')} />
+        <TabButton styles={styles} title="Escalas" active={activeTab === 'ESCALAS'} onPress={() => setActiveTab('ESCALAS')} />
+        <TabButton styles={styles} title="Chat" active={activeTab === 'CHAT'} onPress={() => setActiveTab('CHAT')} />
       </View>
 
       <View style={{ flex: 1 }}>
@@ -628,7 +631,7 @@ export default function EventDetailScreen() {
   );
 }
 
-function TabButton({ title, active, onPress }: { title: string, active: boolean, onPress: () => void }) {
+function TabButton({ title, active, onPress, styles }: { title: string, active: boolean, onPress: () => void, styles: any }) {
   return (
     <TouchableOpacity style={[styles.tabItem, active && styles.activeTabItem]} onPress={onPress}>
       <Text style={[styles.tabText, active && styles.activeTabText]}>{title}</Text>
@@ -636,7 +639,7 @@ function TabButton({ title, active, onPress }: { title: string, active: boolean,
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

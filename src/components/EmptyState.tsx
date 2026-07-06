@@ -1,6 +1,7 @@
+import { useTheme } from '../hooks/useTheme';
+import { Theme } from '../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
-import { theme } from '../theme';
 
 interface EmptyStateProps {
   title: string;
@@ -9,6 +10,8 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, image }) => {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <View style={styles.container}>
       {image && (
@@ -24,7 +27,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ title, description, imag
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

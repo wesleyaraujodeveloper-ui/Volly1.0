@@ -1,5 +1,7 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, Image, Platform, RefreshControl } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
+
 import { useState, useEffect, useMemo } from 'react';
 import { 
   CheckCircle, 
@@ -46,6 +48,8 @@ type subTab = 'DISPONIBILIDADE' | 'ESCALAS' | 'MENSAL';
 const DAYS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
 
 export default function EscalasTabsScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const { user, providerToken } = useAppStore();
   const [activeTab, setActiveTab] = useState<subTab>('DISPONIBILIDADE');
   const [saving, setSaving] = useState(false);
@@ -855,7 +859,7 @@ export default function EscalasTabsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   deptChipsContainer: {
     maxHeight: 52,
     marginBottom: 8,

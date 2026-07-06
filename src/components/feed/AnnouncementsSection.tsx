@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { PushPin, Megaphone, X } from 'phosphor-react-native';
-import { theme } from '../../theme';
 import { Announcement, announcementService } from '../../services/announcementService';
 
 interface AnnouncementsSectionProps {
@@ -12,6 +13,8 @@ interface AnnouncementsSectionProps {
 }
 
 export function AnnouncementsSection({ announcements, user, onRefresh, onOpenCreateModal }: AnnouncementsSectionProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const [expandedAnns, setExpandedAnns] = useState<Record<string, boolean>>({});
 
   const canManage = user?.role === 'LÍDER' || user?.role === 'ADMIN' || user?.role === 'MASTER';
@@ -78,7 +81,7 @@ export function AnnouncementsSection({ announcements, user, onRefresh, onOpenCre
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   section: {
     marginBottom: 25,
   },

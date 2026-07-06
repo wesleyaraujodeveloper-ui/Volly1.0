@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Platform } from 'react-native';
 import { ArrowClockwise, WarningCircle } from 'phosphor-react-native';
-import { theme } from '../../../src/theme';
 
 interface UpdateAvailableModalProps {
   visible: boolean;
@@ -9,6 +10,8 @@ interface UpdateAvailableModalProps {
 }
 
 export function UpdateAvailableModal({ visible, onUpdate }: UpdateAvailableModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Modal visible={visible} animationType="fade" transparent={true}>
       <View style={styles.modalOverlay}>
@@ -32,7 +35,7 @@ export function UpdateAvailableModal({ visible, onUpdate }: UpdateAvailableModal
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',

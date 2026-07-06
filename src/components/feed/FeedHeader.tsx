@@ -1,10 +1,11 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Bell, User } from 'phosphor-react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
-import { theme } from '../../theme';
 
 interface FeedHeaderProps {
   user: any;
@@ -12,6 +13,8 @@ interface FeedHeaderProps {
 }
 
 export function FeedHeader({ user, unreadCount }: FeedHeaderProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
 
@@ -58,7 +61,7 @@ export function FeedHeader({ user, unreadCount }: FeedHeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

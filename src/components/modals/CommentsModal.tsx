@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image, FlatList } from 'react-native';
 import { X, PaperPlaneTilt } from 'phosphor-react-native';
-import { theme } from '../../../src/theme';
 
 interface CommentsModalProps {
   visible: boolean;
@@ -26,6 +27,8 @@ export function CommentsModal({
   submitComment,
   isCommenting
 }: CommentsModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <KeyboardAvoidingView 
@@ -102,7 +105,7 @@ export function CommentsModal({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

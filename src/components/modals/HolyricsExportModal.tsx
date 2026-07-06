@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Desktop, PlugsConnected, Plugs, X, Password } from 'phosphor-react-native';
-import { theme } from '../../../src/theme';
 import { holyricsService, HolyricsConfig } from '../../../src/services/holyricsService';
 import { EventSong } from '../../../src/services/songService';
 
@@ -12,6 +13,8 @@ interface HolyricsExportModalProps {
 }
 
 export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const [connectionCode, setConnectionCode] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -159,7 +162,7 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

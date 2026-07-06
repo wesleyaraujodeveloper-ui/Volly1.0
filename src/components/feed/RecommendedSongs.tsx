@@ -1,13 +1,16 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { YoutubeLogo, MusicNotes } from 'phosphor-react-native';
-import { theme } from '../../theme';
 
 interface RecommendedSongsProps {
   songs: any[];
 }
 
 export function RecommendedSongs({ songs }: RecommendedSongsProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   if (songs.length === 0) return null;
 
   return (
@@ -38,7 +41,7 @@ export function RecommendedSongs({ songs }: RecommendedSongsProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   section: {
     marginBottom: 25,
   },

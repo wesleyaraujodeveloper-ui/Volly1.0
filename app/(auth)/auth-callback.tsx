@@ -1,10 +1,13 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { useEffect } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/services/supabase';
-import { theme } from '../../src/theme';
+
 
 export default function AuthCallback() {
+  const { theme, globalStyles } = useTheme();
   const router = useRouter();
 
   useEffect(() => {

@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl, Switch, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image, RefreshControl, Switch, Linking, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
 import { supabase } from '../../src/services/supabase';
 import { useUserDepartmentsProfile, useUserInstitution } from '../../src/hooks/queries/useProfile';
-import { User, Users, Bell, ShieldCheck, FileText, SignOut, CaretRight, WhatsappLogo } from 'phosphor-react-native';
+import { User, Users, Bell, ShieldCheck, FileText, SignOut, CaretRight, WhatsappLogo, Moon, Sun } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { STRINGS } from '../../src/constants/strings';
 import { CustomModal } from '../../src/components/CustomModal';
-import { Platform } from 'react-native';
 import { APP_VERSION } from '../../src/constants/config';
 import { systemService } from '../../src/services/systemService';
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme';
 
 export default function PerfilScreen() {
   const router = useRouter();
-  const { user, clearSession, setUser } = useAppStore();
+  const { user, clearSession, setUser, themeMode, setThemeMode } = useAppStore();
+  const { theme, isDarkMode } = useTheme();
+  const styles = getStyles(theme);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<{ title: string; message: string; type: 'info' | 'success' | 'danger'; onConfirm?: () => void }>({ title: '', message: '', type: 'info' });
@@ -87,8 +89,6 @@ export default function PerfilScreen() {
     });
     setModalVisible(true);
   };
-
-
 
   const alertSoon = (title: string) => {
     showAlert(title, 'Esta configuração será liberada em breve na próxima atualização!', 'info');
@@ -165,8 +165,8 @@ export default function PerfilScreen() {
                 <User size={50} color={theme.colors.primary} weight="fill" />
               )}
            </View>
-           <View style={styles.roleBadge}>
-             <Text style={styles.roleBadgeText}>{user?.role}</Text>
+           <View style={[styles.roleBadge, { backgroundColor: isDarkMode ? '#121212' : '#FFFFFF' }]}>
+             <Text style={[styles.roleBadgeText, { color: isDarkMode ? 'white' : 'black' }]}>{user?.role}</Text>
            </View>
          </View>
          <Text style={styles.userName}>{user?.name || 'Voluntário'}</Text>
@@ -223,6 +223,37 @@ export default function PerfilScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Configurações</Text>
         
+        <View style={styles.menuItem}>
+          {isDarkMode ? (
+            <Moon size={24} color={theme.colors.primary} weight="fill" />
+          ) : (
+            <Sun size={24} color={theme.colors.primary} weight="fill" />
+          )}
+          <Text style={[styles.menuItemText, { color: theme.colors.text }]}>
+            Tema: {themeMode === 'system' ? 'Automático' : (themeMode === 'light' ? 'Claro' : 'Escuro')}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 5 }}>
+            <TouchableOpacity 
+              onPress={() => setThemeMode('light')}
+              style={[styles.themeBtn, themeMode === 'light' && styles.themeBtnActive]}
+            >
+               <Text style={[styles.themeBtnText, themeMode === 'light' && styles.themeBtnTextActive]}>Claro</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setThemeMode('dark')}
+              style={[styles.themeBtn, themeMode === 'dark' && styles.themeBtnActive]}
+            >
+               <Text style={[styles.themeBtnText, themeMode === 'dark' && styles.themeBtnTextActive]}>Escuro</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setThemeMode('system')}
+              style={[styles.themeBtn, themeMode === 'system' && styles.themeBtnActive]}
+            >
+               <Text style={[styles.themeBtnText, themeMode === 'system' && styles.themeBtnTextActive]}>Auto</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
           <Bell size={24} color={theme.colors.text} weight="regular" />
           <Text style={styles.menuItemText}>Notificações</Text>
@@ -281,7 +312,6 @@ export default function PerfilScreen() {
         type={modalData.type}
         onConfirm={() => {
           if (modalData.title === 'Sair da Conta') {
-             // onConfirm no modalData já tem a lógica de logout
              modalData.onConfirm?.();
           }
           setModalVisible(false);
@@ -293,7 +323,7 @@ export default function PerfilScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -332,15 +362,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: -5,
-    backgroundColor: '#121212',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'white',
+    borderColor: 'rgba(100,100,100,0.3)',
   },
   roleBadgeText: {
-    color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -452,6 +480,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     marginTop: 20,
+  },
+  themeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  themeBtnActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  themeBtnText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  themeBtnTextActive: {
+    color: '#FFFFFF',
   }
 });
+
 

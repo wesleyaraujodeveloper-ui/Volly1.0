@@ -1,9 +1,13 @@
+import { useTheme } from '../src/hooks/useTheme';
+import { Theme } from '../src/theme/index';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { globalStyles, theme } from '../src/theme';
+
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TermsScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
 
   return (
@@ -70,7 +74,7 @@ export default function TermsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

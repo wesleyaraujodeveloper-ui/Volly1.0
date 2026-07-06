@@ -1,8 +1,10 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Image, ScrollView, RefreshControl } from 'react-native';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { theme, globalStyles } from '../../src/theme';
+
 import { adminService, Institution } from '../../src/services/adminService';
 import { useAllInstitutions, useCreateInstitution, useUpdateInstitution, useDeleteInstitution, useStartTrial } from '../../src/hooks/queries/useInstitutions';
 import { CustomModal } from '../../src/components/CustomModal';
@@ -12,6 +14,8 @@ import { systemService } from '../../src/services/systemService';
 import { APP_VERSION } from '../../src/constants/config';
 
 export default function GestaoInstituicoesScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const { user } = useAppStore();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -518,7 +522,7 @@ export default function GestaoInstituicoesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     marginBottom: theme.spacing.md,
   },

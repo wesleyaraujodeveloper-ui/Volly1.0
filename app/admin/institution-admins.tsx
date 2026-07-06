@@ -1,13 +1,17 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'react-native-router-expo'; // mock or use expo-router
 import { useLocalSearchParams as useLocal, useRouter as useRout } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, globalStyles } from '../../src/theme';
+
 import { adminService } from '../../src/services/adminService';
 import { CustomModal } from '../../src/components/CustomModal';
 
 export default function InstitutionAdminsScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRout();
   const { id, name } = useLocal<{ id: string, name: string }>();
   const [admins, setAdmins] = useState<any[]>([]);
@@ -184,7 +188,7 @@ export default function InstitutionAdminsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

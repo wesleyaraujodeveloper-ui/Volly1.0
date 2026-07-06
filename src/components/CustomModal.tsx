@@ -1,6 +1,7 @@
+import { useTheme } from '../hooks/useTheme';
+import { Theme } from '../theme/index';
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { theme } from '../theme';
 
 interface CustomModalProps {
   visible: boolean;
@@ -25,6 +26,8 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   type = 'info',
   children
 }) => {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Modal
       transparent
@@ -69,7 +72,7 @@ export const CustomModal: React.FC<CustomModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',

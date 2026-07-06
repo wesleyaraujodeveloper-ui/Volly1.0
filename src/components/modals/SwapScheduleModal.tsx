@@ -1,6 +1,7 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity } from 'react-native';
-import { theme } from '../../../src/theme';
 
 interface SwapScheduleModalProps {
   visible: boolean;
@@ -11,6 +12,8 @@ interface SwapScheduleModalProps {
 }
 
 export function SwapScheduleModal({ visible, swapReason, setSwapReason, onCancel, onConfirm }: SwapScheduleModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlaySwap}>
@@ -43,7 +46,7 @@ export function SwapScheduleModal({ visible, swapReason, setSwapReason, onCancel
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlaySwap: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

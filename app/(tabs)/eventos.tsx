@@ -1,5 +1,7 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
+
 import { useState, useEffect } from 'react';
 import { Event } from '../../src/services/eventService';
 import { useUpcomingEventsList, usePastEventsList } from '../../src/hooks/queries/useEvents';
@@ -16,6 +18,8 @@ type ViewMode = 'LISTA' | 'CALENDARIO';
 type ListTab = 'PROXIMOS' | 'HISTORICO';
 
 export default function EventosScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { user, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const [viewMode, setViewMode] = useState<ViewMode>('LISTA');
@@ -216,7 +220,7 @@ export default function EventosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

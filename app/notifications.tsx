@@ -1,3 +1,5 @@
+import { useTheme } from '../src/hooks/useTheme';
+import { Theme } from '../src/theme/index';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -7,9 +9,11 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '../src/services/supabase';
 import { useAppStore } from '../src/store/useAppStore';
 import { notificationService } from '../src/services/notificationService';
-import { theme, globalStyles } from '../src/theme';
+
 
 export default function NotificationsScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const router = useRouter();
   const { user } = useAppStore();
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -145,7 +149,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

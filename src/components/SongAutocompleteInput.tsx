@@ -1,6 +1,7 @@
+import { useTheme } from '../hooks/useTheme';
+import { Theme } from '../theme/index';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, ScrollView } from 'react-native';
-import { theme } from '../theme';
 import { songService, GlobalSong } from '../services/songService';
 import { MagnifyingGlass, Plus, X, Hash } from 'phosphor-react-native';
 
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function SongAutocompleteInput({ onSelectSong, onClose, visible }: Props) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GlobalSong[]>([]);
   const [loading, setLoading] = useState(false);
@@ -238,7 +241,7 @@ export function SongAutocompleteInput({ onSelectSong, onClose, visible }: Props)
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

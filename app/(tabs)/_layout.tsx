@@ -1,10 +1,13 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { Tabs } from 'expo-router';
-import { theme } from '../../src/theme';
+
 import { House, Users, Calendar, ClipboardText, User, Buildings, MusicNotes } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { Image, View, Text } from 'react-native';
 
 export default function TabsLayout() {
+  const { theme, globalStyles } = useTheme();
   const { user } = useAppStore();
   const isAdminOrLeader = user?.role === 'ADMIN' || user?.role === 'MASTER' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 

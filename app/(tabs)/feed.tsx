@@ -1,6 +1,8 @@
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme/index';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, FlatList, ActivityIndicator, RefreshControl, Linking, Alert, Platform, Modal, KeyboardAvoidingView, Animated as RNAnimated } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { globalStyles, theme } from '../../src/theme';
+
 import { 
   Bell, 
   ChatTeardropDots, 
@@ -55,6 +57,8 @@ import { FeedbackModal } from '../../src/components/modals/FeedbackModal';
 import { CreateAnnouncementModal } from '../../src/components/modals/CreateAnnouncementModal';
 
 export default function FeedScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const { user, providerToken, selectedInstitutionId, setSelectedInstitutionId } = useAppStore();
   const router = useRouter();
   const [isChatActive, setIsChatActive] = useState(false);
@@ -656,7 +660,7 @@ export default function FeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

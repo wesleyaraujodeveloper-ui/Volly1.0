@@ -1,10 +1,12 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { CaretRight, Users } from 'phosphor-react-native';
 import { Image } from 'expo-image';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { theme } from '../../theme';
+
 import { EventDetailsModal } from '../modals/EventDetailsModal';
 import { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
@@ -20,6 +22,8 @@ interface MissionCardProps {
 }
 
 export function MissionCard({ event, role, isGlobal = false }: MissionCardProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   const [modalVisible, setModalVisible] = useState(false);
   const [holyricsModalVisible, setHolyricsModalVisible] = useState(false);
   const [songs, setSongs] = useState<EventSong[]>([]);
@@ -121,7 +125,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   section: {
     marginBottom: 25,
   },

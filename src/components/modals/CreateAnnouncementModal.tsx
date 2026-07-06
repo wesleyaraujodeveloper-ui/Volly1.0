@@ -1,6 +1,7 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { theme } from '../../../src/theme';
 
 interface CreateAnnouncementModalProps {
   visible: boolean;
@@ -27,6 +28,8 @@ export function CreateAnnouncementModal({
   onSubmit,
   isPosting
 }: CreateAnnouncementModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   return (
     <Modal visible={visible} animationType="fade" transparent={true}>
       <View style={styles.modalOverlaySwap}>
@@ -78,7 +81,7 @@ export function CreateAnnouncementModal({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlaySwap: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

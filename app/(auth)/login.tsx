@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform, Image } from 'react-native';
-import { globalStyles, theme } from '../../src/theme';
 import { useAppStore } from '../../src/store/useAppStore';
+import { useTheme } from '../../src/hooks/useTheme';
+import { Theme } from '../../src/theme';
 import React, { useState, useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
@@ -11,6 +12,8 @@ import { GoogleLogo } from 'phosphor-react-native';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme, globalStyles);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [lastBranding, setLastBranding] = useState<{ name: string; logo_url: string | null } | null>(null);
 
@@ -169,7 +172,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme, globalStyles: any) => StyleSheet.create({
   container: {
     ...globalStyles.container,
     justifyContent: 'center',

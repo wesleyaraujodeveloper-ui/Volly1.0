@@ -1,7 +1,8 @@
+import { useTheme } from '../../hooks/useTheme';
+import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Star } from 'phosphor-react-native';
-import { theme } from '../../../src/theme';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -28,6 +29,8 @@ export function FeedbackModal({
   onSubmit,
   isSubmitting
 }: FeedbackModalProps) {
+  const { theme, globalStyles } = useTheme();
+  const styles = getStyles(theme);
   if (!pendingFeedbackEvent && !feedbackSuccess) return null;
 
   return (
@@ -90,7 +93,7 @@ export function FeedbackModal({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   modalOverlaySwap: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

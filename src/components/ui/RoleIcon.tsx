@@ -1,6 +1,7 @@
 import React from 'react';
 import * as PhosphorIcons from 'phosphor-react-native';
 import { View } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface RoleIconProps {
   name: string | null | undefined;
@@ -15,6 +16,7 @@ export const RoleIcon: React.FC<RoleIconProps> = ({
   color = '#000', 
   weight = 'bold' 
 }) => {
+  const { theme, globalStyles } = useTheme();
   if (!name) return null;
 
   // Usa o ícone passado pelo nome ou um fallback (Star) se não encontrar
