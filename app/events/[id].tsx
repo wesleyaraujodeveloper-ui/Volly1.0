@@ -532,9 +532,9 @@ export default function EventDetailScreen() {
             <FlatList
               ref={listRef}
               data={messages}
-              inverted
+              inverted={Platform.OS !== 'web'}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ padding: 10 }}
+              contentContainerStyle={[{ padding: 10 }, Platform.OS === 'web' && { flexDirection: 'column-reverse', flexGrow: 1, justifyContent: 'flex-end' }]}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
               renderItem={({ item }) => (
                 <View style={[
