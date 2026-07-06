@@ -46,7 +46,8 @@ export const feedService = {
         ),
         roles (
           id,
-          name
+          name,
+          icon_name
         )
       `)
       .eq('user_id', userId)
@@ -78,6 +79,7 @@ export const feedService = {
           roles (
             id,
             name,
+            icon_name,
             departments (id, name)
           )
         )
