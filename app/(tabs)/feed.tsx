@@ -369,7 +369,6 @@ export default function FeedScreen() {
   };
   
   const handleDeletePost = (postId: string) => {
-    if (user?.role !== 'ADMIN' && user?.role !== 'LÍDER' && user?.role !== 'CO-LÍDER' && !posts.find(p => p.id === postId && p.user_id === user?.id)) return;
     setPostToDelete(postId);
     setModalVisible(true);
   };
