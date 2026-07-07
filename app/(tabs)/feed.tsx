@@ -158,6 +158,21 @@ export default function FeedScreen() {
     if (user) {
       loadAnnouncements();
       checkPendingFeedback();
+
+      const annSubscription = supabase
+        .channel('public:announcements')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'announcements' },
+          () => {
+            loadAnnouncements();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(annSubscription);
+      };
     }
   }, [user, feedInstId]);
 
