@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { addWeeks, addMonths, format } from 'date-fns';
+import { notificationService } from './notificationService';
 
 export interface Event {
   id?: string;
@@ -46,6 +47,9 @@ export const eventService = {
           department_id: deptId
         }));
         await supabase.from('event_departments').insert(junctionData);
+        
+        // Dispara notificação para os departamentos do evento
+        notificationService.notifyNewEvent(newEvent.title, newEvent.id, department_ids);
       }
       results.push(newEvent);
     }
