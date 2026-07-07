@@ -116,7 +116,9 @@ export default function PerfilScreen() {
           const { status } = await require('expo-notifications').requestPermissionsAsync();
           if (status === 'granted') {
             setPushEnabled(true);
-            const token = (await require('expo-notifications').getExpoPushTokenAsync()).data;
+            const Constants = require('expo-constants').default;
+            const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+            const token = (await require('expo-notifications').getExpoPushTokenAsync({ projectId })).data;
             if (user?.id) {
               await supabase.from('profiles').update({ expo_push_token: token }).eq('id', user.id);
             }

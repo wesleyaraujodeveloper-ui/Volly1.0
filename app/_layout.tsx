@@ -15,6 +15,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { systemService } from '../src/services/systemService';
 import { APP_VERSION } from '../src/constants/config';
 import { UpdateAvailableModal } from '../src/components/modals/UpdateAvailableModal';
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

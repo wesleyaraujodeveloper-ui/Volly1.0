@@ -307,9 +307,23 @@ export const scheduleService = {
       .update({ status: 'CONFIRMADO' })
       .eq('event_id', eventId)
       .eq('status', 'PENDENTE')
-      .select();
+      .select('*, events(title)');
 
-    // Aqui no futuro dispararíamos push/email via Edge Function
+    // Dispara notificação push para os escalados
+    if (data && data.length > 0) {
+      for (const sch of data) {
+        if (sch.user_id) {
+          const eventTitle = sch.events?.title || 'Evento';
+          await notificationService.notifySpecificUser(
+            sch.user_id,
+            'Nova Escala! 📅',
+            `Você foi escalado para: ${eventTitle}.`,
+            { type: 'NEW_SCHEDULE', related_id: eventId, screen: 'Escalas' }
+          );
+        }
+      }
+    }
+
     return { data, error };
   },
 

@@ -435,6 +435,13 @@ export default function FeedScreen() {
         expires_at: expiresAt.toISOString()
       });
 
+      // Dispara a notificação para todos os usuários
+      await notificationService.notifyAllUsers(
+        'Novo Aviso Oficial 📢',
+        newAnnTitle.trim(),
+        { type: 'NEW_ANNOUNCEMENT', screen: 'Feed' }
+      );
+
       setCreateAnnModalVisible(false);
       setNewAnnTitle('');
       setNewAnnContent('');
