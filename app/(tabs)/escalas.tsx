@@ -16,7 +16,8 @@ import {
   ArrowsLeftRight, 
   CaretLeft, 
   CaretRight, 
-  DownloadSimple 
+  DownloadSimple,
+  ArrowsClockwise
 } from 'phosphor-react-native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { STRINGS } from '../../src/constants/strings';
@@ -429,29 +430,33 @@ export default function EscalasTabsScreen() {
 
   const renderTabHeader = () => (
     <View style={styles.tabHeader}>
-      <TouchableOpacity 
-        style={[styles.tabButton, activeTab === 'DISPONIBILIDADE' && styles.activeTabButton]}
-        onPress={() => setActiveTab('DISPONIBILIDADE')}
-      >
-        <Text style={[styles.tabButtonText, activeTab === 'DISPONIBILIDADE' && styles.activeTabButtonText]}>Disponibilidade</Text>
+      <View style={{ flexDirection: 'row', flex: 1 }}>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'DISPONIBILIDADE' && styles.activeTabButton]}
+          onPress={() => setActiveTab('DISPONIBILIDADE')}
+        >
+          <Text style={[styles.tabButtonText, activeTab === 'DISPONIBILIDADE' && styles.activeTabButtonText]}>Disponibilidade</Text>
+        </TouchableOpacity>
+        {isAdminOrLeader && (
+          <>
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'ESCALAS' && styles.activeTabButton]}
+              onPress={() => setActiveTab('ESCALAS')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'ESCALAS' && styles.activeTabButtonText]}>Escalas</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'MENSAL' && styles.activeTabButton]}
+              onPress={() => setActiveTab('MENSAL')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'MENSAL' && styles.activeTabButtonText]}>Escala Mensal</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+      <TouchableOpacity onPress={onRefresh} style={{ paddingHorizontal: 12, justifyContent: 'center', borderLeftWidth: 1, borderLeftColor: theme.colors.border }}>
+        <ArrowsClockwise size={20} color={theme.colors.primary} weight="bold" />
       </TouchableOpacity>
-
-      {isAdminOrLeader && (
-        <>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'ESCALAS' && styles.activeTabButton]}
-            onPress={() => setActiveTab('ESCALAS')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'ESCALAS' && styles.activeTabButtonText]}>Escalas</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'MENSAL' && styles.activeTabButton]}
-            onPress={() => setActiveTab('MENSAL')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'MENSAL' && styles.activeTabButtonText]}>Escala Mensal</Text>
-          </TouchableOpacity>
-        </>
-      )}
     </View>
   );
 

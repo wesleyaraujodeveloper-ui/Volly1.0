@@ -2,7 +2,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { Theme } from '../../theme/index';
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Bell, User } from 'phosphor-react-native';
+import { Bell, User, ArrowsClockwise } from 'phosphor-react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
@@ -10,9 +10,10 @@ import { useRouter } from 'expo-router';
 interface FeedHeaderProps {
   user: any;
   unreadCount: number;
+  onRefresh?: () => void;
 }
 
-export function FeedHeader({ user, unreadCount }: FeedHeaderProps) {
+export function FeedHeader({ user, unreadCount, onRefresh }: FeedHeaderProps) {
   const { theme, globalStyles } = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
@@ -46,6 +47,16 @@ export function FeedHeader({ user, unreadCount }: FeedHeaderProps) {
             </View>
           )}
         </TouchableOpacity>
+
+        {onRefresh && (
+          <TouchableOpacity 
+            style={[styles.notificationBtn, { marginRight: 15 }]} 
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <ArrowsClockwise size={24} color={theme.colors.primary} weight="bold" />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.avatarContainer}>
           {user?.avatar_url ? (

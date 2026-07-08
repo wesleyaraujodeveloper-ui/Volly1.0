@@ -508,7 +508,7 @@ export default function FeedScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
       >
-        <FeedHeader user={user} unreadCount={unreadCount} />
+        <FeedHeader user={user} unreadCount={unreadCount} onRefresh={onRefresh} />
 
         {user?.role !== 'MASTER' && (
           <View style={styles.modeTabs}>

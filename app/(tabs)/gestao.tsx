@@ -30,7 +30,8 @@ import {
   UserCircle, 
   XCircle,
   RadioButton,
-  Camera
+  Camera,
+  ArrowsClockwise
 } from 'phosphor-react-native';
 import { STRINGS } from '../../src/constants/strings';
 import { EmptyState } from '../../src/components/EmptyState';
@@ -520,9 +521,14 @@ export default function GestaoMembrosScreen() {
   return (
     <View style={globalStyles.container}>
       {/* HEADER */}
-      <View style={styles.headerArea}>
-        <Text style={globalStyles.textTitle}>Gestão de Equipes</Text>
-        <Text style={globalStyles.textBody}>Administre membros e departamentos.</Text>
+      <View style={[styles.headerArea, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={globalStyles.textTitle}>Gestão de Equipes</Text>
+          <Text style={globalStyles.textBody}>Administre membros e departamentos.</Text>
+        </View>
+        <TouchableOpacity onPress={onRefresh} style={{ padding: 8, backgroundColor: theme.colors.surfaceHighlight, borderRadius: 8 }}>
+          <ArrowsClockwise size={20} color={theme.colors.primary} weight="bold" />
+        </TouchableOpacity>
       </View>
 
       {/* FILTROS MASTER */}
