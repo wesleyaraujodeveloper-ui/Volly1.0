@@ -191,7 +191,7 @@ export default function GestaoMembrosScreen() {
     }
 
     setLoading(true);
-    const { error, emailError, emailSent } = await adminService.inviteVolunteer(finalEmail, name, selectedInviteDeptId, user?.institution_id);
+    const { error, emailError, emailSent } = await adminService.inviteVolunteer(finalEmail, name, selectedInviteDeptId, filterInstId);
     if (error) {
       setModalData({
         title: 'Atenção',
@@ -230,7 +230,7 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined, user?.institution_id);
+    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined, filterInstId);
     setLoading(false);
     if (error) Alert.alert('Erro DB', error.message);
     else {
