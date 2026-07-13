@@ -310,12 +310,14 @@ export default function GestaoInstituicoesScreen() {
             )}
           </View>
 
-          <TouchableOpacity 
-            style={[styles.editBtn, { marginRight: 8, backgroundColor: 'rgba(223, 114, 27, 0.1)' }]} 
-            onPress={() => handleStartTrialClick(item)}
-          >
-            <Ionicons name="hourglass-outline" size={20} color={theme.colors.warning} />
-          </TouchableOpacity>
+          {!isTrialActive && (
+            <TouchableOpacity 
+              style={[styles.editBtn, { marginRight: 8, backgroundColor: 'rgba(223, 114, 27, 0.1)' }]} 
+              onPress={() => handleStartTrialClick(item)}
+            >
+              <Ionicons name="hourglass-outline" size={20} color={theme.colors.warning} />
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity onPress={() => toggleStatus(item)}>
             <Ionicons 
