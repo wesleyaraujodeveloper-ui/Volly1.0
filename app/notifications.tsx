@@ -19,6 +19,11 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string) => {
+    setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -98,10 +103,20 @@ export default function NotificationsScreen() {
             {format(new Date(item.created_at), 'HH:mm', { locale: ptBR })}
           </Text>
         </View>
-        <Text style={[styles.body, !item.is_read && styles.unreadBodyText]} numberOfLines={2}>
+        <Text style={[styles.body, !item.is_read && styles.unreadBodyText]} numberOfLines={expandedItems[item.id] ? undefined : 2}>
           {item.body}
         </Text>
-        <Text style={styles.dateText}>
+        {item.body && item.body.length > 80 && (
+          <TouchableOpacity 
+            onPress={() => toggleExpand(item.id)} 
+            style={{ marginTop: 2, paddingVertical: 4, alignSelf: 'flex-start' }}
+          >
+            <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: 'bold' }}>
+              {expandedItems[item.id] ? 'Ver menos' : 'Ver mais'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <Text style={[styles.dateText, { marginTop: item.body && item.body.length > 80 ? 2 : 4 }]}>
           {format(new Date(item.created_at), "dd 'de' MMMM", { locale: ptBR })}
         </Text>
       </View>

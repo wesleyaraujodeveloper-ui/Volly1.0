@@ -2,7 +2,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { Theme } from '../../theme/index';
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Star } from 'phosphor-react-native';
+import { Star, CheckSquare, Square } from 'phosphor-react-native';
 
 interface FeedbackModalProps {
   visible: boolean;
@@ -15,6 +15,8 @@ interface FeedbackModalProps {
   onCancel: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  isPublicFeedback: boolean;
+  setIsPublicFeedback: (isPublic: boolean) => void;
 }
 
 export function FeedbackModal({
@@ -27,7 +29,9 @@ export function FeedbackModal({
   setFeedbackComment,
   onCancel,
   onSubmit,
-  isSubmitting
+  isSubmitting,
+  isPublicFeedback,
+  setIsPublicFeedback
 }: FeedbackModalProps) {
   const { theme, globalStyles } = useTheme();
   const styles = getStyles(theme);
@@ -72,6 +76,20 @@ export function FeedbackModal({
                 value={feedbackComment}
                 onChangeText={setFeedbackComment}
               />
+
+              <TouchableOpacity 
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}
+                onPress={() => setIsPublicFeedback(!isPublicFeedback)}
+              >
+                {isPublicFeedback ? (
+                  <CheckSquare size={24} color={theme.colors.primary} weight="fill" />
+                ) : (
+                  <Square size={24} color={theme.colors.textSecondary} />
+                )}
+                <Text style={{ color: theme.colors.text, flex: 1 }}>
+                  Publicar este feedback no Mural da equipe
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.modalActionsSwap}>
                 <TouchableOpacity style={styles.modalCancelBtn} onPress={onCancel}>

@@ -7,6 +7,7 @@ import { eventService, Event } from '../../src/services/eventService';
 import { scheduleService, Schedule } from '../../src/services/scheduleService';
 import { supabase } from '../../src/services/supabase';
 import { songService, GlobalSong, EventSong } from '../../src/services/songService';
+import { feedbackService } from '../../src/services/feedbackService';
 import { SongAutocompleteInput } from '../../src/components/SongAutocompleteInput';
 import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
@@ -16,14 +17,14 @@ import { chatService } from '../../src/services/chatService';
 import { useRef } from 'react';
 import { HolyricsExportModal } from '../../src/components/modals/HolyricsExportModal';
 import { RoleIcon } from '../../src/components/ui/RoleIcon';
-import { Desktop } from 'phosphor-react-native';
+import { Desktop, Star } from 'phosphor-react-native';
 
 const TONALIDADES_GROUPS = [
   ["C", "Cm"], ["C#", "C#m"], ["D", "Dm"], ["Eb", "Ebm"], ["E", "Em"], ["F", "Fm"], 
   ["F#", "F#m"], ["G", "Gm"], ["G#", "G#m"], ["A", "Am"], ["Bb", "Bbm"], ["B", "Bm"]
 ];
 
-type Tab = 'INFO' | 'ESCALAS' | 'CHAT';
+type Tab = 'INFO' | 'ESCALAS' | 'CHAT' | 'FEEDBACKS';
 
 export default function EventDetailScreen() {
   const { theme, globalStyles } = useTheme();
@@ -33,9 +34,12 @@ export default function EventDetailScreen() {
   const { user, providerToken } = useAppStore();
   const [activeTab, setActiveTab] = useState<Tab>((tab as Tab) || 'INFO');
   const [loading, setLoading] = useState(true);
+  const [eventFeedbacks, setEventFeedbacks] = useState<any[]>([]);
+
+  const canViewFeedbacks = user?.role === 'MASTER' || user?.role === 'ADMIN' || user?.role === 'LÍDER' || user?.role === 'CO-LÍDER';
 
   useEffect(() => {
-    if (tab === 'CHAT' || tab === 'ESCALAS' || tab === 'INFO') {
+    if (tab === 'CHAT' || tab === 'ESCALAS' || tab === 'INFO' || tab === 'FEEDBACKS') {
       setActiveTab(tab as Tab);
     }
   }, [tab]);
@@ -122,6 +126,11 @@ export default function EventDetailScreen() {
       const can = await chatService.canUserPost(id, user.id, user.role || 'VOLUNTÁRIO');
       setChatActive(active);
       setCanChat(can);
+      
+      if (canViewFeedbacks) {
+        const { data: fbs } = await feedbackService.getEventFeedbacks(id);
+        setEventFeedbacks(fbs || []);
+      }
     }
 
     if (!isRefresh) setLoading(false);
@@ -286,6 +295,9 @@ export default function EventDetailScreen() {
         <TabButton styles={styles} title="Info" active={activeTab === 'INFO'} onPress={() => setActiveTab('INFO')} />
         <TabButton styles={styles} title="Escalas" active={activeTab === 'ESCALAS'} onPress={() => setActiveTab('ESCALAS')} />
         <TabButton styles={styles} title="Chat" active={activeTab === 'CHAT'} onPress={() => setActiveTab('CHAT')} />
+        {canViewFeedbacks && (
+          <TabButton styles={styles} title="Feedbacks" active={activeTab === 'FEEDBACKS'} onPress={() => setActiveTab('FEEDBACKS')} />
+        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -588,6 +600,39 @@ export default function EventDetailScreen() {
             )}
           </View>
         )}
+
+        {activeTab === 'FEEDBACKS' && canViewFeedbacks && (
+          <View style={{ flex: 1, padding: 15 }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 15 }]}>Feedbacks Recebidos ({eventFeedbacks.length})</Text>
+            {eventFeedbacks.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="chatbubbles-outline" size={40} color={theme.colors.border} />
+                <Text style={styles.emptyTextSmaller}>Nenhum feedback recebido ainda.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={eventFeedbacks}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => {
+                  let stars = '';
+                  for(let i=0; i<item.rating; i++) stars += '⭐';
+                  return (
+                    <View style={styles.feedbackCard}>
+                      <View style={styles.feedbackHeader}>
+                        <Text style={styles.feedbackName}>{item.profiles?.full_name}</Text>
+                        <Text style={styles.feedbackDate}>{format(parseISO(item.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}</Text>
+                      </View>
+                      <Text style={styles.feedbackStars}>{stars}</Text>
+                      {!!item.comment && (
+                        <Text style={styles.feedbackComment}>{item.comment}</Text>
+                      )}
+                    </View>
+                  );
+                }}
+              />
+            )}
+          </View>
+        )}
       </View>
 
       {isAddingSchedule && (
@@ -640,6 +685,41 @@ function TabButton({ title, active, onPress, styles }: { title: string, active: 
 }
 
 const getStyles = (theme: Theme) => StyleSheet.create({
+  feedbackCard: {
+    backgroundColor: theme.colors.surface,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  feedbackName: {
+    color: theme.colors.text,
+    fontWeight: 'bold',
+    fontSize: 14,
+    flex: 1,
+  },
+  feedbackDate: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginLeft: 10,
+  },
+  feedbackStars: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  feedbackComment: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginTop: 5,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

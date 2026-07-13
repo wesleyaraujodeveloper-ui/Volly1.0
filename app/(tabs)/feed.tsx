@@ -63,7 +63,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const [isChatActive, setIsChatActive] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
-  const [selectedImage, setSelectedImage] = useState<{uri: string, base64: string} | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{uri: string, base64?: string} | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [activeCommentPost, setActiveCommentPost] = useState<any>(null);
   const [postComments, setPostComments] = useState<any[]>([]);
@@ -117,6 +117,7 @@ export default function FeedScreen() {
   const [pendingFeedbackEvent, setPendingFeedbackEvent] = useState<any>(null);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComment, setFeedbackComment] = useState('');
+  const [isPublicFeedback, setIsPublicFeedback] = useState(true);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
@@ -409,7 +410,7 @@ export default function FeedScreen() {
         rating: feedbackRating,
         comment: feedbackComment.trim()
       });
-      // Notificar líder do departamento (simplificado: insere notificação caso o backend resolva o líder ou envia para o Master)
+      // Notificar líder do departamento
       if (pendingFeedbackEvent.department_id) {
         const { data: dept } = await supabase.from('departments').select('leader_id').eq('id', pendingFeedbackEvent.department_id).single();
         if (dept && dept.leader_id) {
@@ -421,6 +422,29 @@ export default function FeedScreen() {
           }]);
         }
       }
+
+      // Publicar no Mural se marcado
+      if (isPublicFeedback) {
+        let stars = '';
+        for(let i = 0; i < feedbackRating; i++) stars += '⭐';
+        
+        let commentText = feedbackComment.trim();
+        if (commentText) {
+          commentText = `\n\n_"${commentText}"_`;
+        }
+        
+        const postText = `${stars}\n**Avaliação do Evento:** ${pendingFeedbackEvent.title}${commentText}`;
+        
+        await feedService.createPost({
+          content: postText,
+          user_id: user.id,
+          institution_id: feedInstId || ''
+        });
+        
+        // Recarregar os posts para aparecer no mural imediatamente
+        refetchPosts();
+      }
+
       setFeedbackSuccess(true);
       setTimeout(() => {
         setFeedbackModalVisible(false);
@@ -663,6 +687,8 @@ export default function FeedScreen() {
         onCancel={() => {setFeedbackModalVisible(false); setPendingFeedbackEvent(null);}}
         onSubmit={handleSubmitFeedback}
         isSubmitting={isSubmittingFeedback}
+        isPublicFeedback={isPublicFeedback}
+        setIsPublicFeedback={setIsPublicFeedback}
       />
 
       <CreateAnnouncementModal 
