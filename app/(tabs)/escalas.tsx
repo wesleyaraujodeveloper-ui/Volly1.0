@@ -305,11 +305,14 @@ export default function EscalasTabsScreen() {
         // PNG para Web usando html-to-image
         const node = document.getElementById('export-template');
         if (node) {
-          // Aumentar a escala para melhor qualidade
+          // Reduzir pixelRatio para evitar limite de memoria/canvas no iOS Safari
           const dataUrl = await htmlToImage.toPng(node, {
             quality: 1,
-            pixelRatio: 2,
-            backgroundColor: '#FFFFFF'
+            pixelRatio: 1,
+            backgroundColor: '#FFFFFF',
+            style: {
+              opacity: '1'
+            }
           });
           
           const link = document.createElement('a');
@@ -1496,9 +1499,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   exportTemplateContainer: {
     position: 'absolute',
     top: 0,
-    left: -5000, // Esconder fora da tela em vez de usar opacidade baixa
+    left: 0, // Posicionado em tela, mas escondido pelo zIndex negativo e opacity
     zIndex: -1000,
-    opacity: 1, 
+    opacity: 0.01, 
   },
   exportContent: {
     backgroundColor: '#FFFFFF',
