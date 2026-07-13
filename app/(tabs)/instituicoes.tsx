@@ -301,12 +301,23 @@ export default function GestaoInstituicoesScreen() {
             
             {/* TAG DE TRIAL */}
             {trialEnd && (
-              <Text style={[
-                styles.statsSubLabel, 
-                { color: isTrialExpired ? theme.colors.error : theme.colors.warning, fontWeight: 'bold' }
+              <View style={[
+                styles.trialBadge,
+                isTrialExpired ? styles.trialBadgeExpired : styles.trialBadgeActive
               ]}>
-                {isTrialExpired ? '⏳ Teste Expirado' : `⏳ Expira em: ${trialDaysRemaining} dias`}
-              </Text>
+                <Ionicons 
+                  name={isTrialExpired ? "alert-circle" : "time-outline"} 
+                  size={14} 
+                  color={isTrialExpired ? theme.colors.error : theme.colors.warning} 
+                  style={{ marginRight: 4 }} 
+                />
+                <Text style={[
+                  styles.trialBadgeText, 
+                  { color: isTrialExpired ? theme.colors.error : theme.colors.warning }
+                ]}>
+                  {isTrialExpired ? 'Teste Expirado' : `Expira em ${trialDaysRemaining} dias`}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -570,6 +581,28 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     opacity: 0.7,
+  },
+  trialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  trialBadgeActive: {
+    backgroundColor: 'rgba(223, 114, 27, 0.1)',
+    borderColor: 'rgba(223, 114, 27, 0.3)',
+  },
+  trialBadgeExpired: {
+    backgroundColor: 'rgba(235, 87, 87, 0.1)',
+    borderColor: 'rgba(235, 87, 87, 0.3)',
+  },
+  trialBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   versionCard: {
     backgroundColor: theme.colors.surface,
