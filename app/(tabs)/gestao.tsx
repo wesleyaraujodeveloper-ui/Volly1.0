@@ -67,7 +67,7 @@ export default function GestaoMembrosScreen() {
 
   const { data: volunteers = [], isLoading: loadingVolunteers } = useVolunteers(filterInstId ?? null);
   const { data: departments = [], isLoading: loadingDepts } = useDepartments(filterInstId ?? null);
-  const { data: roles = [], isLoading: loadingRoles } = useRoles();
+  const { data: roles = [], isLoading: loadingRoles } = useRoles(filterInstId ?? null);
   const { data: leaderTeamsData = [] } = useLeaderDepartments(user?.id);
   const leaderTeams = leaderTeamsData.map(d => d.id);
   

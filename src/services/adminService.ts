@@ -291,11 +291,16 @@ export const adminService = {
   /**
    * Lista todas as funções (Roles) separadas por departamento.
    */
-  listAllRoles: async () => {
-    const { data, error } = await supabase
+  listAllRoles: async (institutionId?: string | null) => {
+    let query = supabase
       .from('roles')
-      .select('*, departments(name)')
-      .order('name');
+      .select('*, departments!inner(name, institution_id)');
+      
+    if (institutionId) {
+      query = query.eq('departments.institution_id', institutionId);
+    }
+    
+    const { data, error } = await query.order('name');
     return { data, error };
   },
 

@@ -25,11 +25,11 @@ export const useDepartments = (institutionId?: string | null) => {
   });
 };
 
-export const useRoles = () => {
+export const useRoles = (institutionId?: string | null) => {
   return useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', institutionId],
     queryFn: async () => {
-      const { data, error } = await adminService.listAllRoles();
+      const { data, error } = await adminService.listAllRoles(institutionId);
       if (error) throw error;
       return data || [];
     },
