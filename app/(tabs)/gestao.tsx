@@ -52,7 +52,7 @@ export default function GestaoMembrosScreen() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'MEMBROS' | 'EQUIPES' | 'FUNÇÕES'>('MEMBROS');
+  const [activeTab, setActiveTab] = useState<'MEMBROS' | 'EQUIPES' | 'FUNÇÕES'>('EQUIPES');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalData, setModalData] = useState<{ title: string; message: string; onConfirm: () => void; type: 'danger' | 'info' | 'success' }>({
     title: '',
@@ -559,14 +559,14 @@ export default function GestaoMembrosScreen() {
 
       {/* TABS */}
       <View style={styles.tabBar}>
-        <TouchableOpacity style={[styles.tabItem, activeTab === 'MEMBROS' && styles.activeTabItem]} onPress={() => setActiveTab('MEMBROS')}>
-          <Text style={[styles.tabText, activeTab === 'MEMBROS' && styles.activeTabText]}>MEMBROS</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={[styles.tabItem, activeTab === 'EQUIPES' && styles.activeTabItem]} onPress={() => setActiveTab('EQUIPES')}>
           <Text style={[styles.tabText, activeTab === 'EQUIPES' && styles.activeTabText]}>EQUIPES</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.tabItem, activeTab === 'FUNÇÕES' && styles.activeTabItem]} onPress={() => setActiveTab('FUNÇÕES')}>
           <Text style={[styles.tabText, activeTab === 'FUNÇÕES' && styles.activeTabText]}>FUNÇÕES</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tabItem, activeTab === 'MEMBROS' && styles.activeTabItem]} onPress={() => setActiveTab('MEMBROS')}>
+          <Text style={[styles.tabText, activeTab === 'MEMBROS' && styles.activeTabText]}>MEMBROS</Text>
         </TouchableOpacity>
       </View>
 
