@@ -230,7 +230,7 @@ export default function GestaoMembrosScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined, filterInstId);
+    const { error } = await adminService.createDepartment(newDeptName, newDeptDesc, selectedLeaderId, selectedCoLeaderId || undefined, filterInstId ?? undefined);
     setLoading(false);
     if (error) Alert.alert('Erro DB', error.message);
     else {
@@ -694,7 +694,14 @@ export default function GestaoMembrosScreen() {
         )}
 
         {activeTab === 'EQUIPES' && (
-          <FlatList
+          !filterInstId ? (
+            <EmptyState 
+              title="Selecione uma Instituição" 
+              description="Para visualizar e gerenciar equipes, selecione uma instituição no filtro acima." 
+              image={require('../../assets/empty_state.jpg')} 
+            />
+          ) : (
+            <FlatList
             data={departments}
             keyExtractor={(item) => item.id}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
@@ -784,10 +791,18 @@ export default function GestaoMembrosScreen() {
                 </View>
               )}
             />
+          )
         )}
 
         {activeTab === 'FUNÇÕES' && (
-          <FlatList
+          !filterInstId ? (
+            <EmptyState 
+              title="Selecione uma Instituição" 
+              description="Para visualizar e gerenciar funções, selecione uma instituição no filtro acima." 
+              image={require('../../assets/empty_state.jpg')} 
+            />
+          ) : (
+            <FlatList
             data={roles}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 40 }}
@@ -819,6 +834,7 @@ export default function GestaoMembrosScreen() {
                 </View>
               )}
             />
+          )
         )}
       </View>
 
