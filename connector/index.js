@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const ffmpeg = require('fluent-ffmpeg');
 
 let ffmpegPath;
+let ytdlpPath;
 try {
   ffmpegPath = require('ffmpeg-static');
   
@@ -24,6 +25,18 @@ try {
       try { fs.chmodSync(extractedFfmpeg, 0o755); } catch(e) {}
     }
     ffmpegPath = extractedFfmpeg;
+
+    const originalYtdlp = path.join(__dirname, 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
+    const extractedYtdlp = path.join(os.tmpdir(), 'ytdlp-volly.exe');
+    if (fs.existsSync(originalYtdlp)) {
+      if (!fs.existsSync(extractedYtdlp)) {
+        fs.writeFileSync(extractedYtdlp, fs.readFileSync(originalYtdlp));
+        try { fs.chmodSync(extractedYtdlp, 0o755); } catch(e) {}
+      }
+      ytdlpPath = extractedYtdlp;
+    }
+  } else {
+    ytdlpPath = path.join(__dirname, 'node_modules', 'youtube-dl-exec', 'bin', 'yt-dlp.exe');
   }
 } catch (e) {
   ffmpegPath = 'ffmpeg'; // Fallback
@@ -77,6 +90,19 @@ class DownloadManager {
     const destPath = path.join(downloadDir, safeFilename);
 
     console.log(`Baixando mídia: ${filename}...`);
+
+    try {
+      if (ytdlpPath && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('drive.google.com'))) {
+        console.log(`🎬 Link do YouTube/Drive detectado. Usando extrator avançado...`);
+        const youtubedl = require('youtube-dl-exec').create(ytdlpPath);
+        await youtubedl(url, { output: destPath, format: 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4/best' });
+        console.log(`✅ Download concluído (via extrator): ${filename} -> ${destPath}`);
+        return destPath;
+      }
+    } catch (err) {
+      console.log(`⚠️ Extrator avançado falhou, tentando método padrão... (${err.message})`);
+    }
+
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Falha ao baixar ${url}: ${response.statusText}`);
 
@@ -464,8 +490,14 @@ app.listen(PORT, async () => {
   if (!isConfigured) {
     console.log('⚠️ Configuração pendente! Abrindo Assistente no navegador...');
     try {
-        const open = (await import('open')).default;
-        await open(`http://localhost:${PORT}`);
+        const { exec } = require('child_process');
+        if (process.platform === 'win32') {
+            exec(`start http://localhost:${PORT}`);
+        } else if (process.platform === 'darwin') {
+            exec(`open http://localhost:${PORT}`);
+        } else {
+            exec(`xdg-open http://localhost:${PORT}`);
+        }
     } catch(e) {
         console.log(`Por favor, acesse http://localhost:${PORT} no seu navegador.`);
     }
