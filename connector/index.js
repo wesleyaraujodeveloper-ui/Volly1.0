@@ -4,6 +4,11 @@ const path = require('path');
 const fetch = require('node-fetch');
 const WebSocket = require('ws');
 const express = require('express');
+const os = require('os');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const streamPipeline = promisify(pipeline);
+const crypto = require('crypto');
 
 // Polyfill para Supabase no Node.js
 global.WebSocket = WebSocket;
@@ -35,9 +40,72 @@ const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
 let isPollingRunning = false;
 let pollingInterval = null;
 
+// --- DOWNLOAD MANAGER ---
+class DownloadManager {
+  static getDownloadDir() {
+    const dir = path.join(os.homedir(), 'Documents', 'VollyMedia');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+  }
+
+  static async downloadFile(url, filename) {
+    const downloadDir = this.getDownloadDir();
+    // Gera um nome único para evitar sobreposição caso existam arquivos com mesmo nome
+    const safeFilename = crypto.randomBytes(4).toString('hex') + '_' + filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    const destPath = path.join(downloadDir, safeFilename);
+
+    console.log(`Baixando mídia: ${filename}...`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Falha ao baixar ${url}: ${response.statusText}`);
+
+    const fileStream = fs.createWriteStream(destPath);
+    await streamPipeline(response.body, fileStream);
+    console.log(`✅ Download concluído: ${filename} -> ${destPath}`);
+    return destPath;
+  }
+}
+
 async function processarPlaylist(exportId, payload) {
   console.log(`[${new Date().toLocaleTimeString()}] Recebendo playlist da nuvem (ID: ${exportId})...`);
   try {
+    // 1. Processar mídias: Baixar arquivos e atualizar payload
+    if (payload && payload.items && Array.isArray(payload.items)) {
+      for (let i = 0; i < payload.items.length; i++) {
+        let item = payload.items[i];
+        if (item.type === 'media' && item.url) {
+          try {
+            const localPath = await DownloadManager.downloadFile(item.url, item.title || 'media.mp4');
+            item.file = localPath; // Substitui URL pelo caminho local
+            // Opcional: tentar enviar via HTTP API direta para o Holyrics se a API AddToPlaylist existir
+            try {
+              const addToPlaylistUrl = `http://localhost:${config.holyricsPort}/api/AddToPlaylist?token=${config.holyricsToken}`;
+              const mediaResponse = await fetch(addToPlaylistUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'media',
+                  file: localPath
+                })
+              });
+              if(mediaResponse.ok) {
+                 console.log(`✅ Mídia enviada com sucesso para o Holyrics via API nativa: ${item.title}`);
+                 item.addedViaApi = true; // Marca para o script não tentar adicionar de novo
+              } else {
+                 console.log(`⚠️ Falha ao adicionar mídia via API nativa, será enviada via script. Status: ${mediaResponse.status}`);
+              }
+            } catch (apiErr) {
+              console.log(`⚠️ Endpoint AddToPlaylist indisponível, fallback para script.`);
+            }
+          } catch (err) {
+             console.error(`❌ Erro ao baixar mídia ${item.title}:`, err.message);
+          }
+        }
+      }
+    }
+
+    // 2. Enviar para Holyrics (Músicas e Mídias que não foram via API)
     const holyricsUrl = `http://localhost:${config.holyricsPort}/api/playlist/add`;
     const response = await fetch(`${holyricsUrl}?token=${config.holyricsToken}`, {
       method: 'POST',
@@ -45,7 +113,7 @@ async function processarPlaylist(exportId, payload) {
       body: JSON.stringify(payload)
     });
     if (response.ok) {
-      console.log(`✅ Sucesso! Músicas enviadas para o Holyrics local.`);
+      console.log(`✅ Sucesso! Músicas e arquivos enviados para o Holyrics local.`);
       await supabase.from('holyrics_exports').update({ status: 'completed' }).eq('id', exportId);
     } else {
       const errorText = await response.text();
@@ -246,6 +314,15 @@ function request(action, headers, content, info) {
                         sucessoCount++;
                     } else {
                         h.log("❌ Não encontrada no banco: " + song.title);
+                    }
+                } else if (song && song.type === 'media' && !song.addedViaApi && song.file) {
+                    // Fallback se a API nativa não funcionou: tenta injetar via plugin
+                    try {
+                        h.hly('AddToPlaylist', { file: song.file });
+                        h.log("✅ Mídia adicionada via script: " + song.title);
+                        sucessoCount++;
+                    } catch (e) {
+                        h.log("❌ Falha ao adicionar mídia via script: " + song.title);
                     }
                 }
             }

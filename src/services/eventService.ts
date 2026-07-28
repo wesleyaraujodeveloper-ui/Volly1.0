@@ -14,6 +14,7 @@ export interface Event {
   chat_window_hours?: number;
   created_at?: string;
   updated_at?: string;
+  media_links?: string[];
   // Campo de retorno virtual
   event_departments?: { departments: { name: string, id: string } }[];
 }
@@ -155,6 +156,20 @@ export const eventService = {
     }
 
     const { data, error } = await query;
+    return { data, error };
+  },
+
+  /**
+   * Atualiza um evento (ex: media_links).
+   */
+  updateEvent: async (eventId: string, updates: Partial<Event>) => {
+    const { data, error } = await supabase
+      .from('events')
+      .update(updates)
+      .eq('id', eventId)
+      .select()
+      .single();
+    
     return { data, error };
   },
 

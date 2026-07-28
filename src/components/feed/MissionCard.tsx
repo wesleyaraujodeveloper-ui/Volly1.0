@@ -120,6 +120,7 @@ export function MissionCard({ event, role, isGlobal = false }: MissionCardProps)
         visible={holyricsModalVisible}
         onClose={() => setHolyricsModalVisible(false)}
         songs={songs}
+        event={event}
       />
     </View>
   );

@@ -1,12 +1,14 @@
 import { useTheme } from '../../hooks/useTheme';
 import { Theme } from '../../theme/index';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { X, CalendarBlank, Clock, Info, Users, MusicNotes } from 'phosphor-react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { X, CalendarBlank, Clock, Info, Users, MusicNotes, Link, VideoCamera, Trash } from 'phosphor-react-native';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useRouter } from 'expo-router';
 import { songService } from '../../services/songService';
+import { eventService } from '../../services/eventService';
+import { useAppStore } from '../../store/useAppStore';
 
 interface EventDetailsModalProps {
   visible: boolean;
@@ -20,16 +22,28 @@ export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: E
   const { theme, globalStyles } = useTheme();
   const styles = getStyles(theme);
   const router = useRouter();
+  const { user } = useAppStore();
   const [songs, setSongs] = useState<any[]>([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
+  
+  // Media Links State
+  const [mediaLinks, setMediaLinks] = useState<string[]>([]);
+  const [newMediaLink, setNewMediaLink] = useState('');
+  const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
+
+  const canEditMedia = user?.role === 'MASTER' || user?.role === 'ADMIN' || 
+    (event?.event_departments?.some((ed: any) => ed.departments?.can_export_holyrics) ?? false);
 
   useEffect(() => {
     if (visible && event?.id) {
       loadSongs();
+      setMediaLinks(event.media_links || []);
     } else {
       setSongs([]);
+      setMediaLinks([]);
+      setNewMediaLink('');
     }
-  }, [visible, event?.id]);
+  }, [visible, event?.id, event?.media_links]);
 
   const loadSongs = async () => {
     setLoadingSongs(true);
@@ -43,6 +57,40 @@ export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: E
     } finally {
       setLoadingSongs(false);
     }
+  };
+
+  const handleAddMedia = async () => {
+    if (!newMediaLink.trim() || !newMediaLink.startsWith('http')) {
+      Alert.alert('Erro', 'Por favor, insira um link válido (começando com http ou https).');
+      return;
+    }
+    
+    setIsUpdatingMedia(true);
+    const updatedLinks = [...mediaLinks, newMediaLink.trim()];
+    const { error } = await eventService.updateEvent(event.id, { media_links: updatedLinks });
+    
+    if (error) {
+      Alert.alert('Erro', 'Não foi possível adicionar o link.');
+    } else {
+      setMediaLinks(updatedLinks);
+      setNewMediaLink('');
+      if (event) event.media_links = updatedLinks;
+    }
+    setIsUpdatingMedia(false);
+  };
+
+  const handleRemoveMedia = async (indexToRemove: number) => {
+    setIsUpdatingMedia(true);
+    const updatedLinks = mediaLinks.filter((_, idx) => idx !== indexToRemove);
+    const { error } = await eventService.updateEvent(event.id, { media_links: updatedLinks });
+    
+    if (error) {
+      Alert.alert('Erro', 'Não foi possível remover o link.');
+    } else {
+      setMediaLinks(updatedLinks);
+      if (event) event.media_links = updatedLinks;
+    }
+    setIsUpdatingMedia(false);
   };
 
   if (!event) return null;
@@ -93,6 +141,59 @@ export function EventDetailsModal({ visible, onClose, event, role, isGlobal }: E
                 <Text style={styles.descriptionText}>{event.description}</Text>
               </View>
             )}
+
+            {/* Preview da Playlist */}
+            <View style={styles.playlistBox}>
+              <View style={styles.playlistHeader}>
+                <VideoCamera size={18} color={theme.colors.textSecondary} />
+                <Text style={styles.playlistTitle}>Mídia do Evento</Text>
+              </View>
+
+              {mediaLinks.length > 0 ? (
+                <View style={styles.songList}>
+                  {mediaLinks.map((link, index) => (
+                    <View key={index} style={styles.songItem}>
+                      <Link size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                      <Text style={[styles.songName, { flex: 1 }]} numberOfLines={1}>
+                        {link}
+                      </Text>
+                      {canEditMedia && (
+                        <TouchableOpacity onPress={() => handleRemoveMedia(index)} disabled={isUpdatingMedia}>
+                          <Trash size={18} color={theme.colors.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyPlaylistText}>Nenhum link de mídia adicionado.</Text>
+              )}
+
+              {canEditMedia && (
+                <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
+                  <TextInput
+                    style={[globalStyles.input, { flex: 1, marginBottom: 0, height: 40 }]}
+                    placeholder="Cole um link (YouTube, Drive...)"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    value={newMediaLink}
+                    onChangeText={setNewMediaLink}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity 
+                    style={[globalStyles.primaryButton, { marginLeft: 8, paddingHorizontal: 12, height: 40, justifyContent: 'center' }]}
+                    onPress={handleAddMedia}
+                    disabled={isUpdatingMedia || !newMediaLink.trim()}
+                  >
+                    {isUpdatingMedia ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={globalStyles.primaryButtonText}>Adicionar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
             {/* Preview da Playlist */}
             <View style={styles.playlistBox}>

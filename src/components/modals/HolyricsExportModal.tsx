@@ -10,9 +10,10 @@ interface HolyricsExportModalProps {
   visible: boolean;
   onClose: () => void;
   songs: EventSong[];
+  event?: any;
 }
 
-export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportModalProps) {
+export function HolyricsExportModal({ visible, onClose, songs, event }: HolyricsExportModalProps) {
   const { theme, globalStyles } = useTheme();
   const styles = getStyles(theme);
   const [connectionCode, setConnectionCode] = useState('');
@@ -74,7 +75,7 @@ export function HolyricsExportModal({ visible, onClose, songs }: HolyricsExportM
     const config = { connectionCode: connectionCode.trim() };
     await holyricsService.saveConfig(config);
 
-    const { success, message } = await holyricsService.exportPlaylist(config, songs);
+    const { success, message } = await holyricsService.exportPlaylist(config, songs, event);
     setIsExporting(false);
 
     if (success) {

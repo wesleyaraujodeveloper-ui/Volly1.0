@@ -51,18 +51,41 @@ export const holyricsService = {
   },
 
   // Export playlist to Supabase cloud table
-  exportPlaylist: async (config: HolyricsConfig, songs: EventSong[]): Promise<{ success: boolean; message?: string }> => {
+  exportPlaylist: async (config: HolyricsConfig, songs: EventSong[], event?: any): Promise<{ success: boolean; message?: string }> => {
     try {
       const code = config.connectionCode.trim();
       if (!code) return { success: false, message: 'Código de conexão obrigatório.' };
 
+      // 1. Extrair URLs de mídia do evento (campo media_links)
+      const mediaUrls: string[] = [];
+      if (event && event.media_links && Array.isArray(event.media_links)) {
+        mediaUrls.push(...event.media_links);
+      }
+
+      // 2. Construir payload (Músicas + Mídias)
+      const items = songs.map((s, index) => ({
+        type: "song",
+        title: s.global_song?.title,
+        artist: s.global_song?.artist,
+        order: index + 1
+      }));
+
+      mediaUrls.forEach((url, i) => {
+        // Tenta deduzir o nome do arquivo a partir da URL, ou usa um genérico
+        const urlObj = new URL(url);
+        let title = urlObj.pathname.split('/').pop() || `media_${i + 1}`;
+        if (!title.includes('.')) title += '.mp4'; // Fallback para mp4 se não tiver extensão
+        
+        items.push({
+          type: "media",
+          url: url,
+          title: decodeURIComponent(title),
+          order: items.length + 1
+        } as any);
+      });
+
       const payload = {
-        items: songs.map((s, index) => ({
-          type: "song",
-          title: s.global_song?.title,
-          artist: s.global_song?.artist,
-          order: index + 1
-        }))
+        items: items
       };
 
       // 1. Insert request into Supabase
