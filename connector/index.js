@@ -10,12 +10,23 @@ const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 const crypto = require('crypto');
 const ffmpeg = require('fluent-ffmpeg');
+
 let ffmpegPath;
 try {
   ffmpegPath = require('ffmpeg-static');
-  // Se rodando dentro do pkg, o caminho será virtual, precisamos de cuidado adicional
+  
+  // Se rodando dentro do pkg, precisamos copiar o binário virtual para o disco real
+  if (process.pkg) {
+    const extractedFfmpeg = path.join(os.tmpdir(), 'ffmpeg-volly.exe');
+    if (!fs.existsSync(extractedFfmpeg)) {
+      const ffmpegData = fs.readFileSync(ffmpegPath);
+      fs.writeFileSync(extractedFfmpeg, ffmpegData);
+      try { fs.chmodSync(extractedFfmpeg, 0o755); } catch(e) {}
+    }
+    ffmpegPath = extractedFfmpeg;
+  }
 } catch (e) {
-  ffmpegPath = 'ffmpeg'; // Tenta usar do sistema como fallback
+  ffmpegPath = 'ffmpeg'; // Fallback
 }
 ffmpeg.setFfmpegPath(ffmpegPath);
 
