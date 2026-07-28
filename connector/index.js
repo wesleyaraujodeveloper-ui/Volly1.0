@@ -367,8 +367,16 @@ function request(action, headers, content, info) {
                     }
                     
                     if (foundId) {
+                        // Adiciona na aba de Letras (padrão)
                         h.hly('AddSongsToPlaylist', { id: foundId });
-                        h.log("✅ Adicionada: " + song.title);
+                        
+                        // Tentativas de adicionar cópia na aba de Mídia (já que o comando exato não é documentado)
+                        try { h.hly('AddSongsToMediaPlaylist', { id: foundId }); } catch(e) {}
+                        try { h.hly('AddSongToMedia', { id: foundId }); } catch(e) {}
+                        try { h.hly('AddToMediaPlaylist', { id: foundId, type: 'song' }); } catch(e) {}
+                        try { h.hly('AddSongsToPlaylist', { id: foundId, target: 'media' }); } catch(e) {}
+                        
+                        h.log("✅ Adicionada (Letras e Mídia): " + song.title);
                         sucessoCount++;
                     } else {
                         h.log("❌ Não encontrada no banco: " + song.title);
