@@ -9,6 +9,15 @@ const { pipeline } = require('stream');
 const { promisify } = require('util');
 const streamPipeline = promisify(pipeline);
 const crypto = require('crypto');
+const ffmpeg = require('fluent-ffmpeg');
+let ffmpegPath;
+try {
+  ffmpegPath = require('ffmpeg-static');
+  // Se rodando dentro do pkg, o caminho será virtual, precisamos de cuidado adicional
+} catch (e) {
+  ffmpegPath = 'ffmpeg'; // Tenta usar do sistema como fallback
+}
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Polyfill para Supabase no Node.js
 global.WebSocket = WebSocket;
@@ -65,6 +74,53 @@ class DownloadManager {
     console.log(`✅ Download concluído: ${filename} -> ${destPath}`);
     return destPath;
   }
+
+  static async convertToMp4(sourcePath) {
+    return new Promise((resolve, reject) => {
+      const ext = path.extname(sourcePath).toLowerCase();
+      // Se já for mp4 (ou não for vídeo que possamos converter facilmente, ex: imagem), retorna o original
+      if (ext === '.mp4' || ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.mp3') {
+        return resolve(sourcePath);
+      }
+
+      // Prepara o caminho final com extensão .mp4
+      const destPath = sourcePath.substring(0, sourcePath.lastIndexOf('.')) + '.mp4';
+      
+      console.log(`🔄 Convertendo ${path.basename(sourcePath)} para MP4...`);
+      let lastProgress = -1;
+
+      ffmpeg(sourcePath)
+        .toFormat('mp4')
+        .videoCodec('libx264')
+        .audioCodec('aac')
+        .on('progress', (progress) => {
+          if (progress.percent) {
+            const currentPercent = Math.floor(progress.percent);
+            // Mostrar log a cada 10% para não poluir
+            if (currentPercent > lastProgress && currentPercent % 10 === 0) {
+              console.log(`   Progresso da conversão: ${currentPercent}%`);
+              lastProgress = currentPercent;
+            }
+          }
+        })
+        .on('error', (err) => {
+          console.error(`❌ Erro na conversão de ${sourcePath}:`, err.message);
+          // Em caso de erro, devolve o original para tentar adicionar de qualquer jeito
+          resolve(sourcePath);
+        })
+        .on('end', () => {
+          console.log(`✅ Conversão concluída: ${path.basename(destPath)}`);
+          // Deleta o original não suportado
+          try {
+            fs.unlinkSync(sourcePath);
+          } catch (e) {
+             // ignora erro ao deletar
+          }
+          resolve(destPath);
+        })
+        .save(destPath);
+    });
+  }
 }
 
 async function processarPlaylist(exportId, payload) {
@@ -76,7 +132,9 @@ async function processarPlaylist(exportId, payload) {
         let item = payload.items[i];
         if (item.type === 'media' && item.url) {
           try {
-            const localPath = await DownloadManager.downloadFile(item.url, item.title || 'media.mp4');
+            let localPath = await DownloadManager.downloadFile(item.url, item.title || 'media.mp4');
+            // Tenta converter se não for suportado
+            localPath = await DownloadManager.convertToMp4(localPath);
             item.file = localPath; // Substitui URL pelo caminho local
             // Opcional: tentar enviar via HTTP API direta para o Holyrics se a API AddToPlaylist existir
             try {
