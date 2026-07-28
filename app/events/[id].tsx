@@ -536,7 +536,7 @@ export default function EventDetailScreen() {
                 {canEditPlaylist && (
                   <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
                     <TextInput
-                      style={[globalStyles.input, { flex: 1, marginBottom: 0, height: 44 }]}
+                      style={[globalStyles.input, { flex: 1, marginBottom: 0, height: 44, color: theme.colors.text }]}
                       placeholder="Cole um link (YouTube, Drive...)"
                       placeholderTextColor={theme.colors.textSecondary}
                       value={newMediaLink}
@@ -545,14 +545,18 @@ export default function EventDetailScreen() {
                       autoCorrect={false}
                     />
                     <TouchableOpacity 
-                      style={[globalStyles.primaryButton, { marginLeft: 8, paddingHorizontal: 16, height: 44, justifyContent: 'center' }]}
+                      style={[
+                        globalStyles.primaryButton, 
+                        { marginLeft: 8, paddingHorizontal: 16, height: 44, justifyContent: 'center' },
+                        (isUpdatingMedia || !newMediaLink.trim()) && { backgroundColor: theme.colors.border, opacity: 0.7 }
+                      ]}
                       onPress={handleAddMedia}
                       disabled={isUpdatingMedia || !newMediaLink.trim()}
                     >
                       {isUpdatingMedia ? (
                         <ActivityIndicator size="small" color="#FFF" />
                       ) : (
-                        <Text style={globalStyles.primaryButtonText}>Adicionar</Text>
+                        <Text style={[globalStyles.primaryButtonText, (isUpdatingMedia || !newMediaLink.trim()) && { color: theme.colors.textSecondary }]}>Adicionar</Text>
                       )}
                     </TouchableOpacity>
                   </View>
