@@ -370,11 +370,20 @@ function request(action, headers, content, info) {
                         // Adiciona na aba de Letras (padrão)
                         h.hly('AddSongsToPlaylist', { id: foundId });
                         
-                        // Tentativas de adicionar cópia na aba de Mídia (já que o comando exato não é documentado)
-                        try { h.hly('AddSongsToMediaPlaylist', { id: foundId }); } catch(e) {}
-                        try { h.hly('AddSongToMedia', { id: foundId }); } catch(e) {}
-                        try { h.hly('AddToMediaPlaylist', { id: foundId, type: 'song' }); } catch(e) {}
-                        try { h.hly('AddSongsToPlaylist', { id: foundId, target: 'media' }); } catch(e) {}
+                        // Adiciona uma cópia na aba de Mídia
+                        try {
+                            if (typeof h.addSongToPlaylist === 'function') {
+                                h.addSongToPlaylist({
+                                    id: foundId,
+                                    media_playlist: true,
+                                    index: -1
+                                });
+                            } else {
+                                h.hly('AddSongsToPlaylist', { id: foundId, media_playlist: true });
+                            }
+                        } catch(e) {
+                            h.log("Aviso: Falha ao tentar enviar para aba Mídia. Erro: " + e.message);
+                        }
                         
                         h.log("✅ Adicionada (Letras e Mídia): " + song.title);
                         sucessoCount++;
