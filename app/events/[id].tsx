@@ -17,7 +17,7 @@ import { chatService } from '../../src/services/chatService';
 import { useRef } from 'react';
 import { HolyricsExportModal } from '../../src/components/modals/HolyricsExportModal';
 import { RoleIcon } from '../../src/components/ui/RoleIcon';
-import { Desktop, Star } from 'phosphor-react-native';
+import { Desktop, Star, Link, Trash } from 'phosphor-react-native';
 
 const TONALIDADES_GROUPS = [
   ["C", "Cm"], ["C#", "C#m"], ["D", "Dm"], ["Eb", "Ebm"], ["E", "Em"], ["F", "Fm"], 
@@ -48,6 +48,9 @@ export default function EventDetailScreen() {
   const [schedules, setSchedules] = useState<any[]>([]);
   const [songs, setSongs] = useState<EventSong[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [mediaLinks, setMediaLinks] = useState<string[]>([]);
+  const [newMediaLink, setNewMediaLink] = useState('');
+  const [isUpdatingMedia, setIsUpdatingMedia] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [canChat, setCanChat] = useState(false);
@@ -98,6 +101,7 @@ export default function EventDetailScreen() {
     
     if (ev) {
       setEvent(ev);
+      setMediaLinks(ev.media_links || []);
       const deptIds = ev.event_departments?.map((ed: any) => ed.departments?.id).filter(Boolean) || [];
       
       if (deptIds.length > 0) {
@@ -155,6 +159,35 @@ export default function EventDetailScreen() {
       setNewMessage('');
     } else {
        Alert.alert('Erro', 'Não foi possível enviar a mensagem.');
+    }
+  };
+
+  const handleAddMedia = async () => {
+    if (!newMediaLink.trim() || !event) return;
+    setIsUpdatingMedia(true);
+    const updatedLinks = [...mediaLinks, newMediaLink.trim()];
+    const { error } = await eventService.updateEvent(event.id, { media_links: updatedLinks });
+    setIsUpdatingMedia(false);
+    if (!error) {
+      setMediaLinks(updatedLinks);
+      setNewMediaLink('');
+      if (event) event.media_links = updatedLinks;
+    } else {
+      Alert.alert('Erro', 'Não foi possível adicionar o link de mídia.');
+    }
+  };
+
+  const handleRemoveMedia = async (index: number) => {
+    if (!event) return;
+    setIsUpdatingMedia(true);
+    const updatedLinks = mediaLinks.filter((_, i) => i !== index);
+    const { error } = await eventService.updateEvent(event.id, { media_links: updatedLinks });
+    setIsUpdatingMedia(false);
+    if (!error) {
+      setMediaLinks(updatedLinks);
+      if (event) event.media_links = updatedLinks;
+    } else {
+      Alert.alert('Erro', 'Não foi possível remover o link de mídia.');
     }
   };
 
@@ -472,6 +505,58 @@ export default function EventDetailScreen() {
                     )}
                   </View>
                 ) : null}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Mídia (Vídeos/Imagens)</Text>
+                <Text style={{color: theme.colors.textSecondary, fontSize: 13, marginBottom: 16}}>
+                  Adicione links de vídeos (YouTube/Drive) para baixar automaticamente no Holyrics.
+                </Text>
+
+                {mediaLinks.length > 0 ? (
+                  <View style={{ gap: 8 }}>
+                    {mediaLinks.map((link, index) => (
+                      <View key={index} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, padding: 12, borderRadius: 12 }}>
+                        <Link size={16} color={theme.colors.primary} style={{ marginRight: 8 }} />
+                        <Text style={{ color: theme.colors.text, fontSize: 14, flex: 1 }} numberOfLines={1}>
+                          {link}
+                        </Text>
+                        {canEditPlaylist && (
+                          <TouchableOpacity onPress={() => handleRemoveMedia(index)} disabled={isUpdatingMedia} style={{ padding: 4 }}>
+                            <Trash size={18} color={theme.colors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.emptyTextSmaller}>Nenhum link de mídia adicionado.</Text>
+                )}
+
+                {canEditPlaylist && (
+                  <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
+                    <TextInput
+                      style={[globalStyles.input, { flex: 1, marginBottom: 0, height: 44 }]}
+                      placeholder="Cole um link (YouTube, Drive...)"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      value={newMediaLink}
+                      onChangeText={setNewMediaLink}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity 
+                      style={[globalStyles.primaryButton, { marginLeft: 8, paddingHorizontal: 16, height: 44, justifyContent: 'center' }]}
+                      onPress={handleAddMedia}
+                      disabled={isUpdatingMedia || !newMediaLink.trim()}
+                    >
+                      {isUpdatingMedia ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={globalStyles.primaryButtonText}>Adicionar</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </View>
           </ScrollView>
