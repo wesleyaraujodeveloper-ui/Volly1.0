@@ -572,13 +572,14 @@ function request(action, headers, content, info) {
                         h.log("❌ Não encontrada no banco: " + song.title);
                     }
                 } else if (song && song.type === 'media' && !song.addedViaApi && song.file) {
-                    // Fallback se a API nativa não funcionou: tenta injetar via plugin
+                    // Tenta injetar via plugin diretamente na aba de Mídia
                     try {
-                        h.hly('AddToPlaylist', { file: song.file });
-                        h.log("✅ Mídia adicionada via script: " + song.title);
+                        // Usamos media_playlist: true para enviar para a aba Mídia
+                        h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
+                        h.log("✅ Mídia adicionada à aba Mídia: " + song.title);
                         sucessoCount++;
                     } catch (e) {
-                        h.log("❌ Falha ao adicionar mídia via script: " + song.title);
+                        h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
                     }
                 }
             }
