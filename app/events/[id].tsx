@@ -760,6 +760,7 @@ export default function EventDetailScreen() {
         visible={holyricsModalVisible}
         onClose={() => setHolyricsModalVisible(false)}
         songs={songs}
+        event={event}
       />
     </View>
   );

@@ -92,7 +92,13 @@ class DownloadManager {
     console.log(`Baixando mídia: ${filename}...`);
 
     try {
-      if (ytdlpPath && (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('drive.google.com'))) {
+      if (url.includes('drive.google.com')) {
+        await this.downloadGoogleDrive(url, destPath);
+        console.log(`✅ Download do Drive concluído: ${filename} -> ${destPath}`);
+        return destPath;
+      }
+      
+      if (ytdlpPath && (url.includes('youtube.com') || url.includes('youtu.be'))) {
         console.log(`🎬 Link do YouTube/Drive detectado. Usando extrator avançado...`);
         const youtubedl = require('youtube-dl-exec').create(ytdlpPath);
         await youtubedl(url, { output: destPath, format: 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4/best' });
@@ -110,6 +116,87 @@ class DownloadManager {
     await streamPipeline(response.body, fileStream);
     console.log(`✅ Download concluído: ${filename} -> ${destPath}`);
     return destPath;
+  }
+
+  static async downloadGoogleDrive(url, destPath) {
+    console.log(`☁️ Detectado link do Google Drive. Tentando baixar de forma nativa e sem limites...`);
+    const https = require('https');
+    
+    let fileId = null;
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) fileId = match[1];
+    else {
+      try {
+        const parsedUrl = new URL(url);
+        fileId = parsedUrl.searchParams.get('id');
+      } catch (e) {}
+    }
+    
+    if (!fileId) {
+      throw new Error("Não foi possível extrair o ID do arquivo do link do Google Drive.");
+    }
+
+    return new Promise((resolve, reject) => {
+      const baseUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      
+      function fetchUrl(targetUrl, cookie = '') {
+        const options = { headers: {} };
+        if (cookie) options.headers['Cookie'] = cookie;
+
+        https.get(targetUrl, options, (res) => {
+          if (res.statusCode === 302 || res.statusCode === 303) {
+            let newCookie = cookie;
+            if (res.headers['set-cookie']) {
+              newCookie = res.headers['set-cookie'].map(c => c.split(';')[0]).join('; ');
+            }
+            let loc = res.headers.location;
+            if (loc.startsWith('/')) loc = 'https://drive.google.com' + loc;
+            fetchUrl(loc, newCookie);
+          } else if (res.statusCode === 200) {
+            const contentType = res.headers['content-type'] || '';
+            if (contentType.includes('text/html')) {
+              let data = '';
+              res.on('data', chunk => data += chunk);
+              res.on('end', () => {
+                const confirmMatch = data.match(/confirm=([a-zA-Z0-9_-]+)/);
+                if (confirmMatch) {
+                  const confirmToken = confirmMatch[1];
+                  console.log(`   Aviso de verificação (vírus/tamanho) do Google detectado. Bypass automático em andamento...`);
+                  fetchUrl(`${baseUrl}&confirm=${confirmToken}`, cookie);
+                } else {
+                  reject(new Error("O Google bloqueou o download e a tela de bypass falhou. O arquivo deve estar como 'Qualquer pessoa com o link'."));
+                }
+              });
+            } else {
+              const fileStream = fs.createWriteStream(destPath);
+              res.pipe(fileStream);
+              let downloaded = 0;
+              let lastMb = -1;
+              res.on('data', (chunk) => {
+                downloaded += chunk.length;
+                const mb = Math.floor(downloaded / (1024 * 1024));
+                if (mb > lastMb && mb % 10 === 0 && mb > 0) {
+                   console.log(`   Drive: Baixado ${mb}MB...`);
+                   lastMb = mb;
+                }
+              });
+              fileStream.on('finish', () => {
+                fileStream.close();
+                resolve();
+              });
+              fileStream.on('error', (err) => {
+                try { fs.unlinkSync(destPath); } catch (e) {}
+                reject(err);
+              });
+            }
+          } else {
+            reject(new Error(`Falha na comunicação com o Google Drive (Status HTTP: ${res.statusCode})`));
+          }
+        }).on('error', reject);
+      }
+      
+      fetchUrl(baseUrl);
+    });
   }
 
   static async convertToMp4(sourcePath) {
@@ -282,6 +369,11 @@ function startPolling() {
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log('✅ Conectado ao banco de forma silenciosa. Aguardando Músicas...');
+        console.log('=============================================');
+        console.log('🛑 IMPORTANTE: NÃO FECHE ESTA TELA!');
+        console.log('🛑 Se você fechar esta janela, o Volly Connector irá parar e as músicas não chegarão ao Holyrics.');
+        console.log('🛑 Apenas minimize esta janela e deixe-a rodando em segundo plano.');
+        console.log('=============================================');
       } else if (status === 'CHANNEL_ERROR') {
         console.log('⚠️ Erro de canal no Realtime. Tente reiniciar o connector mais tarde.');
       }
@@ -332,7 +424,7 @@ app.post('/api/config', (req, res) => {
   // Tentar puxar a janela do console para a frente
   try {
     const { execSync } = require('child_process');
-    execSync(`powershell -Command "Add-Type -AssemblyName VisualBasic; [Microsoft.VisualBasic.Interaction]::AppActivate('Volly Connector')"`);
+    execSync(`powershell -Command "Add-Type -AssemblyName VisualBasic; [Microsoft.VisualBasic.Interaction]::AppActivate('Volly Connector')"`, { stdio: 'ignore' });
   } catch (e) {}
 
   // Criar atalho na pasta Inicializar do Windows (Startup)
@@ -489,6 +581,11 @@ app.listen(PORT, async () => {
 
   if (!isConfigured) {
     console.log('⚠️ Configuração pendente! Abrindo Assistente no navegador...');
+    console.log('=============================================');
+    console.log('🛑 IMPORTANTE: NÃO FECHE ESTA TELA PRETA!');
+    console.log('🛑 Ela é o coração do Volly Connector. Se você fechar agora, a tela do navegador não voltará a abrir.');
+    console.log('🛑 Após salvar as configurações no navegador, apenas minimize esta janela.');
+    console.log('=============================================');
     try {
         const { exec } = require('child_process');
         if (process.platform === 'win32') {
@@ -505,3 +602,4 @@ app.listen(PORT, async () => {
     startPolling();
   }
 });
+
