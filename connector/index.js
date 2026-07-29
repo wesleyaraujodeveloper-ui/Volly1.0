@@ -216,13 +216,11 @@ class DownloadManager {
               let lastMb = -1;
               res.on('data', (chunk) => {
                 downloaded += chunk.length;
-                const mb = Math.floor(downloaded / (1024 * 1024));
-                if (mb > lastMb && mb % 10 === 0 && mb > 0) {
-                   console.log(`   Drive: Baixado ${mb}MB...`);
-                   lastMb = mb;
-                }
+                const mb = (downloaded / (1024 * 1024)).toFixed(1);
+                process.stdout.write(`\r   ⏳ Baixando do Drive: ${mb} MB...`);
               });
               fileStream.on('finish', () => {
+                process.stdout.write('\n');
                 fileStream.close();
                 if (finalPath !== destPath) {
                     try { fs.renameSync(destPath, finalPath); } catch (e) { finalPath = destPath; }
@@ -273,11 +271,7 @@ class DownloadManager {
         .outputOptions('-preset', 'fast') // Acelera um pouco a conversão
         .on('progress', (progress) => {
           if (progress.percent) {
-            const currentPercent = Math.floor(progress.percent);
-            if (currentPercent > lastProgress && currentPercent % 5 === 0) {
-              console.log(`   ⏳ Progresso da conversão: ${currentPercent}%`);
-              lastProgress = currentPercent;
-            }
+            process.stdout.write(`\r   ⏳ Progresso da conversão: ${progress.percent.toFixed(1)}%     `);
           }
         })
         .on('error', (err) => {
@@ -285,6 +279,7 @@ class DownloadManager {
           resolve(sourcePath); // Falhou? Tenta mandar o original mesmo assim.
         })
         .on('end', () => {
+          process.stdout.write('\n');
           console.log(`✅ Conversão concluída: ${path.basename(destPath)}`);
           // Deleta o original não suportado
           try {
