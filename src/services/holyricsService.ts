@@ -74,7 +74,7 @@ export const holyricsService = {
         // Tenta deduzir o nome do arquivo a partir da URL, ou usa um genérico
         const urlObj = new URL(url);
         let title = urlObj.pathname.split('/').pop() || `media_${i + 1}`;
-        if (!title.includes('.')) title += '.mp4'; // Fallback para mp4 se não tiver extensão
+        // Não forçar `.mp4` aqui. Deixar o backend (Connector) descobrir a extensão real via Content-Disposition
         
         items.push({
           type: "media",

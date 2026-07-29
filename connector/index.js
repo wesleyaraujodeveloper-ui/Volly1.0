@@ -41,6 +41,14 @@ try {
 } catch (e) {
   ffmpegPath = 'ffmpeg'; // Fallback
 }
+
+// Preferir o FFmpeg do próprio Holyrics se existir (Economiza extração e garante compatibilidade)
+const holyricsFfmpeg = path.join('C:', 'Holyrics', 'Holyrics', 'files', 'ffmpeg.exe');
+if (fs.existsSync(holyricsFfmpeg)) {
+  ffmpegPath = holyricsFfmpeg;
+  console.log(`🎬 Usando motor de vídeo nativo do Holyrics: ${ffmpegPath}`);
+}
+
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Polyfill para Supabase no Node.js
@@ -76,9 +84,17 @@ let pollingInterval = null;
 // --- DOWNLOAD MANAGER ---
 class DownloadManager {
   static getDownloadDir() {
-    const dir = path.join(os.homedir(), 'Documents', 'VollyMedia');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    let dir = path.join(os.homedir(), 'Documents', 'VollyMedia');
+    
+    // Tentar encontrar a pasta do Holyrics para auto-importação
+    const holyricsDefault = path.join('C:', 'Holyrics', 'Holyrics', 'files', 'media', 'video');
+    if (fs.existsSync(holyricsDefault)) {
+        dir = holyricsDefault;
+        console.log(`📂 Pasta nativa do Holyrics encontrada: ${dir}`);
+    } else {
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
     }
     return dir;
   }
@@ -93,9 +109,9 @@ class DownloadManager {
 
     try {
       if (url.includes('drive.google.com')) {
-        await this.downloadGoogleDrive(url, destPath);
-        console.log(`✅ Download do Drive concluído: ${filename} -> ${destPath}`);
-        return destPath;
+        const finalPath = await this.downloadGoogleDrive(url, destPath);
+        console.log(`✅ Download do Drive concluído: ${filename} -> ${finalPath}`);
+        return finalPath;
       }
       
       if (ytdlpPath && (url.includes('youtube.com') || url.includes('youtu.be'))) {
@@ -184,6 +200,16 @@ class DownloadManager {
                 }
               });
             } else {
+              let finalPath = destPath;
+              const contentDisposition = res.headers['content-disposition'] || '';
+              const filenameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+              if (filenameMatch) {
+                  const realExt = path.extname(filenameMatch[1]);
+                  if (realExt) {
+                      finalPath = destPath.replace(path.extname(destPath), realExt);
+                  }
+              }
+
               const fileStream = fs.createWriteStream(destPath);
               res.pipe(fileStream);
               let downloaded = 0;
@@ -198,7 +224,10 @@ class DownloadManager {
               });
               fileStream.on('finish', () => {
                 fileStream.close();
-                resolve();
+                if (finalPath !== destPath) {
+                    try { fs.renameSync(destPath, finalPath); } catch (e) { finalPath = destPath; }
+                }
+                resolve(finalPath);
               });
               fileStream.on('error', (err) => {
                 try { fs.unlinkSync(destPath); } catch (e) {}
@@ -218,35 +247,42 @@ class DownloadManager {
   static async convertToMp4(sourcePath) {
     return new Promise((resolve, reject) => {
       const ext = path.extname(sourcePath).toLowerCase();
-      // Se já for mp4 (ou não for vídeo que possamos converter facilmente, ex: imagem), retorna o original
-      if (ext === '.mp4' || ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.mp3') {
-        return resolve(sourcePath);
+      
+      // Lista de extensões que DEFINITIVAMENTE precisam de conversão
+      const needsConversion = ['.mov', '.mkv', '.avi', '.wmv', '.flv'];
+      
+      if (!needsConversion.includes(ext) && ext === '.mp4') {
+         // Se já for mp4, assume que está ok. Em versões futuras podemos usar ffprobe para checar h265
+         return resolve(sourcePath);
+      }
+      
+      if (['.jpg', '.jpeg', '.png', '.mp3'].includes(ext)) {
+         return resolve(sourcePath);
       }
 
       // Prepara o caminho final com extensão .mp4
       const destPath = sourcePath.substring(0, sourcePath.lastIndexOf('.')) + '.mp4';
       
-      console.log(`🔄 Convertendo ${path.basename(sourcePath)} para MP4...`);
+      console.log(`🔄 Convertendo ${path.basename(sourcePath)} para padrão Holyrics (H.264 MP4)... Isso pode levar alguns minutos dependendo do tamanho.`);
       let lastProgress = -1;
 
       ffmpeg(sourcePath)
         .toFormat('mp4')
         .videoCodec('libx264')
         .audioCodec('aac')
+        .outputOptions('-preset', 'fast') // Acelera um pouco a conversão
         .on('progress', (progress) => {
           if (progress.percent) {
             const currentPercent = Math.floor(progress.percent);
-            // Mostrar log a cada 10% para não poluir
-            if (currentPercent > lastProgress && currentPercent % 10 === 0) {
-              console.log(`   Progresso da conversão: ${currentPercent}%`);
+            if (currentPercent > lastProgress && currentPercent % 5 === 0) {
+              console.log(`   ⏳ Progresso da conversão: ${currentPercent}%`);
               lastProgress = currentPercent;
             }
           }
         })
         .on('error', (err) => {
           console.error(`❌ Erro na conversão de ${sourcePath}:`, err.message);
-          // Em caso de erro, devolve o original para tentar adicionar de qualquer jeito
-          resolve(sourcePath);
+          resolve(sourcePath); // Falhou? Tenta mandar o original mesmo assim.
         })
         .on('end', () => {
           console.log(`✅ Conversão concluída: ${path.basename(destPath)}`);
