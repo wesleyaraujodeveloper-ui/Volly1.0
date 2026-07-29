@@ -576,6 +576,13 @@ function request(action, headers, content, info) {
                         var targetMediaTitle = song.title.toLowerCase().trim();
                         var mediaFoundId = null;
                         
+                        // Garante que o caminho é relativo para o Holyrics (ex: video/nome.mp4)
+                        var relPath = song.file;
+                        var mIdx = relPath.indexOf('media');
+                        if (mIdx !== -1) {
+                            relPath = relPath.substring(mIdx + 6).replace(/\\\\/g, '/');
+                        }
+                        
                         // Tentar buscar na biblioteca de vídeos do Holyrics
                         try {
                             var vRes = h.hly('GetVideos', {}) || h.hly('GetMedia', {});
@@ -597,19 +604,24 @@ function request(action, headers, content, info) {
                             h.log("✅ Mídia (ID) adicionada à aba Mídia: " + song.title);
                             sucessoCount++;
                         } else {
-                            // Tenta injetar o arquivo bruto via plugin
-                            h.hly('AddToPlaylist', { items: [{ type: 'video', file: song.file }], media_playlist: true });
-                            h.log("✅ Mídia (Arquivo) adicionada à aba Mídia: " + song.title);
-                            sucessoCount++;
+                            // Tenta injetar com caminho relativo (O padrão do Holyrics)
+                            try {
+                                if (typeof h.addMediaToPlaylist === 'function') {
+                                    h.addMediaToPlaylist({ file: relPath, media_playlist: true });
+                                } else {
+                                    h.hly('AddToPlaylist', { file: relPath, media_playlist: true });
+                                }
+                                h.log("✅ Mídia (RelPath) adicionada à aba Mídia: " + song.title);
+                                sucessoCount++;
+                            } catch (e3) {
+                                // Fallback absoluto
+                                h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
+                                h.log("✅ Mídia (AbsPath) adicionada à aba Mídia: " + song.title);
+                                sucessoCount++;
+                            }
                         }
                     } catch (e) {
-                        try {
-                             h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
-                             h.log("✅ Mídia (Fallback) adicionada à aba Mídia: " + song.title);
-                             sucessoCount++;
-                        } catch (e2) {
-                             h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
-                        }
+                        h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
                     }
                 }
             }
