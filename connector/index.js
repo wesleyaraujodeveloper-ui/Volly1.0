@@ -572,21 +572,51 @@ function request(action, headers, content, info) {
                         h.log("❌ Não encontrada no banco: " + song.title);
                     }
                 } else if (song && song.type === 'media' && !song.addedViaApi && song.file) {
-                    // Tenta injetar via plugin diretamente na aba de Mídia
                     try {
-                        // Usamos media_playlist: true para enviar para a aba Mídia
-                        h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
-                        h.log("✅ Mídia adicionada à aba Mídia: " + song.title);
-                        sucessoCount++;
+                        var targetMediaTitle = song.title.toLowerCase().trim();
+                        var mediaFoundId = null;
+                        
+                        // Tentar buscar na biblioteca de vídeos do Holyrics
+                        try {
+                            var vRes = h.hly('GetVideos', {}) || h.hly('GetMedia', {});
+                            var allVideos = vRes.data ? vRes.data : vRes;
+                            if (allVideos) {
+                                var vLen = (allVideos.length !== undefined) ? allVideos.length : ((allVideos.size) ? allVideos.size() : 0);
+                                for (var v = 0; v < vLen; v++) {
+                                    var vid = allVideos[v] || (allVideos.get && allVideos.get(v));
+                                    if (vid && vid.title && vid.title.toLowerCase().trim() === targetMediaTitle) {
+                                        mediaFoundId = vid.id;
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch(e) {}
+                        
+                        if (mediaFoundId) {
+                            h.hly('AddToPlaylist', { items: [{ type: 'video', id: mediaFoundId }], media_playlist: true });
+                            h.log("✅ Mídia (ID) adicionada à aba Mídia: " + song.title);
+                            sucessoCount++;
+                        } else {
+                            // Tenta injetar o arquivo bruto via plugin
+                            h.hly('AddToPlaylist', { items: [{ type: 'video', file: song.file }], media_playlist: true });
+                            h.log("✅ Mídia (Arquivo) adicionada à aba Mídia: " + song.title);
+                            sucessoCount++;
+                        }
                     } catch (e) {
-                        h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
+                        try {
+                             h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
+                             h.log("✅ Mídia (Fallback) adicionada à aba Mídia: " + song.title);
+                             sucessoCount++;
+                        } catch (e2) {
+                             h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
+                        }
                     }
                 }
             }
             
             return { 
                 status: 'ok', 
-                message: 'Sucesso! ' + sucessoCount + ' músicas adicionadas.' 
+                message: 'Sucesso! ' + sucessoCount + ' itens processados (Músicas e Mídias).' 
             };
             
         } catch (e) {
