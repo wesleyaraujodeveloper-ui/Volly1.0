@@ -573,53 +573,27 @@ function request(action, headers, content, info) {
                     }
                 } else if (song && song.type === 'media' && !song.addedViaApi && song.file) {
                     try {
-                        var targetMediaTitle = song.title.toLowerCase().trim();
-                        var mediaFoundId = null;
-                        
-                        // Garante que o caminho é relativo para o Holyrics (ex: video/nome.mp4)
-                        var relPath = song.file;
-                        var mIdx = relPath.indexOf('media');
-                        if (mIdx !== -1) {
-                            relPath = relPath.substring(mIdx + 6).replace(/\\\\/g, '/');
+                        // Extrai apenas o nome do arquivo final (ex: view.mp4)
+                        var fileName = song.file;
+                        var slashIdx = fileName.lastIndexOf('/');
+                        var backslashIdx = fileName.lastIndexOf('\\\\');
+                        var lastIdx = Math.max(slashIdx, backslashIdx);
+                        if (lastIdx !== -1) {
+                            fileName = fileName.substring(lastIdx + 1);
                         }
                         
-                        // Tentar buscar na biblioteca de vídeos do Holyrics
-                        try {
-                            var vRes = h.hly('GetVideos', {}) || h.hly('GetMedia', {});
-                            var allVideos = vRes.data ? vRes.data : vRes;
-                            if (allVideos) {
-                                var vLen = (allVideos.length !== undefined) ? allVideos.length : ((allVideos.size) ? allVideos.size() : 0);
-                                for (var v = 0; v < vLen; v++) {
-                                    var vid = allVideos[v] || (allVideos.get && allVideos.get(v));
-                                    if (vid && vid.title && vid.title.toLowerCase().trim() === targetMediaTitle) {
-                                        mediaFoundId = vid.id;
-                                        break;
-                                    }
-                                }
-                            }
-                        } catch(e) {}
+                        // Lógica oficial do Holyrics (AddItemVideo)
+                        h.hly('AddToPlaylist', { 
+                            items: [{ 
+                                type: 'video', 
+                                name: fileName,
+                                isDir: false
+                            }], 
+                            media_playlist: true 
+                        });
                         
-                        if (mediaFoundId) {
-                            h.hly('AddToPlaylist', { items: [{ type: 'video', id: mediaFoundId }], media_playlist: true });
-                            h.log("✅ Mídia (ID) adicionada à aba Mídia: " + song.title);
-                            sucessoCount++;
-                        } else {
-                            // Tenta injetar com caminho relativo (O padrão do Holyrics)
-                            try {
-                                if (typeof h.addMediaToPlaylist === 'function') {
-                                    h.addMediaToPlaylist({ file: relPath, media_playlist: true });
-                                } else {
-                                    h.hly('AddToPlaylist', { file: relPath, media_playlist: true });
-                                }
-                                h.log("✅ Mídia (RelPath) adicionada à aba Mídia: " + song.title);
-                                sucessoCount++;
-                            } catch (e3) {
-                                // Fallback absoluto
-                                h.hly('AddToPlaylist', { file: song.file, media_playlist: true });
-                                h.log("✅ Mídia (AbsPath) adicionada à aba Mídia: " + song.title);
-                                sucessoCount++;
-                            }
-                        }
+                        h.log("✅ Mídia adicionada à aba Mídia (API Oficial): " + fileName);
+                        sucessoCount++;
                     } catch (e) {
                         h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
                     }
