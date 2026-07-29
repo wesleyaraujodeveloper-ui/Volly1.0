@@ -573,26 +573,23 @@ function request(action, headers, content, info) {
                     }
                 } else if (song && song.type === 'media' && !song.addedViaApi && song.file) {
                     try {
-                        // Extrai apenas o nome do arquivo final (ex: view.mp4)
-                        var fileName = song.file;
-                        var slashIdx = fileName.lastIndexOf('/');
-                        var backslashIdx = fileName.lastIndexOf('\\\\');
-                        var lastIdx = Math.max(slashIdx, backslashIdx);
-                        if (lastIdx !== -1) {
-                            fileName = fileName.substring(lastIdx + 1);
+                        // O Holyrics espera type: "file" e o caminho a partir da pasta media (ex: video/arquivo.mp4)
+                        var relPath = song.file;
+                        var mIdx = relPath.indexOf('media');
+                        if (mIdx !== -1) {
+                            relPath = relPath.substring(mIdx + 6).replace(/\\\\/g, '/');
                         }
                         
-                        // Lógica oficial do Holyrics (AddItemVideo)
+                        // Lógica baseada no snippet de sucesso testado pelo usuário
                         h.hly('AddToPlaylist', { 
                             items: [{ 
-                                type: 'video', 
-                                name: fileName,
-                                isDir: false
+                                type: 'file', 
+                                name: relPath
                             }], 
                             media_playlist: true 
                         });
                         
-                        h.log("✅ Mídia adicionada à aba Mídia (API Oficial): " + fileName);
+                        h.log("✅ Mídia adicionada à aba Mídia (type: file): " + relPath);
                         sucessoCount++;
                     } catch (e) {
                         h.log("❌ Falha ao adicionar mídia: " + song.title + " - " + e.message);
