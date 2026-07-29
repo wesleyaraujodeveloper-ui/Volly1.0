@@ -106,6 +106,9 @@ class DownloadManager {
         return destPath;
       }
     } catch (err) {
+      if (url.includes('drive.google.com')) {
+        throw err;
+      }
       console.log(`⚠️ Extrator avançado falhou, tentando método padrão... (${err.message})`);
     }
 
@@ -158,11 +161,24 @@ class DownloadManager {
               let data = '';
               res.on('data', chunk => data += chunk);
               res.on('end', () => {
-                const confirmMatch = data.match(/confirm=([a-zA-Z0-9_-]+)/);
+                const confirmMatch = data.match(/name="confirm"\s+value="([^"]+)"/i) || data.match(/confirm=([a-zA-Z0-9_-]+)/);
+                const uuidMatch = data.match(/name="uuid"\s+value="([^"]+)"/i);
+                
                 if (confirmMatch) {
                   const confirmToken = confirmMatch[1];
+                  // A url de action do form agora costuma ser https://drive.usercontent.google.com/download
+                  const actionMatch = data.match(/action="([^"]+)"/i);
+                  let nextUrl = actionMatch ? actionMatch[1] : `https://drive.usercontent.google.com/download`;
+                  
+                  // Adicionar parametros query ao invés de concatenar mal
+                  const pUrl = new URL(nextUrl.startsWith('/') ? 'https://drive.usercontent.google.com' + nextUrl : nextUrl);
+                  pUrl.searchParams.set('id', fileId);
+                  pUrl.searchParams.set('export', 'download');
+                  pUrl.searchParams.set('confirm', confirmToken);
+                  if (uuidMatch) pUrl.searchParams.set('uuid', uuidMatch[1]);
+
                   console.log(`   Aviso de verificação (vírus/tamanho) do Google detectado. Bypass automático em andamento...`);
-                  fetchUrl(`${baseUrl}&confirm=${confirmToken}`, cookie);
+                  fetchUrl(pUrl.toString(), cookie);
                 } else {
                   reject(new Error("O Google bloqueou o download e a tela de bypass falhou. O arquivo deve estar como 'Qualquer pessoa com o link'."));
                 }
