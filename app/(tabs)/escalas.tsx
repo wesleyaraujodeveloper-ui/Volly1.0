@@ -119,7 +119,7 @@ export default function EscalasTabsScreen() {
 
   const eventIds = useMemo(() => pendingEvents.map((e: any) => e.id!), [pendingEvents]);
   
-  const { data: serverAvailabilities } = useEventAvailability(eventIds);
+  const { data: serverAvailabilities } = useEventAvailability(selectedDeptId, eventIds);
   const { data: teamAvailabilities = [] } = useTeamAvailability(selectedDeptId, eventIds);
   const [eventAvailabilities, setEventAvailabilities] = useState<any[]>([]);
 
@@ -177,6 +177,7 @@ export default function EscalasTabsScreen() {
       setEventAvailabilities(prev => [...prev, { 
         user_id: user?.id!, 
         event_id: eventId, 
+        department_id: selectedDeptId!,
         periods: [], 
         is_available: status 
       }]);
@@ -185,8 +186,9 @@ export default function EscalasTabsScreen() {
 
   const handleSaveAvailability = async () => {
     setSaving(true);
+    if (!selectedDeptId) return;
     try {
-      await updateAvailabilityMutation.mutateAsync({ eventAvailabilities });
+      await updateAvailabilityMutation.mutateAsync({ eventAvailabilities, departmentId: selectedDeptId });
       showAlert('Sucesso', 'Sua disponibilidade para os eventos foi atualizada!', 'success');
     } catch (error) {
       showAlert('Erro', 'Não foi possível salvar as alterações.', 'danger');

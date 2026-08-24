@@ -12,6 +12,7 @@ export interface EventAvailability {
   id?: string;
   user_id: string;
   event_id: string;
+  department_id: string;
   periods: string[];
   is_available: boolean;
 }
@@ -139,9 +140,9 @@ export const availabilityService = {
   },
 
   /**
-   * Busca a disponibilidade do usuário para uma lista de eventos.
+   * Busca a disponibilidade do usuário para uma lista de eventos de um departamento.
    */
-  getEventAvailability: async (eventIds: string[]) => {
+  getEventAvailability: async (departmentId: string, eventIds: string[]) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: null, error: 'User not logged in' };
 
@@ -149,15 +150,16 @@ export const availabilityService = {
       .from('user_event_availabilities')
       .select('*')
       .eq('user_id', user.id)
+      .eq('department_id', departmentId)
       .in('event_id', eventIds);
 
     return { data: data as EventAvailability[], error };
   },
 
   /**
-   * Atualiza a disponibilidade de um evento específico.
+   * Atualiza a disponibilidade de um evento específico para uma equipe.
    */
-  updateEventAvailability: async (event_id: string, periods: string[], is_available: boolean) => {
+  updateEventAvailability: async (event_id: string, department_id: string, periods: string[], is_available: boolean) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: null, error: 'User not logged in' };
 
@@ -166,10 +168,11 @@ export const availabilityService = {
       .upsert({
         user_id: user.id,
         event_id,
+        department_id,
         periods,
         is_available,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id, event_id' })
+      }, { onConflict: 'user_id, event_id, department_id' })
       .select();
 
     return { data, error };
@@ -190,11 +193,12 @@ export const availabilityService = {
 
     const userIds = members.map(m => m.user_id);
 
-    // 2. Busca disponibilidades desses usuários para os eventos
+    // 2. Busca disponibilidades desses usuários para os eventos E para este departamento
     const { data, error } = await supabase
       .from('user_event_availabilities')
       .select('*, profiles:user_id(full_name, avatar_url, access_level)')
       .in('user_id', userIds)
+      .eq('department_id', departmentId)
       .in('event_id', eventIds);
 
     if (error) return { data: [], error };

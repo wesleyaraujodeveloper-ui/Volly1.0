@@ -119,15 +119,19 @@ export const holyricsService = {
 
         if (checkData) {
           if (checkData.status === 'completed') {
-            return { success: true };
+            return { success: true, message: 'As músicas chegaram no computador da Igreja.' };
           } else if (checkData.status === 'failed') {
             return { success: false, message: checkData.message || 'O PC da Igreja não conseguiu enviar para o Holyrics.' };
+          } else if (checkData.status === 'processing' && mediaUrls.length > 0) {
+            // Se tem mídia, o download e a conversão podem levar muitos minutos. 
+            // Como já recebemos 'processing', sabemos que o Connector está vivo e trabalhando.
+            return { success: true, message: 'O PC da igreja recebeu o pedido e está baixando/convertendo os vídeos em segundo plano. Isso pode levar alguns minutos, mas você já pode fechar esta tela.' };
           }
         }
         attempts++;
       }
 
-      // If we reach here, it timed out
+      // If we reach here, it timed out (never even reached 'processing')
       // Mark as timed_out so the PC ignores it if it wakes up late
       await supabase.from('holyrics_exports').update({ status: 'timed_out' }).eq('id', exportId);
 

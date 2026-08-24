@@ -41,16 +41,16 @@ export const useUpcomingEventsByDept = (departmentId: string | null) => {
   });
 };
 
-export const useEventAvailability = (eventIds: string[]) => {
+export const useEventAvailability = (departmentId: string | null, eventIds: string[]) => {
   return useQuery({
-    queryKey: ['eventAvailability', eventIds],
+    queryKey: ['eventAvailability', departmentId, eventIds],
     queryFn: async () => {
-      if (eventIds.length === 0) return [];
-      const { data, error } = await availabilityService.getEventAvailability(eventIds);
+      if (!departmentId || eventIds.length === 0) return [];
+      const { data, error } = await availabilityService.getEventAvailability(departmentId, eventIds);
       if (error) throw error;
       return data || [];
     },
-    enabled: eventIds.length > 0,
+    enabled: !!departmentId && eventIds.length > 0,
   });
 };
 
@@ -139,9 +139,9 @@ export const useMonthlyData = (departmentId: string | null, selectedMonth: Date 
 export const useUpdateAvailability = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ eventAvailabilities }: { eventAvailabilities: any[] }) => {
+    mutationFn: async ({ eventAvailabilities, departmentId }: { eventAvailabilities: any[], departmentId: string }) => {
       const promises = eventAvailabilities.map(a => 
-        availabilityService.updateEventAvailability(a.event_id, a.periods, a.is_available)
+        availabilityService.updateEventAvailability(a.event_id, departmentId, a.periods, a.is_available)
       );
       await Promise.all(promises);
     },

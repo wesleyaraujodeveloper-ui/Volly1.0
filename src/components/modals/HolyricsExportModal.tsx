@@ -79,7 +79,7 @@ export function HolyricsExportModal({ visible, onClose, songs, event }: Holyrics
     setIsExporting(false);
 
     if (success) {
-      Alert.alert('Exportado com Sucesso! 🎉', 'As músicas chegaram no computador da Igreja.', [
+      Alert.alert('Exportado com Sucesso! 🎉', message || 'As músicas chegaram no computador da Igreja.', [
         { text: 'OK', onPress: onClose }
       ]);
     } else {
